@@ -1,0 +1,18 @@
+{
+  "name": "chess-coach-copilot",
+  "private": true,
+  "workspaces": ["be", "fe"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:be\" \"npm run dev:fe\"",
+    "dev:be": "npm run start:dev --workspace=./be",
+    "dev:fe": "npm run dev --workspace=./fe",
+    "build": "npm run build:be && npm run build:fe",
+    "build:be": "npm run build --workspace=./be",
+    "build:fe": "npm run build --workspace=./fe",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

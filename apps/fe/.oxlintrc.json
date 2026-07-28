@@ -1,0 +1,66 @@
+{
+  "$schema": "../node_modules/oxlint/configuration_schema.json",
+
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "react", "import"],
+
+  "env": {
+    "browser": true
+  },
+
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn",
+    "style": "off",
+    "pedantic": "off",
+    "restriction": "off",
+    "nursery": "off"
+  },
+
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "warn"
+  },
+
+  "ignorePatterns": [
+    "dist/**",
+    "coverage/**",
+    "public/**",
+    "src/api/generated/**"
+  ],
+
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/only-export-components": [
+      "warn",
+      {
+        "allowConstantExport": true
+      }
+    ],
+
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": [
+      "warn",
+      {
+        "checksVoidReturn": {
+          "attributes": false
+        }
+      }
+    ],
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-non-null-assertion": "warn",
+    "typescript/consistent-type-imports": [
+      "warn",
+      {
+        "prefer": "type-imports",
+        "fixStyle": "separate-type-imports"
+      }
+    ],
+
+    "import/no-duplicates": "error",
+    "import/no-cycle": "warn",
+
+    "eqeqeq": "error"
+  }
+}
