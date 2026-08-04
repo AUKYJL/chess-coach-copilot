@@ -1,0 +1,20 @@
+model Homework {
+  id               String            @id @default(uuid())
+  coachAccountId   String
+  studentId        String
+  analysisId       String
+  title            String
+  content          Json
+  promptVersion    String
+  model            String
+  coachAccount     CoachAccount      @relation(fields: [coachAccountId], references: [id], onDelete: Cascade)
+  student          Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  analysis         GameAnalysis      @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  generationTraces GenerationTrace[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([coachAccountId])
+  @@index([studentId])
+  @@index([analysisId])
+}

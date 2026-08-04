@@ -1,15 +1,37 @@
+import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { AppModule } from './app.module.js';
+import { appConfig } from './config/index.js';
+import { HttpExceptionFilter } from './shared/filters/http-exception.filter.js';
+import { setupSwagger } from './shared/swagger/swagger.config.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+  const applicationConfiguration = app.get<ConfigType<typeof appConfig>>(
+    appConfig.KEY,
+  );
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
+      forbidNonWhitelisted: true,
     }),
   );
-  await app.listen(process.env.PORT ?? 5000);
+
+  app.use(cookieParser());
+  app.enableCors({
+    origin: applicationConfiguration.corsOrigins,
+    credentials: true,
+  });
+  app.useGlobalFilters(new HttpExceptionFilter());
+  setupSwagger(app);
+
+  await app.listen(applicationConfiguration.port);
 }
-bootstrap();
+
+void bootstrap();

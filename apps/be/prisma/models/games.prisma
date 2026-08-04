@@ -1,0 +1,40 @@
+enum GameSourceType {
+  MANUAL_PGN
+  LICHESS_IMPORT
+}
+
+enum StudentColor {
+  WHITE
+  BLACK
+}
+
+enum AnnotationCoverage {
+  FULL
+  PARTIAL
+  NONE
+}
+
+model Game {
+  id                       String             @id @default(uuid())
+  coachAccountId           String
+  studentId                String
+  sourceType               GameSourceType
+  sourceLabel              String?
+  studentColor             StudentColor
+  rawPgn                   String
+  normalizedPgnHash        String
+  hasEngineAnnotations     Boolean            @default(false)
+  annotationCoverage       AnnotationCoverage @default(NONE)
+  reducedConfidenceWarning String?
+  importedAt               DateTime           @default(now())
+  coachAccount             CoachAccount       @relation(fields: [coachAccountId], references: [id], onDelete: Cascade)
+  student                  Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  analysisJobs             AnalysisJob[]
+  analyses                 GameAnalysis[]
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  @@index([coachAccountId])
+  @@index([studentId])
+  @@index([studentId, normalizedPgnHash])
+}

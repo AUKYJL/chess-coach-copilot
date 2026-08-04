@@ -1,0 +1,40 @@
+enum CoachAccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model CoachAccount {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  passwordHash      String
+  displayName       String
+  status            CoachAccountStatus @default(ACTIVE)
+  refreshTokens     RefreshToken[]
+  students          Student[]
+  games             Game[]
+  analysisJobs      AnalysisJob[]
+  analyses          GameAnalysis[]
+  reports           Report[]
+  homeworks         Homework[]
+  progressSnapshots ProgressSnapshot[]
+  generationTraces  GenerationTrace[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model RefreshToken {
+  id                String       @id
+  coachAccountId    String
+  tokenHash         String       @unique
+  userAgent         String?
+  ipAddress         String?
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  replacedByTokenId String?
+  coachAccount      CoachAccount @relation(fields: [coachAccountId], references: [id], onDelete: Cascade)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([coachAccountId])
+  @@index([expiresAt])
+}

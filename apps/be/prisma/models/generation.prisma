@@ -1,0 +1,27 @@
+model GenerationTrace {
+  id                 String            @id @default(uuid())
+  coachAccountId     String
+  analysisJobId      String?
+  analysisId         String?
+  reportId           String?
+  homeworkId         String?
+  progressSnapshotId String?
+  promptVersion      String
+  model              String
+  inputPayload       Json
+  outputPayload      Json
+  failureCode        String?
+  failureMessage     String?
+  coachAccount       CoachAccount      @relation(fields: [coachAccountId], references: [id], onDelete: Cascade)
+  analysisJob        AnalysisJob?      @relation(fields: [analysisJobId], references: [id], onDelete: SetNull)
+  analysis           GameAnalysis?     @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+  report             Report?           @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  homework           Homework?         @relation(fields: [homeworkId], references: [id], onDelete: SetNull)
+  progressSnapshot   ProgressSnapshot? @relation(fields: [progressSnapshotId], references: [id], onDelete: SetNull)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([coachAccountId])
+  @@index([analysisJobId])
+  @@index([analysisId])
+}

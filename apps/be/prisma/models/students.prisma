@@ -1,0 +1,39 @@
+enum ExternalPlatform {
+  LICHESS
+  CHESS_COM
+}
+
+model Student {
+  id                String             @id @default(uuid())
+  coachAccountId    String
+  displayName       String
+  birthYear         Int?
+  rating            Int?
+  notes             String?
+  archivedAt        DateTime?
+  coachAccount      CoachAccount       @relation(fields: [coachAccountId], references: [id], onDelete: Cascade)
+  externalAccounts  ExternalAccount[]
+  games             Game[]
+  analysisJobs      AnalysisJob[]
+  analyses          GameAnalysis[]
+  reports           Report[]
+  homeworks         Homework[]
+  progressSnapshots ProgressSnapshot[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([coachAccountId])
+}
+
+model ExternalAccount {
+  id        String           @id @default(uuid())
+  studentId String
+  platform  ExternalPlatform
+  username  String
+  student   Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([studentId, platform, username])
+  @@index([studentId])
+}

@@ -1,0 +1,10 @@
+process.env.NODE_ENV = 'test';
+process.env.DATABASE_URL ??=
+  'postgresql://postgres:postgres@localhost:5432/chess_coach_copilot_test?schema=public';
+process.env.JWT_ACCESS_SECRET ??= 'test-access-secret';
+process.env.JWT_REFRESH_SECRET ??= 'test-refresh-secret';
+process.env.JWT_ACCESS_TTL_SECONDS ??= '900';
+process.env.JWT_REFRESH_TTL_SECONDS ??= '2592000';
+process.env.AUTH_REFRESH_COOKIE_NAME ??= 'refresh_token';
+process.env.APP_CORS_ORIGINS ??= 'http://localhost:5173';
+process.env.OPENROUTER_API_KEY ??= 'test-openrouter-api-key';

@@ -1,0 +1,17 @@
+model ProgressSnapshot {
+  id               String            @id @default(uuid())
+  coachAccountId   String
+  studentId        String
+  analysisCount    Int
+  summary          Json
+  promptVersion    String
+  model            String
+  coachAccount     CoachAccount      @relation(fields: [coachAccountId], references: [id], onDelete: Cascade)
+  student          Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  generationTraces GenerationTrace[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([coachAccountId])
+  @@index([studentId])
+}
