@@ -10,9 +10,20 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiExtraModels,
+  ApiParam,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard.js';
 import { CurrentCoach } from '../shared/decorators/current-coach.decorator.js';
+import {
+  swaggerParamExamples,
+  swaggerRequestExamples,
+} from '../shared/swagger/swagger-examples.js';
 import type { AuthenticatedCoach } from '../shared/types/authenticated-coach.type.js';
 import { CreateStudentDto } from './dto/create-student.dto.js';
 import { SetStudentArchiveDto } from './dto/set-student-archive.dto.js';
@@ -22,6 +33,7 @@ import { StudentsService } from './students.service.js';
 
 @ApiTags('Students')
 @ApiBearerAuth()
+@ApiExtraModels(CreateStudentDto, UpdateStudentDto, SetStudentArchiveDto)
 @UseGuards(JwtAccessGuard)
 @Controller('students')
 export class StudentsController {
@@ -33,6 +45,12 @@ export class StudentsController {
     return { items };
   }
 
+  @ApiBody({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(CreateStudentDto) }],
+      example: swaggerRequestExamples.students.create,
+    },
+  })
   @Post()
   create(
     @CurrentCoach() coach: AuthenticatedCoach,
@@ -42,6 +60,11 @@ export class StudentsController {
   }
 
   @UseGuards(CoachStudentAccessGuard)
+  @ApiParam({
+    name: 'studentId',
+    example: swaggerParamExamples.studentId,
+    format: 'uuid',
+  })
   @Get(':studentId')
   getOne(
     @CurrentCoach() coach: AuthenticatedCoach,
@@ -51,6 +74,17 @@ export class StudentsController {
   }
 
   @UseGuards(CoachStudentAccessGuard)
+  @ApiParam({
+    name: 'studentId',
+    example: swaggerParamExamples.studentId,
+    format: 'uuid',
+  })
+  @ApiBody({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(UpdateStudentDto) }],
+      example: swaggerRequestExamples.students.update,
+    },
+  })
   @Patch(':studentId')
   update(
     @CurrentCoach() coach: AuthenticatedCoach,
@@ -61,6 +95,17 @@ export class StudentsController {
   }
 
   @UseGuards(CoachStudentAccessGuard)
+  @ApiParam({
+    name: 'studentId',
+    example: swaggerParamExamples.studentId,
+    format: 'uuid',
+  })
+  @ApiBody({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(SetStudentArchiveDto) }],
+      example: swaggerRequestExamples.students.setArchive,
+    },
+  })
   @HttpCode(HttpStatus.OK)
   @Post(':studentId/archive')
   setArchiveState(

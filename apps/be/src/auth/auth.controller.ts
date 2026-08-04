@@ -12,10 +12,17 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiExtraModels,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { APP_ENVIRONMENT, appConfig, jwtConfig } from '../config/index.js';
 import { CurrentCoach } from '../shared/decorators/current-coach.decorator.js';
+import { swaggerRequestExamples } from '../shared/swagger/swagger-examples.js';
 import type { AuthenticatedCoach } from '../shared/types/authenticated-coach.type.js';
 import { AuthService } from './auth.service.js';
 import {
@@ -32,6 +39,7 @@ import {
 } from './refresh-cookie.util.js';
 
 @ApiTags('Auth')
+@ApiExtraModels(RegisterDto, LoginDto)
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -42,6 +50,12 @@ export class AuthController {
     private readonly appConfiguration: ConfigType<typeof appConfig>,
   ) {}
 
+  @ApiBody({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(RegisterDto) }],
+      example: swaggerRequestExamples.auth.register,
+    },
+  })
   @Post('register')
   async register(
     @Body() dto: RegisterDto,
@@ -59,6 +73,12 @@ export class AuthController {
     return result.body;
   }
 
+  @ApiBody({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(LoginDto) }],
+      example: swaggerRequestExamples.auth.login,
+    },
+  })
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(

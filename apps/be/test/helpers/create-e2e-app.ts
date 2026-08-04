@@ -16,6 +16,7 @@ import { ExternalAccountsModule } from '../../src/external-accounts/external-acc
 import { PrismaModule } from '../../src/prisma/prisma.module.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { HttpExceptionFilter } from '../../src/shared/filters/http-exception.filter.js';
+import { setupSwagger } from '../../src/shared/swagger/swagger.config.js';
 import { StudentsModule } from '../../src/students/students.module.js';
 import { InMemoryPrismaService } from './in-memory-prisma.js';
 
@@ -41,7 +42,11 @@ import { InMemoryPrismaService } from './in-memory-prisma.js';
 })
 class E2eAppModule {}
 
-export async function createE2eApp(): Promise<{
+interface CreateE2eAppOptions {
+  withSwagger?: boolean;
+}
+
+export async function createE2eApp(options: CreateE2eAppOptions = {}): Promise<{
   app: INestApplication;
   prisma: InMemoryPrismaService;
 }> {
@@ -71,6 +76,11 @@ export async function createE2eApp(): Promise<{
     credentials: true,
   });
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  if (options.withSwagger) {
+    setupSwagger(app);
+  }
+
   await app.init();
 
   return { app, prisma };
