@@ -4,5 +4,4 @@ export type AuthTokens = {
   refreshTokenId: string;
   refreshTokenHash: string;
   refreshExpiresAt: Date;
-  expiresInSeconds: number;
 };

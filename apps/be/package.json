@@ -31,8 +31,7 @@
     "prisma:format": "prisma format",
     "prisma:validate": "prisma validate",
     "prisma:migrate:dev": "prisma migrate dev",
-    "prisma:migrate:deploy": "prisma migrate deploy",
-    "openapi:export": "node ./dist/scripts/export-openapi.js"
+    "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.3",

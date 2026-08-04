@@ -1,7 +1,7 @@
-import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module.js';
 import { appConfig } from './config/index.js';
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter.js';
@@ -14,7 +14,7 @@ async function bootstrap() {
   const applicationConfiguration = app.get<ConfigType<typeof appConfig>>(
     appConfig.KEY,
   );
-
+  app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

@@ -83,7 +83,6 @@ export class AuthService {
     return {
       body: {
         accessToken: tokens.accessToken,
-        expiresInSeconds: tokens.expiresInSeconds,
         coach: this.toCoachProfile(coach),
       },
       refreshToken: tokens.refreshToken,
@@ -114,7 +113,6 @@ export class AuthService {
     return {
       body: {
         accessToken: tokens.accessToken,
-        expiresInSeconds: tokens.expiresInSeconds,
         coach: this.toCoachProfile(coach),
       },
       refreshToken: tokens.refreshToken,
@@ -145,7 +143,6 @@ export class AuthService {
     return {
       body: {
         accessToken: tokens.accessToken,
-        expiresInSeconds: tokens.expiresInSeconds,
       },
       refreshToken: tokens.refreshToken,
     };
@@ -257,7 +254,6 @@ export class AuthService {
       refreshTokenId,
       refreshTokenHash: hashRefreshToken(refreshToken),
       refreshExpiresAt,
-      expiresInSeconds: accessTtlSeconds,
     };
   }
 

@@ -9,7 +9,6 @@ import { InMemoryPrismaService } from '../helpers/in-memory-prisma.js';
 
 interface AuthBody {
   accessToken: string;
-  expiresInSeconds: number;
   coach?: {
     id: string;
     email: string;
@@ -52,13 +51,13 @@ describe('AuthController (e2e)', () => {
     );
 
     expect(registerBody).toMatchObject({
-      expiresInSeconds: jwtConfiguration.accessTtlSeconds,
       coach: {
         email: 'coach@example.com',
         displayName: 'Coach One',
       },
     });
     expect(registerBody.accessToken).toEqual(expect.any(String));
+    expect(registerBody).not.toHaveProperty('expiresInSeconds');
     expect(registerBody.refreshToken).toBeUndefined();
     expect(registerResponse.headers['cache-control']).toBe('no-store');
 
@@ -92,11 +91,11 @@ describe('AuthController (e2e)', () => {
       jwtConfiguration,
     );
 
-    expect(refreshBody).toMatchObject({
-      expiresInSeconds: jwtConfiguration.accessTtlSeconds,
+    expect(refreshBody).toEqual({
+      accessToken: expect.any(String),
     });
     expect(refreshBody.coach).toBeUndefined();
-    expect(refreshBody.accessToken).toEqual(expect.any(String));
+    expect(refreshBody).not.toHaveProperty('expiresInSeconds');
     expect(refreshCookie.value).not.toBe(registerCookie.value);
 
     await request(getServer(app))
@@ -150,6 +149,7 @@ describe('AuthController (e2e)', () => {
 
     expect(loginBody.refreshToken).toBeUndefined();
     expect(loginBody.coach?.email).toBe('duplicate@example.com');
+    expect(loginBody).not.toHaveProperty('expiresInSeconds');
     expect(loginResponse.headers['set-cookie']).toEqual(
       expect.arrayContaining([
         expect.stringMatching(
