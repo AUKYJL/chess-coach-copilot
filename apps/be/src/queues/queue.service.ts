@@ -7,8 +7,12 @@ export interface AnalysisQueueJobData {
   analysisJobId: string;
 }
 
+export interface AnalysisJobEnqueuer {
+  enqueueAnalysisJob(analysisJobId: string): Promise<Job<AnalysisQueueJobData>>;
+}
+
 @Injectable()
-export class QueueService {
+export class QueueService implements AnalysisJobEnqueuer {
   constructor(
     @InjectQueue(ANALYSIS_QUEUE_NAME)
     private readonly analysisQueue: Queue<AnalysisQueueJobData>,

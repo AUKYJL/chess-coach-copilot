@@ -51,6 +51,8 @@ export class LlmService {
     });
 
     const rawText = completion.output_text;
+    console.log('----------rawText');
+    console.log(rawText);
 
     return {
       model: this.model,

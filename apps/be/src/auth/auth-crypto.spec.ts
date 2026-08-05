@@ -2,7 +2,7 @@ import {
   hashPassword,
   hashRefreshToken,
   verifyPassword,
-} from '../../src/auth/auth-crypto.js';
+} from './auth-crypto.js';
 
 describe('auth-crypto', () => {
   it('hashes and verifies passwords with argon2id', async () => {

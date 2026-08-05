@@ -1,4 +1,9 @@
 import { ExternalPlatform } from '../../generated/prisma/client.js';
+import {
+  AnnotationCoverage,
+  AnalysisJobStatus,
+  StudentColor,
+} from '../../generated/prisma/client.js';
 
 const coach = {
   email: 'coach.alex.petrov@example.com',
@@ -20,6 +25,29 @@ const externalAccount = {
   username: 'maksim_sokolov_2012',
 } as const;
 
+const importPgn = {
+  studentColor: StudentColor.WHITE,
+  sourceLabel: 'Lichess Study export',
+  rawPgn: `[Event "Training Game"]
+[Site "Lichess"]
+[Date "2026.07.25"]
+[Round "?"]
+[White "Student"]
+[Black "Opponent"]
+[Result "1-0"]
+
+1. e4 { [%eval 0.3] Good central control. } e5 { [%eval 0.1] } 2. Nf3 { [%eval 0.5] } Nc6 { [%eval 0.2] } 3. Bb5 { [%eval 0.9] } a6 { [%eval 0.4] } 1-0`,
+} as const;
+
+const analysisJob = {
+  id: 'd517a8f0-48b0-4c7d-b8dc-a29af59c3c1b',
+  gameId: '7d0af7b3-cf17-4eb0-b8a6-67a6981d4cc1',
+  status: AnalysisJobStatus.PENDING,
+  attemptCount: 0,
+  isDuplicate: false,
+  annotationCoverage: AnnotationCoverage.FULL,
+} as const;
+
 const studentUpsertPayload = {
   displayName: student.displayName,
   birthYear: student.birthYear,
@@ -31,6 +59,8 @@ export const swaggerEntityExamples = {
   coach,
   student,
   externalAccount,
+  importPgn,
+  analysisJob,
 } as const;
 
 export const swaggerParamExamples = {
@@ -61,5 +91,8 @@ export const swaggerRequestExamples = {
       platform: externalAccount.platform,
       username: externalAccount.username,
     },
+  },
+  imports: {
+    create: importPgn,
   },
 } as const;
