@@ -4,13 +4,30 @@ import {
   MomentSeverity,
   WeaknessTag,
 } from '../../generated/prisma/client.js';
+import type {
+  JsonObject,
+  JsonValue,
+} from '../../shared/types/json-value.type.js';
 import { z } from 'zod';
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const optionalNullableStringSchema = nonEmptyStringSchema.nullable().optional();
 const weaknessTagValueSchema = z.nativeEnum(WeaknessTag);
 const nullableWeaknessTagSchema = weaknessTagValueSchema.nullable();
-const sourceEvidenceSchema = z.object({}).catchall(z.unknown());
+const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(jsonValueSchema),
+    z.record(z.string(), jsonValueSchema),
+  ]),
+);
+const sourceEvidenceSchema: z.ZodType<JsonObject> = z.record(
+  z.string(),
+  jsonValueSchema,
+);
 
 export const analysisResultMistakeSchema = z.object({
   criticalMomentPly: z.number().int().positive().nullable().optional(),

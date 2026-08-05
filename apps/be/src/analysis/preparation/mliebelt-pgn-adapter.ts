@@ -1,6 +1,11 @@
 import type { ParseTree } from '@mliebelt/pgn-parser';
 import type { PgnMove } from '@mliebelt/pgn-types';
 import { GameResult, StudentColor } from '../../generated/prisma/client.js';
+import type { JsonObject } from '../../shared/types/json-value.type.js';
+import {
+  toJsonObject,
+  toJsonValue,
+} from '../../shared/utils/json-value.util.js';
 import type {
   ParserDiagnostic,
   PositionEvaluation,
@@ -12,7 +17,7 @@ type ParserMove = ParseTree['moves'][number];
 
 export interface AdaptedPgnMetadata {
   headers: StableHeaders;
-  rawTags: Record<string, unknown>;
+  rawTags: JsonObject;
   diagnostics: ParserDiagnostic[];
   replayStartFen: string | null;
   rawResult: string | null;
@@ -30,7 +35,7 @@ export interface AdaptedParserMove {
   bestVariation: string[];
   bestVariationMoves: PreparedVariationMove[];
   evaluationAfter: PositionEvaluation | null;
-  sourceEvidence: Record<string, unknown>;
+  sourceEvidence: JsonObject;
 }
 
 export function adaptParseTreeMetadata(
@@ -74,29 +79,31 @@ export function adaptParserMove(move: ParserMove): AdaptedParserMove {
     sourceEvidence: {
       parserMoveNumber: move.moveNumber ?? null,
       parserTurn: move.turn,
-      parserNotation: move.notation,
+      parserNotation: toJsonObject(move.notation),
       parserNag: move.nag ?? [],
-      parserCommentDiag: move.commentDiag ?? null,
+      parserCommentDiag: toJsonObject(move.commentDiag),
       parserCommentMove: move.commentMove ?? null,
       parserCommentAfter: move.commentAfter ?? null,
-      parserVariations: move.variations ?? [],
+      parserVariations: toJsonValue(move.variations) ?? [],
     },
   };
 }
 
-function normalizeRawTags(
-  tags: ParseTree['tags'] | undefined,
-): Record<string, unknown> {
+function normalizeRawTags(tags: ParseTree['tags'] | undefined): JsonObject {
   if (!tags) {
     return {};
   }
 
-  return Object.fromEntries(
-    Object.entries(tags).map(([key, value]) => [key, value]),
+  return (
+    toJsonObject(
+      Object.fromEntries(
+        Object.entries(tags).map(([key, value]) => [key, value]),
+      ),
+    ) ?? {}
   );
 }
 
-function normalizeHeaders(rawTags: Record<string, unknown>): StableHeaders {
+function normalizeHeaders(rawTags: JsonObject): StableHeaders {
   return {
     event: asOptionalString(rawTags.Event),
     site: asOptionalString(rawTags.Site),
@@ -113,7 +120,7 @@ function normalizeHeaders(rawTags: Record<string, unknown>): StableHeaders {
 
 function normalizeDiagnostics(
   parseTree: ParseTree,
-  rawTags: Record<string, unknown>,
+  rawTags: JsonObject,
 ): ParserDiagnostic[] {
   const parserMessages = Array.isArray(parseTree.messages)
     ? parseTree.messages
@@ -133,12 +140,14 @@ function normalizeDiagnostics(
 
 function extractMessageLocation(
   message: Record<string, unknown>,
-): Record<string, unknown> | null {
-  const location: Record<string, unknown> = {};
+): JsonObject | null {
+  const location: JsonObject = {};
 
   for (const key of ['start', 'end']) {
-    if (message[key] && typeof message[key] === 'object') {
-      location[key] = message[key];
+    const jsonValue = toJsonValue(message[key]);
+
+    if (jsonValue !== undefined) {
+      location[key] = jsonValue;
     }
   }
 

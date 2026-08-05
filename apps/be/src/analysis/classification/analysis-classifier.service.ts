@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '../../generated/prisma/client.js';
 import { ConfidenceLevel, WeaknessTag } from '../../generated/prisma/client.js';
 import { LlmService } from '../../llm/llm.service.js';
+import type { JsonObject } from '../../shared/types/json-value.type.js';
 import type { ParsedPgn } from '../preparation/pgn-parser.service.js';
 import { ANALYSIS_CLASSIFIER_SYSTEM_PROMPT } from './analysis-classifier.prompt.js';
 import {
@@ -13,8 +15,8 @@ export interface ClassifiedAnalysisResult {
   payload: AnalysisResultPayload;
   promptVersion: string;
   model: string;
-  rawOutput: Record<string, unknown>;
-  inputPayload: Record<string, unknown>;
+  rawOutput: Prisma.InputJsonValue;
+  inputPayload: Prisma.InputJsonObject;
 }
 
 const REDUCED_CONFIDENCE_PROMPT_VERSION = 'rule-based-reduced-confidence-v2';
@@ -28,14 +30,23 @@ export class AnalysisClassifierService {
     parsedPgn: ParsedPgn,
     extractedContext: ExtractedAnnotationContext,
   ): Promise<ClassifiedAnalysisResult> {
-    const inputPayload = {
+    const inputPayload: Prisma.InputJsonObject = {
       headers: parsedPgn.headers,
       rawResult: parsedPgn.rawResult,
       result: parsedPgn.result,
       studentColor: parsedPgn.studentColor,
       annotationCoverage: extractedContext.annotationCoverage,
-      diagnostics: parsedPgn.diagnostics,
-      moments: extractedContext.moments,
+      diagnostics: parsedPgn.diagnostics.map((diagnostic) => ({
+        type: diagnostic.type,
+        key: diagnostic.key,
+        value: diagnostic.value,
+        message: diagnostic.message,
+        location: diagnostic.location,
+      })),
+      moments: extractedContext.moments.map((moment) => ({
+        ...moment,
+        sourceEvidence: moment.sourceEvidence,
+      })),
       surroundingMoves: this.buildSurroundingMoves(parsedPgn, extractedContext),
     };
 
@@ -65,12 +76,12 @@ export class AnalysisClassifierService {
         payload,
         promptVersion: REDUCED_CONFIDENCE_PROMPT_VERSION,
         model: REDUCED_CONFIDENCE_MODEL,
-        rawOutput: payload as unknown as Record<string, unknown>,
+        rawOutput: payload,
         inputPayload,
       };
     }
 
-    const llmResponse = await this.llmService.classify<AnalysisResultPayload>({
+    const llmResponse = await this.llmService.classify({
       systemPrompt: ANALYSIS_CLASSIFIER_SYSTEM_PROMPT,
       userPrompt: JSON.stringify(inputPayload),
       schemaName: 'analysis-result',
@@ -80,7 +91,7 @@ export class AnalysisClassifierService {
       payload: validateAnalysisResultPayload(llmResponse.payload),
       promptVersion: llmResponse.promptVersion,
       model: llmResponse.model,
-      rawOutput: llmResponse.payload as unknown as Record<string, unknown>,
+      rawOutput: llmResponse.payload,
       inputPayload,
     };
   }
@@ -88,7 +99,7 @@ export class AnalysisClassifierService {
   private buildSurroundingMoves(
     parsedPgn: ParsedPgn,
     extractedContext: ExtractedAnnotationContext,
-  ) {
+  ): Array<JsonObject> {
     return extractedContext.moments.map((moment) => ({
       ply: moment.ply,
       context: parsedPgn.moves

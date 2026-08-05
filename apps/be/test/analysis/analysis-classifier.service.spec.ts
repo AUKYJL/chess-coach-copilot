@@ -175,7 +175,7 @@ describe('AnalysisClassifierService', () => {
       }),
     ) as () => Promise<LlmResponse>;
     const llmService: Pick<LlmService, 'classify'> = {
-      classify: classifyMock as LlmService['classify'],
+      classify: classifyMock,
     };
     const service = new AnalysisClassifierService(
       llmService as unknown as LlmService,
@@ -220,9 +220,9 @@ describe('AnalysisClassifierService', () => {
   });
 
   it('returns the reduced-confidence fallback without calling LLM when evidence is insufficient', async () => {
-    const classifyMock = jest.fn();
+    const classifyMock = jest.fn<() => Promise<LlmResponse>>();
     const llmService: Pick<LlmService, 'classify'> = {
-      classify: classifyMock as LlmService['classify'],
+      classify: classifyMock,
     };
     const service = new AnalysisClassifierService(
       llmService as unknown as LlmService,
@@ -271,7 +271,7 @@ describe('AnalysisClassifierService', () => {
       }),
     ) as () => Promise<LlmResponse>;
     const llmService: Pick<LlmService, 'classify'> = {
-      classify: classifyMock as LlmService['classify'],
+      classify: classifyMock,
     };
     const service = new AnalysisClassifierService(
       llmService as unknown as LlmService,

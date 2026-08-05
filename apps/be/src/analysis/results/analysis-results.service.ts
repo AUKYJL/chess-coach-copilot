@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '../../generated/prisma/client.js';
 import { MoveColor } from '../../generated/prisma/client.js';
 import type { ClassifiedAnalysisResult } from '../classification/analysis-classifier.service.js';
 import { GenerationTraceService } from '../classification/generation-trace.service.js';
@@ -41,7 +42,7 @@ export class AnalysisResultsService {
           data.classifiedResult.payload.recommendedLessonWhy ?? null,
         recommendedFocusPoints:
           data.classifiedResult.payload.recommendedFocusPoints,
-        rawExtractedContext: data.extractedContext,
+        rawExtractedContext: this.toRawExtractedContext(data.extractedContext),
         rawAnalysisJson: data.classifiedResult.rawOutput,
         criticalMoments: data.extractedContext.moments.map((moment) => ({
           ply: moment.ply,
@@ -85,5 +86,28 @@ export class AnalysisResultsService {
     });
 
     return analysis;
+  }
+
+  private toRawExtractedContext(
+    extractedContext: ExtractedAnnotationContext,
+  ): Prisma.InputJsonObject {
+    return {
+      hasEngineAnnotations: extractedContext.hasEngineAnnotations,
+      annotationCoverage: extractedContext.annotationCoverage,
+      reducedConfidenceWarning: extractedContext.reducedConfidenceWarning,
+      rawCommentCount: extractedContext.rawCommentCount,
+      candidateMomentCount: extractedContext.candidateMomentCount,
+      diagnostics: extractedContext.diagnostics.map((diagnostic) => ({
+        type: diagnostic.type,
+        key: diagnostic.key,
+        value: diagnostic.value,
+        message: diagnostic.message,
+        location: diagnostic.location,
+      })),
+      moments: extractedContext.moments.map((moment) => ({
+        ...moment,
+        sourceEvidence: moment.sourceEvidence,
+      })),
+    };
   }
 }

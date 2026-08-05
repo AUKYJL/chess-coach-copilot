@@ -8,6 +8,39 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
+function hasMessageField(value: object): value is { message?: unknown } {
+  return 'message' in value;
+}
+
+function getErrorMessage(errorResponse: unknown): string | string[] {
+  if (typeof errorResponse === 'string') {
+    return errorResponse;
+  }
+
+  if (typeof errorResponse !== 'object' || errorResponse === null) {
+    return 'Unexpected error';
+  }
+
+  if (!hasMessageField(errorResponse)) {
+    return 'Unexpected error';
+  }
+
+  const { message } = errorResponse;
+
+  if (typeof message === 'string') {
+    return message;
+  }
+
+  if (
+    Array.isArray(message) &&
+    message.every((item) => typeof item === 'string')
+  ) {
+    return message;
+  }
+
+  return 'Unexpected error';
+}
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -24,14 +57,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const errorResponse = isHttpException
       ? exception.getResponse()
       : 'Internal server error';
-
-    const message =
-      typeof errorResponse === 'string'
-        ? errorResponse
-        : Array.isArray((errorResponse as { message?: unknown }).message)
-          ? (errorResponse as { message: string[] }).message
-          : ((errorResponse as { message?: string }).message ??
-            'Unexpected error');
+    const message = getErrorMessage(errorResponse);
 
     if (!isHttpException || status >= 500) {
       this.logger.error(exception);

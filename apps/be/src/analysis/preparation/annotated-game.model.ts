@@ -2,6 +2,7 @@ import type {
   GameResult,
   StudentColor,
 } from '../../generated/prisma/client.js';
+import type { JsonObject } from '../../shared/types/json-value.type.js';
 
 export type StableHeaders = {
   event: string | null;
@@ -33,7 +34,7 @@ export interface ParserDiagnostic {
   key: string | null;
   value: string | null;
   message: string;
-  location: Record<string, unknown> | null;
+  location: JsonObject | null;
 }
 
 export interface PreparedVariationMove {
@@ -63,12 +64,12 @@ export interface PreparedMove {
   bestVariationMoves: PreparedVariationMove[];
   evaluationBefore: PositionEvaluation | null;
   evaluationAfter: PositionEvaluation | null;
-  sourceEvidence: Record<string, unknown>;
+  sourceEvidence: JsonObject;
 }
 
 export interface ParsedPgn {
   headers: StableHeaders;
-  rawTags: Record<string, unknown>;
+  rawTags: JsonObject;
   diagnostics: ParserDiagnostic[];
   moves: PreparedMove[];
   result: GameResult;

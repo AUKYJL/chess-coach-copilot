@@ -46,7 +46,7 @@ class FakeAnalysisJobEnqueuer {
 }
 
 class FakeLlmService {
-  classify<TPayload>(request: { userPrompt: string }) {
+  classify(request: { userPrompt: string }) {
     const parsed = JSON.parse(request.userPrompt) as {
       headers: {
         opening: string | null;
@@ -77,7 +77,7 @@ class FakeLlmService {
           suggestedFix: 'Check forcing moves first.',
           sourceEvidence: moment.sourceEvidence,
         })),
-      } as TPayload,
+      },
     });
   }
 }

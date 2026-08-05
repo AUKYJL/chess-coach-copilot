@@ -8,6 +8,7 @@ import type {
   ParserDiagnostic,
   PositionEvaluation,
 } from '../preparation/annotated-game.model.js';
+import type { JsonObject } from '../../shared/types/json-value.type.js';
 
 export interface ExtractedAnnotationMoment {
   ply: number;
@@ -26,7 +27,7 @@ export interface ExtractedAnnotationMoment {
   evaluationBefore: PositionEvaluation | null;
   evaluationAfter: PositionEvaluation | null;
   severity: MomentSeverity;
-  sourceEvidence: Record<string, unknown>;
+  sourceEvidence: JsonObject;
 }
 
 export interface ExtractedAnnotationContext {
@@ -119,7 +120,11 @@ export class AnnotationExtractorService {
         ...move.sourceEvidence,
         rawComment: move.rawComment,
         comments: move.comments,
-        bestVariationMoves: move.bestVariationMoves,
+        bestVariationMoves: move.bestVariationMoves.map((variationMove) => ({
+          moveNumber: variationMove.moveNumber,
+          color: variationMove.color,
+          san: variationMove.san,
+        })),
       },
     };
   }

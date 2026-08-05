@@ -121,7 +121,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<void> {
     await this.authService.logout(
-      request.cookies?.[this.getRefreshCookieName()] as string | undefined,
+      this.getCookieValue(request, this.getRefreshCookieName()),
     );
 
     this.setNoStore(response);
@@ -146,14 +146,35 @@ export class AuthController {
   }
 
   private getRefreshTokenFromCookies(request: Request): string {
-    const cookies = request.cookies as Record<string, unknown> | undefined;
-    const refreshToken = cookies?.[this.getRefreshCookieName()];
+    const refreshToken = this.getCookieValue(
+      request,
+      this.getRefreshCookieName(),
+    );
 
     if (typeof refreshToken !== 'string' || refreshToken.length === 0) {
       throw new UnauthorizedException('Refresh token cookie is required');
     }
 
     return refreshToken;
+  }
+
+  private getCookieValue(
+    request: Request,
+    cookieName: string,
+  ): string | undefined {
+    const cookies: unknown = request.cookies;
+
+    if (!this.isCookieBag(cookies)) {
+      return undefined;
+    }
+
+    const value = cookies[cookieName];
+
+    return typeof value === 'string' ? value : undefined;
+  }
+
+  private isCookieBag(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
   }
 
   private getRefreshCookieName(): string {

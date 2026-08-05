@@ -1,3 +1,5 @@
+import type { Prisma } from '../generated/prisma/client.js';
+
 export interface LlmClassificationRequest {
   systemPrompt: string;
   userPrompt: string;
@@ -10,9 +12,9 @@ export interface LlmGenerationRequest {
   schemaName?: string;
 }
 
-export interface LlmResponse<TPayload = unknown> {
+export interface LlmResponse {
   model: string;
   promptVersion: string;
-  payload: TPayload;
+  payload: Prisma.InputJsonValue;
   rawText: string;
 }

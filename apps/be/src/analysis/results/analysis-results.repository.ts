@@ -9,10 +9,6 @@ import {
 } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
-function asJson(value: unknown): Prisma.InputJsonValue {
-  return value as Prisma.InputJsonValue;
-}
-
 @Injectable()
 export class AnalysisResultsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -31,8 +27,8 @@ export class AnalysisResultsRepository {
     recommendedLessonTitle: string | null;
     recommendedLessonWhy: string | null;
     recommendedFocusPoints: string[];
-    rawExtractedContext: unknown;
-    rawAnalysisJson: unknown;
+    rawExtractedContext: Prisma.InputJsonValue;
+    rawAnalysisJson: Prisma.InputJsonValue;
     criticalMoments: Array<{
       ply: number;
       fullMoveNumber: number;
@@ -44,13 +40,13 @@ export class AnalysisResultsRepository {
       beforeFen: string;
       afterFen: string;
       bestMove: string | null;
-      bestVariation: unknown;
-      nags: unknown;
-      comments: unknown;
-      evaluationBefore: unknown;
-      evaluationAfter: unknown;
+      bestVariation: Prisma.InputJsonValue;
+      nags: Prisma.InputJsonValue;
+      comments: Prisma.InputJsonValue;
+      evaluationBefore: Prisma.InputJsonValue | null;
+      evaluationAfter: Prisma.InputJsonValue | null;
       severity: MomentSeverity;
-      sourceEvidence: unknown;
+      sourceEvidence: Prisma.InputJsonValue;
     }>;
     mistakes: Array<{
       criticalMomentPly: number | null;
@@ -58,7 +54,7 @@ export class AnalysisResultsRepository {
       category: string;
       explanation: string;
       suggestedFix: string | null;
-      sourceEvidence: unknown;
+      sourceEvidence: Prisma.InputJsonValue;
     }>;
   }) {
     return this.prisma.$transaction(async (tx) => {
@@ -79,8 +75,8 @@ export class AnalysisResultsRepository {
               recommendedLessonTitle: data.recommendedLessonTitle,
               recommendedLessonWhy: data.recommendedLessonWhy,
               recommendedFocusPoints: data.recommendedFocusPoints,
-              rawExtractedContext: asJson(data.rawExtractedContext),
-              rawAnalysisJson: asJson(data.rawAnalysisJson),
+              rawExtractedContext: data.rawExtractedContext,
+              rawAnalysisJson: data.rawAnalysisJson,
             },
           })
         : await tx.gameAnalysis.create({
@@ -98,8 +94,8 @@ export class AnalysisResultsRepository {
               recommendedLessonTitle: data.recommendedLessonTitle,
               recommendedLessonWhy: data.recommendedLessonWhy,
               recommendedFocusPoints: data.recommendedFocusPoints,
-              rawExtractedContext: asJson(data.rawExtractedContext),
-              rawAnalysisJson: asJson(data.rawAnalysisJson),
+              rawExtractedContext: data.rawExtractedContext,
+              rawAnalysisJson: data.rawAnalysisJson,
             },
           });
 
@@ -128,17 +124,17 @@ export class AnalysisResultsRepository {
             beforeFen: item.beforeFen,
             afterFen: item.afterFen,
             bestMove: item.bestMove,
-            bestVariation: asJson(item.bestVariation),
-            nags: asJson(item.nags),
-            comments: asJson(item.comments),
+            bestVariation: item.bestVariation,
+            nags: item.nags,
+            comments: item.comments,
             evaluationBefore: item.evaluationBefore
-              ? asJson(item.evaluationBefore)
+              ? item.evaluationBefore
               : Prisma.JsonNull,
             evaluationAfter: item.evaluationAfter
-              ? asJson(item.evaluationAfter)
+              ? item.evaluationAfter
               : Prisma.JsonNull,
             severity: item.severity,
-            sourceEvidence: asJson(item.sourceEvidence),
+            sourceEvidence: item.sourceEvidence,
           })),
         });
       }
@@ -162,7 +158,7 @@ export class AnalysisResultsRepository {
             category: item.category,
             explanation: item.explanation,
             suggestedFix: item.suggestedFix,
-            sourceEvidence: asJson(item.sourceEvidence),
+            sourceEvidence: item.sourceEvidence,
           })),
         });
       }
