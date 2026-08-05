@@ -3,6 +3,8 @@ import { readFileSync } from 'fs';
 import request from 'supertest';
 import { createE2eApp } from '../helpers/create-e2e-app.js';
 
+type TestServer = Parameters<typeof request>[0];
+
 describe('ImportsController (e2e)', () => {
   let app: INestApplication;
 
@@ -24,7 +26,7 @@ describe('ImportsController (e2e)', () => {
       'utf8',
     );
 
-    const response = await request(app.getHttpServer())
+    const response = await request(getServer(app))
       .post(`/students/${studentId}/imports/pgn`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
@@ -44,7 +46,7 @@ describe('ImportsController (e2e)', () => {
 
   it('rejects invalid PGN and archived-student imports, and flags duplicates', async () => {
     const { accessToken, studentId } = await registerCoachAndStudent(app);
-    const server = app.getHttpServer();
+    const server = getServer(app);
     const payload = {
       studentColor: 'WHITE',
       rawPgn: `[Event "Training"]
@@ -95,7 +97,7 @@ describe('ImportsController (e2e)', () => {
 });
 
 async function registerCoachAndStudent(app: INestApplication) {
-  const server = app.getHttpServer();
+  const server = getServer(app);
   const authResponse = await request(server).post('/auth/register').send({
     email: 'coach@example.com',
     password: 'strongpass1',
@@ -113,4 +115,8 @@ async function registerCoachAndStudent(app: INestApplication) {
     accessToken,
     studentId: studentResponse.body.id as string,
   };
+}
+
+function getServer(app: INestApplication): TestServer {
+  return app.getHttpServer() as TestServer;
 }

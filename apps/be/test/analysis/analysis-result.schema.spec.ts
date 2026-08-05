@@ -84,15 +84,17 @@ describe('validateAnalysisResultPayload', () => {
   });
 
   it('accepts the Prisma weakness-tag vocabulary', () => {
-    expect(validateAnalysisResultPayload({
-      confidenceLevel: ConfidenceLevel.HIGH,
-      overallDiagnosis: 'Diagnosis',
-      result: GameResult.WIN,
-      mainWeaknessTag: WeaknessTag.INSUFFICIENT_ANNOTATION_DATA,
-      secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
-      recommendedFocusPoints: [],
-      mistakes: [],
-    })).toMatchObject({
+    expect(
+      validateAnalysisResultPayload({
+        confidenceLevel: ConfidenceLevel.HIGH,
+        overallDiagnosis: 'Diagnosis',
+        result: GameResult.WIN,
+        mainWeaknessTag: WeaknessTag.INSUFFICIENT_ANNOTATION_DATA,
+        secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
+        recommendedFocusPoints: [],
+        mistakes: [],
+      }),
+    ).toMatchObject({
       mainWeaknessTag: WeaknessTag.INSUFFICIENT_ANNOTATION_DATA,
       secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
     });

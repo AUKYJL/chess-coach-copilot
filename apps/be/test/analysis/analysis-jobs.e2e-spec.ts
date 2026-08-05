@@ -10,6 +10,8 @@ import {
 import { createE2eApp } from '../helpers/create-e2e-app.js';
 import { InMemoryPrismaService } from '../helpers/in-memory-prisma.js';
 
+type TestServer = Parameters<typeof request>[0];
+
 describe('Analysis jobs (e2e)', () => {
   let app: INestApplication;
   let prisma: InMemoryPrismaService;
@@ -26,7 +28,7 @@ describe('Analysis jobs (e2e)', () => {
 
   it('returns job status, completed result, and retries a failed job on the same record', async () => {
     const { accessToken, jobId } = await importGame(app);
-    const server = app.getHttpServer();
+    const server = getServer(app);
     const job = await prisma.analysisJob.findUnique({
       where: { id: jobId },
       include: { game: true },
@@ -253,7 +255,7 @@ describe('Analysis jobs (e2e)', () => {
 });
 
 async function importGame(app: INestApplication, rawPgn?: string) {
-  const server = app.getHttpServer();
+  const server = getServer(app);
   const accessToken = await registerCoach(
     app,
     `coach-${Math.random()}@example.com`,
@@ -286,7 +288,7 @@ async function importGame(app: INestApplication, rawPgn?: string) {
 }
 
 async function registerCoach(app: INestApplication, email: string) {
-  const server = app.getHttpServer();
+  const server = getServer(app);
   const authResponse = await request(server).post('/auth/register').send({
     email,
     password: 'strongpass1',
@@ -294,4 +296,8 @@ async function registerCoach(app: INestApplication, email: string) {
   });
 
   return authResponse.body.accessToken as string;
+}
+
+function getServer(app: INestApplication): TestServer {
+  return app.getHttpServer() as TestServer;
 }
