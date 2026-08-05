@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateStudentDto } from './dto/create-student.dto.js';
 import { SetStudentArchiveDto } from './dto/set-student-archive.dto.js';
@@ -11,7 +12,7 @@ export class StudentsService {
   list(coachAccountId: string) {
     return this.prisma.student.findMany({
       where: { coachAccountId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: Prisma.SortOrder.desc },
     });
   }
 

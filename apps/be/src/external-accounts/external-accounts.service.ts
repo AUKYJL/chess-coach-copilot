@@ -4,6 +4,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateExternalAccountDto } from './dto/create-external-account.dto.js';
 
@@ -16,7 +17,7 @@ export class ExternalAccountsService {
 
     return this.prisma.externalAccount.findMany({
       where: { studentId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: Prisma.SortOrder.desc },
     });
   }
 

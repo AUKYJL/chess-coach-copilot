@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 @Injectable()
@@ -15,7 +16,7 @@ export class AnalysisQueriesService {
         ...(args.studentId ? { studentId: args.studentId } : {}),
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: Prisma.SortOrder.desc,
       },
       include: {
         game: true,
