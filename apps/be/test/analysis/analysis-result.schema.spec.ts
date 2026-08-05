@@ -2,6 +2,7 @@ import {
   ConfidenceLevel,
   GameResult,
   MomentSeverity,
+  WeaknessTag,
 } from '../../src/generated/prisma/client.js';
 import { validateAnalysisResultPayload } from '../../src/analysis/classification/analysis-result.schema.js';
 
@@ -13,8 +14,8 @@ describe('validateAnalysisResultPayload', () => {
         overallDiagnosis: 'The student rushed tactical decisions.',
         openingName: 'Sicilian Defense',
         result: GameResult.LOSS,
-        mainWeaknessTag: 'calculation_depth',
-        secondaryWeaknessTags: ['missed_opponent_threat'],
+        mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
+        secondaryWeaknessTags: [WeaknessTag.MISSED_OPPONENT_THREAT],
         recommendedLessonTitle: 'Slow down before forcing lines',
         recommendedLessonWhy:
           'The key mistakes came from incomplete candidate move checks.',
@@ -52,7 +53,7 @@ describe('validateAnalysisResultPayload', () => {
         openingName: null,
         result: GameResult.UNKNOWN,
         mainWeaknessTag: null,
-        secondaryWeaknessTags: ['reduced-confidence'],
+        secondaryWeaknessTags: [WeaknessTag.REDUCED_CONFIDENCE],
         recommendedLessonTitle: null,
         recommendedLessonWhy: null,
         recommendedFocusPoints: ['Re-export the game with annotations'],
@@ -60,6 +61,7 @@ describe('validateAnalysisResultPayload', () => {
       }),
     ).toMatchObject({
       confidenceLevel: ConfidenceLevel.LOW,
+      secondaryWeaknessTags: [WeaknessTag.REDUCED_CONFIDENCE],
       mistakes: [],
     });
   });
@@ -75,6 +77,35 @@ describe('validateAnalysisResultPayload', () => {
         overallDiagnosis: 'Diagnosis',
         result: GameResult.WIN,
         secondaryWeaknessTags: [],
+        recommendedFocusPoints: [],
+        mistakes: [],
+      }),
+    ).toThrow();
+  });
+
+  it('accepts the Prisma weakness-tag vocabulary', () => {
+    expect(validateAnalysisResultPayload({
+      confidenceLevel: ConfidenceLevel.HIGH,
+      overallDiagnosis: 'Diagnosis',
+      result: GameResult.WIN,
+      mainWeaknessTag: WeaknessTag.INSUFFICIENT_ANNOTATION_DATA,
+      secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
+      recommendedFocusPoints: [],
+      mistakes: [],
+    })).toMatchObject({
+      mainWeaknessTag: WeaknessTag.INSUFFICIENT_ANNOTATION_DATA,
+      secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
+    });
+  });
+
+  it('rejects legacy weakness-tag aliases', () => {
+    expect(() =>
+      validateAnalysisResultPayload({
+        confidenceLevel: ConfidenceLevel.MEDIUM,
+        overallDiagnosis: 'Diagnosis',
+        result: GameResult.DRAW,
+        mainWeaknessTag: 'calculation',
+        secondaryWeaknessTags: ['time-management'],
         recommendedFocusPoints: [],
         mistakes: [],
       }),

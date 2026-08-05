@@ -1,9 +1,11 @@
+import { ApiProperty } from '@nestjs/swagger';
 import {
   AnnotationCoverage,
   ConfidenceLevel,
   GameResult,
   MomentSeverity,
   MoveColor,
+  WeaknessTag,
 } from '../../generated/prisma/client.js';
 
 export class GameAnalysisMomentResponse {
@@ -48,8 +50,10 @@ export class GameAnalysisResponse {
   overallDiagnosis: string;
   openingName: string | null;
   result: GameResult;
-  mainWeaknessTag: string | null;
-  secondaryWeaknessTags: string[];
+  @ApiProperty({ enum: WeaknessTag, nullable: true })
+  mainWeaknessTag: WeaknessTag | null;
+  @ApiProperty({ enum: WeaknessTag, isArray: true })
+  secondaryWeaknessTags: WeaknessTag[];
   recommendedLessonTitle: string | null;
   recommendedLessonWhy: string | null;
   recommendedFocusPoints: string[];

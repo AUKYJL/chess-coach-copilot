@@ -21,6 +21,38 @@ enum ConfidenceLevel {
   LOW
 }
 
+enum WeaknessTag {
+  MISSED_FORK                  @map("missed_fork")
+  MISSED_PIN                   @map("missed_pin")
+  MISSED_DOUBLE_ATTACK         @map("missed_double_attack")
+  MISSED_DISCOVERED_ATTACK     @map("missed_discovered_attack")
+  MISSED_MATE                  @map("missed_mate")
+  ALLOWED_MATE                 @map("allowed_mate")
+  HANGING_PIECE                @map("hanging_piece")
+  MISSED_CAPTURE               @map("missed_capture")
+  BAD_CAPTURE                  @map("bad_capture")
+  MISSED_OPPONENT_THREAT       @map("missed_opponent_threat")
+  OPENED_LINE                  @map("opened_line")
+  UNKNOWN_TACTICAL_ERROR       @map("unknown_tactical_error")
+  KING_SAFETY                  @map("king_safety")
+  DELAYED_CASTLING             @map("delayed_castling")
+  POOR_DEVELOPMENT             @map("poor_development")
+  EARLY_QUEEN                  @map("early_queen")
+  BAD_TRADE                    @map("bad_trade")
+  POOR_CONVERSION              @map("poor_conversion")
+  OPENING_STRATEGY             @map("opening_strategy")
+  PAWN_STRUCTURE               @map("pawn_structure")
+  ENDGAME_TECHNIQUE            @map("endgame_technique")
+  UNKNOWN_STRATEGIC_ERROR      @map("unknown_strategic_error")
+  TIME_MANAGEMENT              @map("time_management")
+  CALCULATION_DEPTH            @map("calculation_depth")
+  TUNNEL_VISION                @map("tunnel_vision")
+  MATERIAL_GREED               @map("material_greed")
+  LOW_BOARD_AWARENESS          @map("low_board_awareness")
+  INSUFFICIENT_ANNOTATION_DATA @map("insufficient-annotation-data")
+  REDUCED_CONFIDENCE           @map("reduced-confidence")
+}
+
 enum GameResult {
   WIN
   LOSS
@@ -81,8 +113,8 @@ model GameAnalysis {
   overallDiagnosis       String
   openingName            String?
   result                 GameResult        @default(UNKNOWN)
-  mainWeaknessTag        String?
-  secondaryWeaknessTags  Json
+  mainWeaknessTag        WeaknessTag?
+  secondaryWeaknessTags  WeaknessTag[]     @default([])
   recommendedLessonTitle String?
   recommendedLessonWhy   String?
   recommendedFocusPoints Json

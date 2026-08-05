@@ -2,11 +2,14 @@ import {
   ConfidenceLevel,
   GameResult,
   MomentSeverity,
+  WeaknessTag,
 } from '../../generated/prisma/client.js';
 import { z } from 'zod';
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const optionalNullableStringSchema = nonEmptyStringSchema.nullable().optional();
+const weaknessTagValueSchema = z.nativeEnum(WeaknessTag);
+const nullableWeaknessTagSchema = weaknessTagValueSchema.nullable();
 const sourceEvidenceSchema = z.object({}).catchall(z.unknown());
 
 export const analysisResultMistakeSchema = z.object({
@@ -23,8 +26,8 @@ export const analysisResultPayloadSchema = z.object({
   overallDiagnosis: nonEmptyStringSchema,
   openingName: optionalNullableStringSchema,
   result: z.nativeEnum(GameResult),
-  mainWeaknessTag: optionalNullableStringSchema,
-  secondaryWeaknessTags: z.array(nonEmptyStringSchema),
+  mainWeaknessTag: nullableWeaknessTagSchema,
+  secondaryWeaknessTags: z.array(weaknessTagValueSchema),
   recommendedLessonTitle: optionalNullableStringSchema,
   recommendedLessonWhy: optionalNullableStringSchema,
   recommendedFocusPoints: z.array(nonEmptyStringSchema),

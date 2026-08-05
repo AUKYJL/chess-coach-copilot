@@ -80,16 +80,24 @@ export class AnalysisQueriesService {
   }
 
   getOwnedAnalysisByJobId(analysisJobId: string, coachAccountId: string) {
-    return this.prisma.gameAnalysis.findFirst({
-      where: {
-        analysisJobId,
-        coachAccountId,
-      },
-      include: {
-        game: true,
-        criticalMoments: true,
-        mistakes: true,
-      },
-    });
+    return this.prisma.gameAnalysis
+      .findFirst({
+        where: {
+          analysisJobId,
+          coachAccountId,
+        },
+        include: {
+          game: true,
+          criticalMoments: true,
+          mistakes: true,
+        },
+      })
+      .then((analysis) => {
+        if (!analysis) {
+          return null;
+        }
+
+        return analysis;
+      });
   }
 }

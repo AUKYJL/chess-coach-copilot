@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ConfidenceLevel } from '../../generated/prisma/client.js';
+import { ConfidenceLevel, WeaknessTag } from '../../generated/prisma/client.js';
 import { LlmService } from '../../llm/llm.service.js';
 import type { ParsedPgn } from '../preparation/pgn-parser.service.js';
 import { ANALYSIS_CLASSIFIER_SYSTEM_PROMPT } from './analysis-classifier.prompt.js';
@@ -16,6 +16,9 @@ export interface ClassifiedAnalysisResult {
   rawOutput: Record<string, unknown>;
   inputPayload: Record<string, unknown>;
 }
+
+const REDUCED_CONFIDENCE_PROMPT_VERSION = 'rule-based-reduced-confidence-v2';
+const REDUCED_CONFIDENCE_MODEL = 'reduced-confidence-fallback';
 
 @Injectable()
 export class AnalysisClassifierService {
@@ -46,8 +49,8 @@ export class AnalysisClassifierService {
           'The game is parseable, but it does not contain enough reliable annotated evidence to derive objective coaching mistakes.',
         openingName: parsedPgn.headers.opening,
         result: parsedPgn.result,
-        mainWeaknessTag: 'insufficient-annotation-data',
-        secondaryWeaknessTags: ['reduced-confidence'],
+        mainWeaknessTag: WeaknessTag.INSUFFICIENT_ANNOTATION_DATA,
+        secondaryWeaknessTags: [WeaknessTag.REDUCED_CONFIDENCE],
         recommendedLessonTitle: 'Replay the game with annotated evidence',
         recommendedLessonWhy:
           'Reliable best-line or evaluation evidence is required before assigning objective mistake categories.',
@@ -60,8 +63,8 @@ export class AnalysisClassifierService {
 
       return {
         payload,
-        promptVersion: 'rule-based-reduced-confidence-v2',
-        model: 'reduced-confidence-fallback',
+        promptVersion: REDUCED_CONFIDENCE_PROMPT_VERSION,
+        model: REDUCED_CONFIDENCE_MODEL,
         rawOutput: payload as unknown as Record<string, unknown>,
         inputPayload,
       };

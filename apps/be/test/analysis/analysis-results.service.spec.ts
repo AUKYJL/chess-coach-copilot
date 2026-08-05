@@ -17,6 +17,7 @@ import {
   ConfidenceLevel,
   GameResult,
   MomentSeverity,
+  WeaknessTag,
 } from '../../src/generated/prisma/client.js';
 import { LlmService } from '../../src/llm/llm.service.js';
 import { PrismaModule } from '../../src/prisma/prisma.module.js';
@@ -25,12 +26,12 @@ import { ANALYSIS_JOB_ENQUEUER } from '../../src/queues/queue.constants.js';
 import { InMemoryPrismaService } from '../helpers/in-memory-prisma.js';
 
 class FakeAnalysisJobEnqueuer {
-  async enqueueAnalysisJob(analysisJobId: string) {
-    return {
+  enqueueAnalysisJob(analysisJobId: string) {
+    return Promise.resolve({
       id: analysisJobId,
       name: 'process-analysis',
       data: { analysisJobId },
-    };
+    });
   }
 }
 
@@ -238,8 +239,8 @@ function buildClassifiedResult(
       overallDiagnosis,
       openingName: 'Italian Game',
       result: GameResult.WIN,
-      mainWeaknessTag: 'calculation',
-      secondaryWeaknessTags: ['time-management'],
+      mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
+      secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
       recommendedLessonTitle: 'Candidate move discipline',
       recommendedLessonWhy: 'Missed a forcing line.',
       recommendedFocusPoints: ['Check forcing moves first'],

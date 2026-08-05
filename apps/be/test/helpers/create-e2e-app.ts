@@ -28,24 +28,25 @@ import { ANALYSIS_JOB_ENQUEUER } from '../../src/queues/queue.constants.js';
 import { HttpExceptionFilter } from '../../src/shared/filters/http-exception.filter.js';
 import { setupSwagger } from '../../src/shared/swagger/swagger.config.js';
 import { StudentsModule } from '../../src/students/students.module.js';
+import { WeaknessTag } from '../../src/generated/prisma/client.js';
 import { InMemoryPrismaService } from './in-memory-prisma.js';
 
 class FakeAnalysisJobEnqueuer {
   readonly analysisJobIds: string[] = [];
 
-  async enqueueAnalysisJob(analysisJobId: string) {
+  enqueueAnalysisJob(analysisJobId: string) {
     this.analysisJobIds.push(analysisJobId);
 
-    return {
+    return Promise.resolve({
       id: analysisJobId,
       name: 'process-analysis',
       data: { analysisJobId },
-    };
+    });
   }
 }
 
 class FakeLlmService {
-  async classify<TPayload>(request: { userPrompt: string }) {
+  classify<TPayload>(request: { userPrompt: string }) {
     const parsed = JSON.parse(request.userPrompt) as {
       headers: {
         opening: string | null;
@@ -53,7 +54,7 @@ class FakeLlmService {
       moments: Array<Record<string, unknown>>;
     };
 
-    return {
+    return Promise.resolve({
       model: 'fake-llm',
       promptVersion: 'test-v1',
       rawText: '',
@@ -62,8 +63,8 @@ class FakeLlmService {
         overallDiagnosis: 'Annotated middlegame decisions need cleanup.',
         openingName: parsed.headers.opening,
         result: 'WIN',
-        mainWeaknessTag: 'calculation',
-        secondaryWeaknessTags: ['time-management'],
+        mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
+        secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
         recommendedLessonTitle: 'Candidate move discipline',
         recommendedLessonWhy:
           'Several tactical decisions were rushed despite good strategic positions.',
@@ -71,13 +72,13 @@ class FakeLlmService {
         mistakes: parsed.moments.slice(0, 1).map((moment) => ({
           criticalMomentPly: typeof moment.ply === 'number' ? moment.ply : null,
           severity: moment.severity,
-          category: 'calculation',
+          category: 'calculation_depth',
           explanation: 'The move missed a stronger continuation.',
           suggestedFix: 'Check forcing moves first.',
           sourceEvidence: moment.sourceEvidence,
         })),
       } as TPayload,
-    };
+    });
   }
 }
 

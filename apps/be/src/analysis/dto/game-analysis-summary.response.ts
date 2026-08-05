@@ -1,7 +1,9 @@
+import { ApiProperty } from '@nestjs/swagger';
 import {
   AnnotationCoverage,
   ConfidenceLevel,
   GameResult,
+  WeaknessTag,
 } from '../../generated/prisma/client.js';
 
 export class GameAnalysisSummaryResponse {
@@ -14,6 +16,7 @@ export class GameAnalysisSummaryResponse {
   reducedConfidenceWarning: string | null;
   openingName: string | null;
   result: GameResult;
-  mainWeaknessTag: string | null;
+  @ApiProperty({ enum: WeaknessTag, nullable: true })
+  mainWeaknessTag: WeaknessTag | null;
   createdAt: Date;
 }

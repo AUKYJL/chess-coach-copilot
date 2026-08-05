@@ -13,6 +13,7 @@ import {
   MomentSeverity,
   MoveColor,
   StudentColor,
+  WeaknessTag,
 } from '../../src/generated/prisma/client.js';
 
 type CoachAccountRecord = {
@@ -107,8 +108,8 @@ type GameAnalysisRecord = {
   overallDiagnosis: string;
   openingName: string | null;
   result: GameResult;
-  mainWeaknessTag: string | null;
-  secondaryWeaknessTags: string[];
+  mainWeaknessTag: WeaknessTag | null;
+  secondaryWeaknessTags: WeaknessTag[];
   recommendedLessonTitle: string | null;
   recommendedLessonWhy: string | null;
   recommendedFocusPoints: string[];

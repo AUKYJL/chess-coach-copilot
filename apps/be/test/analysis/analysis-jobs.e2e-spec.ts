@@ -5,6 +5,7 @@ import {
   AnalysisJobStatus,
   MomentSeverity,
   MoveColor,
+  WeaknessTag,
 } from '../../src/generated/prisma/client.js';
 import { createE2eApp } from '../helpers/create-e2e-app.js';
 import { InMemoryPrismaService } from '../helpers/in-memory-prisma.js';
@@ -51,8 +52,8 @@ describe('Analysis jobs (e2e)', () => {
         overallDiagnosis: 'Saved completed analysis',
         openingName: 'Test Opening',
         result: 'WIN',
-        mainWeaknessTag: 'calculation',
-        secondaryWeaknessTags: ['time-management'],
+        mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
+        secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
         recommendedLessonTitle: 'Candidate move discipline',
         recommendedLessonWhy: 'Missed forcing sequence',
         recommendedFocusPoints: ['Check forcing moves first'],
@@ -165,7 +166,7 @@ describe('Analysis jobs (e2e)', () => {
         reducedConfidenceWarning: jobGame?.reducedConfidenceWarning,
         openingName: 'Test Opening',
         result: 'WIN',
-        mainWeaknessTag: 'calculation',
+        mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
       }),
     ]);
 

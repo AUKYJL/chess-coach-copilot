@@ -1,7 +1,9 @@
 import {
+  ALLOWED_WEAKNESS_TAG_VALUES,
   ANALYSIS_CLASSIFIER_SYSTEM_PROMPT,
   ANALYSIS_PROMPTS_BY_MODE,
 } from '../../src/analysis/classification/analysis-classifier.prompt.js';
+import { WeaknessTag } from '../../src/generated/prisma/client.js';
 
 describe('analysis-classifier prompt registry', () => {
   it('contains all supported prompt modes', () => {
@@ -36,5 +38,13 @@ describe('analysis-classifier prompt registry', () => {
     expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
       '`surroundingMoves`',
     );
+  });
+
+  it('derives the allowed weakness tags from the Prisma enum', () => {
+    expect(ALLOWED_WEAKNESS_TAG_VALUES).toEqual(Object.values(WeaknessTag));
+
+    for (const weaknessTag of Object.values(WeaknessTag)) {
+      expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(weaknessTag);
+    }
   });
 });

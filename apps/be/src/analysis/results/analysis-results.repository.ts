@@ -5,6 +5,7 @@ import {
   MomentSeverity,
   MoveColor,
   Prisma,
+  WeaknessTag,
 } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
@@ -25,8 +26,8 @@ export class AnalysisResultsRepository {
     overallDiagnosis: string;
     openingName: string | null;
     result: GameResult;
-    mainWeaknessTag: string | null;
-    secondaryWeaknessTags: string[];
+    mainWeaknessTag: WeaknessTag | null;
+    secondaryWeaknessTags: WeaknessTag[];
     recommendedLessonTitle: string | null;
     recommendedLessonWhy: string | null;
     recommendedFocusPoints: string[];

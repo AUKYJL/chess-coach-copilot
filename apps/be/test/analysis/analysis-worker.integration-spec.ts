@@ -20,6 +20,7 @@ import { PrismaModule } from '../../src/prisma/prisma.module.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { ANALYSIS_JOB_ENQUEUER } from '../../src/queues/queue.constants.js';
 import { InMemoryPrismaService } from '../helpers/in-memory-prisma.js';
+import { WeaknessTag } from '../../src/generated/prisma/client.js';
 
 class FakeAnalysisJobEnqueuer {
   enqueueAnalysisJob(analysisJobId: string) {
@@ -89,8 +90,8 @@ describe('AnalysisProcessor (integration)', () => {
               overallDiagnosis: 'Completed analysis',
               openingName: 'Test Opening',
               result: 'WIN',
-              mainWeaknessTag: 'calculation',
-              secondaryWeaknessTags: ['time-management'],
+              mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
+              secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
               recommendedLessonTitle: 'Review tactics',
               recommendedLessonWhy: 'Missed tactical detail',
               recommendedFocusPoints: ['Count checks and captures'],
@@ -273,7 +274,7 @@ describe('AnalysisProcessor (integration)', () => {
               confidenceLevel: 'HIGH',
               overallDiagnosis: 'Invalid analysis payload',
               result: 'WIN',
-              secondaryWeaknessTags: ['time-management'],
+              secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
               recommendedFocusPoints: ['Count checks and captures'],
               mistakes: [
                 {

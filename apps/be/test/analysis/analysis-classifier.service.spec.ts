@@ -5,6 +5,7 @@ import {
   GameResult,
   MomentSeverity,
   StudentColor,
+  WeaknessTag,
 } from '../../src/generated/prisma/client.js';
 import type { LlmService } from '../../src/llm/llm.service.js';
 import type { LlmResponse } from '../../src/llm/llm.types.js';
@@ -160,8 +161,8 @@ describe('AnalysisClassifierService', () => {
             'The student forced complications without enough calculation.',
           openingName: 'Sicilian Defense',
           result: GameResult.LOSS,
-          mainWeaknessTag: 'calculation_depth',
-          secondaryWeaknessTags: ['missed_opponent_threat'],
+          mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
+          secondaryWeaknessTags: [WeaknessTag.MISSED_OPPONENT_THREAT],
           recommendedLessonTitle: 'Calculate forcing moves before committing',
           recommendedLessonWhy:
             'The critical error came from overlooking the opponent reply.',
@@ -212,6 +213,10 @@ describe('AnalysisClassifierService', () => {
     });
     expect(result.promptVersion).toBe('v2');
     expect(result.model).toBe('test-model');
+    expect(result.payload.mainWeaknessTag).toBe(WeaknessTag.CALCULATION_DEPTH);
+    expect(result.payload.secondaryWeaknessTags).toEqual([
+      WeaknessTag.MISSED_OPPONENT_THREAT,
+    ]);
   });
 
   it('returns the reduced-confidence fallback without calling LLM when evidence is insufficient', async () => {
@@ -236,7 +241,9 @@ describe('AnalysisClassifierService', () => {
     expect(result.promptVersion).toBe('rule-based-reduced-confidence-v2');
     expect(result.model).toBe('reduced-confidence-fallback');
     expect(result.payload.confidenceLevel).toBe(ConfidenceLevel.LOW);
-    expect(result.payload.mainWeaknessTag).toBe('insufficient-annotation-data');
+    expect(result.payload.mainWeaknessTag).toBe(
+      WeaknessTag.INSUFFICIENT_ANNOTATION_DATA,
+    );
   });
 
   it('throws when LLM returns an invalid payload', async () => {

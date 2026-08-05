@@ -1,3 +1,5 @@
+import { WeaknessTag } from '../../generated/prisma/client.js';
+
 const PRODUCT_CONTEXT = [
   'You are the analysis backend for Chess Coach Copilot.',
   'Your output is consumed by application code, not by an end user.',
@@ -18,37 +20,8 @@ const CONFIDENCE_RULES = [
   'Use LOW when the evidence is sparse, ambiguous, contradictory, or too limited for strong claims.',
 ].join('\n');
 
-const ALLOWED_WEAKNESS_TAGS = [
-  'missed_fork',
-  'missed_pin',
-  'missed_double_attack',
-  'missed_discovered_attack',
-  'missed_mate',
-  'allowed_mate',
-  'hanging_piece',
-  'missed_capture',
-  'bad_capture',
-  'missed_opponent_threat',
-  'opened_line',
-  'unknown_tactical_error',
-  'king_safety',
-  'delayed_castling',
-  'poor_development',
-  'early_queen',
-  'bad_trade',
-  'poor_conversion',
-  'opening_strategy',
-  'pawn_structure',
-  'endgame_technique',
-  'unknown_strategic_error',
-  'time_management',
-  'calculation_depth',
-  'tunnel_vision',
-  'material_greed',
-  'low_board_awareness',
-  'insufficient-annotation-data',
-  'reduced-confidence',
-].join(', ');
+export const ALLOWED_WEAKNESS_TAG_VALUES = Object.values(WeaknessTag);
+const ALLOWED_WEAKNESS_TAGS = ALLOWED_WEAKNESS_TAG_VALUES.join(', ');
 
 export const JSON_ANALYSIS_PROMPT = [
   PRODUCT_CONTEXT,
