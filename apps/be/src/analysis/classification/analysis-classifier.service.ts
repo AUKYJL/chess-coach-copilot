@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ConfidenceLevel } from '../../generated/prisma/client.js';
 import { LlmService } from '../../llm/llm.service.js';
-import type { ParsedPgn } from '../parsers/pgn-parser.service.js';
+import type { ParsedPgn } from '../preparation/pgn-parser.service.js';
+import { ANALYSIS_CLASSIFIER_SYSTEM_PROMPT } from './analysis-classifier.prompt.js';
 import {
   AnalysisResultPayload,
   validateAnalysisResultPayload,
-} from '../schemas/analysis-result.schema.js';
+} from './analysis-result.schema.js';
 import type { ExtractedAnnotationContext } from './annotation-extractor.service.js';
 
 export interface ClassifiedAnalysisResult {
@@ -26,36 +27,40 @@ export class AnalysisClassifierService {
   ): Promise<ClassifiedAnalysisResult> {
     const inputPayload = {
       headers: parsedPgn.headers,
-      moves: parsedPgn.moves.slice(0, 20),
-      extractedContext,
+      rawResult: parsedPgn.rawResult,
+      result: parsedPgn.result,
+      studentColor: parsedPgn.studentColor,
+      annotationCoverage: extractedContext.annotationCoverage,
+      diagnostics: parsedPgn.diagnostics,
+      moments: extractedContext.moments,
+      surroundingMoves: this.buildSurroundingMoves(parsedPgn, extractedContext),
     };
 
-    if (!extractedContext.hasEngineAnnotations) {
+    if (
+      !extractedContext.hasEngineAnnotations ||
+      extractedContext.moments.length === 0
+    ) {
       const payload: AnalysisResultPayload = {
         confidenceLevel: ConfidenceLevel.LOW,
         overallDiagnosis:
-          'The game is structurally valid, but objective engine annotations are missing, so only limited coaching conclusions are available.',
-        openingName: parsedPgn.headers.Opening ?? null,
+          'The game is parseable, but it does not contain enough reliable annotated evidence to derive objective coaching mistakes.',
+        openingName: parsedPgn.headers.opening,
         result: parsedPgn.result,
         mainWeaknessTag: 'insufficient-annotation-data',
         secondaryWeaknessTags: ['reduced-confidence'],
-        recommendedLessonTitle: 'Replay the game with engine annotations',
+        recommendedLessonTitle: 'Replay the game with annotated evidence',
         recommendedLessonWhy:
-          'More annotated evidence is required before assigning objective mistake severity.',
+          'Reliable best-line or evaluation evidence is required before assigning objective mistake categories.',
         recommendedFocusPoints: [
-          'Re-export the PGN with engine annotations',
-          'Review the main decision points manually',
+          'Re-export the game with full Lichess annotations',
+          'Review the critical decisions manually',
         ],
-        criticalMoments: extractedContext.moments.map((moment) => ({
-          ...moment,
-          severity: moment.severity,
-        })),
         mistakes: [],
       };
 
       return {
         payload,
-        promptVersion: 'rule-based-reduced-confidence-v1',
+        promptVersion: 'rule-based-reduced-confidence-v2',
         model: 'reduced-confidence-fallback',
         rawOutput: payload as unknown as Record<string, unknown>,
         inputPayload,
@@ -63,15 +68,11 @@ export class AnalysisClassifierService {
     }
 
     const llmResponse = await this.llmService.classify<AnalysisResultPayload>({
-      systemPrompt:
-        'You classify coach-facing chess analysis from annotated PGN. Return JSON only.',
+      systemPrompt: ANALYSIS_CLASSIFIER_SYSTEM_PROMPT,
       userPrompt: JSON.stringify(inputPayload),
       schemaName: 'analysis-result',
     });
-    console.log('----------llmResponse');
-    console.log(llmResponse);
-    console.log('----------llmResponse.payload');
-    console.log(llmResponse.payload);
+
     return {
       payload: validateAnalysisResultPayload(llmResponse.payload),
       promptVersion: llmResponse.promptVersion,
@@ -79,5 +80,26 @@ export class AnalysisClassifierService {
       rawOutput: llmResponse.payload as unknown as Record<string, unknown>,
       inputPayload,
     };
+  }
+
+  private buildSurroundingMoves(
+    parsedPgn: ParsedPgn,
+    extractedContext: ExtractedAnnotationContext,
+  ) {
+    return extractedContext.moments.map((moment) => ({
+      ply: moment.ply,
+      context: parsedPgn.moves
+        .filter(
+          (move) => move.ply >= moment.ply - 2 && move.ply <= moment.ply + 2,
+        )
+        .map((move) => ({
+          ply: move.ply,
+          moveNumber: move.moveNumber,
+          color: move.color,
+          san: move.san,
+          beforeFen: move.beforeFen,
+          afterFen: move.afterFen,
+        })),
+    }));
   }
 }

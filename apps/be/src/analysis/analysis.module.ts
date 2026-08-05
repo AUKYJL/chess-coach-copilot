@@ -1,23 +1,23 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
-import { GamesModule } from '../games/games.module.js';
 import { LlmModule } from '../llm/llm.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
-import { AnalysisJobsController } from './analysis-jobs.controller.js';
-import { AnalysisJobsRepository } from './analysis-jobs.repository.js';
-import { AnalysisJobsService } from './analysis-jobs.service.js';
-import { AnalysisResultsRepository } from './analysis-results.repository.js';
-import { AnalysisController } from './analysis.controller.js';
-import { PgnPreparationService } from './pgn-preparation.service.js';
-import { PgnParserService } from './parsers/pgn-parser.service.js';
-import { AnalysisClassifierService } from './services/analysis-classifier.service.js';
-import { AnalysisResultsService } from './services/analysis-results.service.js';
-import { AnnotationExtractorService } from './services/annotation-extractor.service.js';
-import { GenerationTraceService } from './services/generation-trace.service.js';
-import { AnalysisProcessor } from './workers/analysis.processor.js';
+import { AnalysisClassifierService } from './classification/analysis-classifier.service.js';
+import { AnnotationExtractorService } from './classification/annotation-extractor.service.js';
+import { GenerationTraceService } from './classification/generation-trace.service.js';
+import { AnalysisJobsController } from './jobs/analysis-jobs.controller.js';
+import { AnalysisJobsRepository } from './jobs/analysis-jobs.repository.js';
+import { AnalysisJobsService } from './jobs/analysis-jobs.service.js';
+import { AnalysisProcessor } from './jobs/analysis.processor.js';
+import { PgnParserService } from './preparation/pgn-parser.service.js';
+import { PgnPreparationService } from './preparation/pgn-preparation.service.js';
+import { AnalysisQueriesService } from './results/analysis-queries.service.js';
+import { AnalysisResultsRepository } from './results/analysis-results.repository.js';
+import { AnalysisResultsService } from './results/analysis-results.service.js';
+import { AnalysisController } from './results/analysis.controller.js';
 
 @Module({
-  imports: [PrismaModule, AuthModule, GamesModule, LlmModule],
+  imports: [PrismaModule, AuthModule, LlmModule],
   controllers: [AnalysisController, AnalysisJobsController],
   providers: [
     AnalysisJobsRepository,
@@ -27,6 +27,7 @@ import { AnalysisProcessor } from './workers/analysis.processor.js';
     AnnotationExtractorService,
     PgnPreparationService,
     AnalysisClassifierService,
+    AnalysisQueriesService,
     AnalysisResultsService,
     GenerationTraceService,
     AnalysisProcessor,

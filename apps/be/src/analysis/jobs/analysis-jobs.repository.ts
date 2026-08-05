@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type { AnalysisJobStatus, AnalysisJobType } from '../generated/prisma/client.js';
-import { PrismaService } from '../prisma/prisma.service.js';
+import {
+  AnalysisJobStatus,
+  type AnalysisJobType,
+} from '../../generated/prisma/client.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 
 @Injectable()
 export class AnalysisJobsRepository {
@@ -39,38 +42,41 @@ export class AnalysisJobsRepository {
     });
   }
 
-  update(jobId: string, data: Record<string, unknown>) {
-    return this.prisma.analysisJob.update({
-      where: { id: jobId },
-      data,
-    });
-  }
-
-  findAnalysisList(args: { coachAccountId: string; studentId?: string }) {
-    return this.prisma.gameAnalysis.findMany({
-      where: {
-        coachAccountId: args.coachAccountId,
-        ...(args.studentId ? { studentId: args.studentId } : {}),
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      include: {
-        game: true,
-      },
-    });
-  }
-
-  updateStatus(
+  transitionStatus(
     jobId: string,
+    expectedStatuses: AnalysisJobStatus[],
     status: AnalysisJobStatus,
     data: Record<string, unknown> = {},
   ) {
-    return this.prisma.analysisJob.update({
-      where: { id: jobId },
+    return this.prisma.analysisJob.updateMany({
+      where: {
+        id: jobId,
+        status: {
+          in: expectedStatuses,
+        },
+      },
       data: {
         status,
         ...data,
+      },
+    });
+  }
+
+  retryFailedJob(jobId: string, attemptCount: number) {
+    return this.prisma.analysisJob.updateMany({
+      where: {
+        id: jobId,
+        status: AnalysisJobStatus.FAILED,
+      },
+      data: {
+        status: AnalysisJobStatus.PENDING,
+        failureCode: null,
+        failureMessage: null,
+        progressPercent: 0,
+        completedAt: null,
+        startedAt: null,
+        lastRetriedAt: new Date(),
+        attemptCount,
       },
     });
   }

@@ -3,33 +3,33 @@ import {
   ConfidenceLevel,
   GameResult,
   MomentSeverity,
+  MoveColor,
 } from '../../generated/prisma/client.js';
 
 export class GameAnalysisMomentResponse {
   id: string;
+  ply: number;
+  fullMoveNumber: number;
   moveNumber: string;
-  movePlayed: string;
+  moveColor: MoveColor;
+  san: string;
+  lan: string | null;
+  uci: string | null;
+  beforeFen: string;
+  afterFen: string;
   bestMove: string | null;
-  fen: string | null;
-  evaluationBefore: string | null;
-  evaluationAfter: string | null;
-  evalChange: string | null;
+  bestVariation: string[];
+  nags: string[];
+  comments: string[];
+  evaluationBefore: Record<string, unknown> | null;
+  evaluationAfter: Record<string, unknown> | null;
   severity: MomentSeverity;
-  mainTag: string;
-  secondaryTags: string[];
-  confidence: number;
-  whatHappened: string;
-  studentExplanation: string;
-  coachNote: string;
-  trainingTheme: string | null;
   sourceEvidence: Record<string, unknown>;
 }
 
 export class GameAnalysisMistakeResponse {
   id: string;
-  moveNumber: string;
-  movePlayed: string;
-  bestMove: string | null;
+  criticalMomentId: string | null;
   severity: MomentSeverity;
   category: string;
   explanation: string;

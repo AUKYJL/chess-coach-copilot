@@ -1,9 +1,10 @@
+import { StudentColor } from '../../generated/prisma/client.js';
 import { Injectable } from '@nestjs/common';
 import { createPgnFingerprint } from './pgn-normalization.util.js';
-import type { ParsedPgn } from './parsers/pgn-parser.service.js';
-import { PgnParserService } from './parsers/pgn-parser.service.js';
-import type { ExtractedAnnotationContext } from './services/annotation-extractor.service.js';
-import { AnnotationExtractorService } from './services/annotation-extractor.service.js';
+import type { ExtractedAnnotationContext } from '../classification/annotation-extractor.service.js';
+import { AnnotationExtractorService } from '../classification/annotation-extractor.service.js';
+import type { ParsedPgn } from './pgn-parser.service.js';
+import { PgnParserService } from './pgn-parser.service.js';
 
 export interface PreparedPgnForAnalysis {
   parsedPgn: ParsedPgn;
@@ -17,8 +18,11 @@ export class PgnPreparationService {
     private readonly annotationExtractorService: AnnotationExtractorService,
   ) {}
 
-  parseForAnalysis(rawPgn: string): PreparedPgnForAnalysis {
-    const parsedPgn = this.pgnParserService.parse(rawPgn);
+  parseForAnalysis(
+    rawPgn: string,
+    studentColor: StudentColor,
+  ): PreparedPgnForAnalysis {
+    const parsedPgn = this.pgnParserService.parse(rawPgn, studentColor);
     const extractedContext = this.annotationExtractorService.extract(parsedPgn);
 
     return {

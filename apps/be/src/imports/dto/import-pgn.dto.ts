@@ -1,10 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { StudentColor } from '../../generated/prisma/client.js';
-import { IsEnum, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { swaggerEntityExamples } from '../../shared/swagger/swagger-examples.js';
 
 export class ImportPgnDto {
-  @ApiProperty({ enum: StudentColor, example: swaggerEntityExamples.importPgn.studentColor })
+  @ApiProperty({
+    enum: StudentColor,
+    example: swaggerEntityExamples.importPgn.studentColor,
+  })
   @IsEnum(StudentColor)
   studentColor: StudentColor;
 

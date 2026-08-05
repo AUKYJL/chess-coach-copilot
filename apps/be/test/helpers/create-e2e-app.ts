@@ -47,10 +47,10 @@ class FakeAnalysisJobEnqueuer {
 class FakeLlmService {
   async classify<TPayload>(request: { userPrompt: string }) {
     const parsed = JSON.parse(request.userPrompt) as {
-      headers: Record<string, string>;
-      extractedContext: {
-        moments: Array<Record<string, unknown>>;
+      headers: {
+        opening: string | null;
       };
+      moments: Array<Record<string, unknown>>;
     };
 
     return {
@@ -60,7 +60,7 @@ class FakeLlmService {
       payload: {
         confidenceLevel: 'HIGH',
         overallDiagnosis: 'Annotated middlegame decisions need cleanup.',
-        openingName: parsed.headers.Opening ?? null,
+        openingName: parsed.headers.opening,
         result: 'WIN',
         mainWeaknessTag: 'calculation',
         secondaryWeaknessTags: ['time-management'],
@@ -68,11 +68,8 @@ class FakeLlmService {
         recommendedLessonWhy:
           'Several tactical decisions were rushed despite good strategic positions.',
         recommendedFocusPoints: ['Slow down before forcing moves'],
-        criticalMoments: parsed.extractedContext.moments,
-        mistakes: parsed.extractedContext.moments.slice(0, 1).map((moment) => ({
-          moveNumber: moment.moveNumber,
-          movePlayed: moment.movePlayed,
-          bestMove: null,
+        mistakes: parsed.moments.slice(0, 1).map((moment) => ({
+          criticalMomentPly: typeof moment.ply === 'number' ? moment.ply : null,
           severity: moment.severity,
           category: 'calculation',
           explanation: 'The move missed a stronger continuation.',

@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '../../generated/prisma/client.js';
-import { AnalysisResultsRepository } from '../analysis-results.repository.js';
-import type { ClassifiedAnalysisResult } from './analysis-classifier.service.js';
-import type { ExtractedAnnotationContext } from './annotation-extractor.service.js';
+import { MoveColor } from '../../generated/prisma/client.js';
+import type { ClassifiedAnalysisResult } from '../classification/analysis-classifier.service.js';
+import { GenerationTraceService } from '../classification/generation-trace.service.js';
+import type { ExtractedAnnotationContext } from '../classification/annotation-extractor.service.js';
+import { AnalysisResultsRepository } from './analysis-results.repository.js';
 
 @Injectable()
 export class AnalysisResultsService {
   constructor(
     private readonly analysisResultsRepository: AnalysisResultsRepository,
+    private readonly generationTraceService: GenerationTraceService,
   ) {}
 
   async persistCompletedAnalysis(data: {
@@ -39,22 +41,40 @@ export class AnalysisResultsService {
           data.classifiedResult.payload.recommendedLessonWhy ?? null,
         recommendedFocusPoints:
           data.classifiedResult.payload.recommendedFocusPoints,
-        rawExtractedContext: data.extractedContext as unknown as Record<
-          string,
-          unknown
-        >,
+        rawExtractedContext: data.extractedContext,
         rawAnalysisJson: data.classifiedResult.rawOutput,
-        criticalMoments: data.classifiedResult.payload
-          .criticalMoments as unknown as Array<
-          Omit<Prisma.CriticalMomentCreateManyInput, 'analysisId'>
-        >,
-        mistakes: data.classifiedResult.payload.mistakes as unknown as Array<
-          Omit<Prisma.MistakeCreateManyInput, 'analysisId'>
-        >,
+        criticalMoments: data.extractedContext.moments.map((moment) => ({
+          ply: moment.ply,
+          fullMoveNumber: moment.fullMoveNumber,
+          moveNumber: moment.moveNumber,
+          moveColor:
+            moment.moveColor === 'w' ? MoveColor.WHITE : MoveColor.BLACK,
+          san: moment.san,
+          lan: moment.lan,
+          uci: moment.uci,
+          beforeFen: moment.beforeFen,
+          afterFen: moment.afterFen,
+          bestMove: moment.bestMove,
+          bestVariation: moment.bestVariation,
+          nags: moment.nags,
+          comments: moment.comments,
+          evaluationBefore: moment.evaluationBefore,
+          evaluationAfter: moment.evaluationAfter,
+          severity: moment.severity,
+          sourceEvidence: moment.sourceEvidence,
+        })),
+        mistakes: data.classifiedResult.payload.mistakes.map((mistake) => ({
+          criticalMomentPly: mistake.criticalMomentPly ?? null,
+          severity: mistake.severity,
+          category: mistake.category,
+          explanation: mistake.explanation,
+          suggestedFix: mistake.suggestedFix ?? null,
+          sourceEvidence: mistake.sourceEvidence,
+        })),
       },
     );
 
-    await this.analysisResultsRepository.createTrace({
+    await this.generationTraceService.persistSuccess({
       coachAccountId: data.job.coachAccountId,
       analysisJobId: data.job.id,
       analysisId: analysis.id,
@@ -65,18 +85,5 @@ export class AnalysisResultsService {
     });
 
     return analysis;
-  }
-
-  persistFailedTrace(data: {
-    coachAccountId: string;
-    analysisJobId: string;
-    promptVersion: string;
-    model: string;
-    inputPayload: Record<string, unknown>;
-    outputPayload: Record<string, unknown>;
-    failureCode: string;
-    failureMessage: string;
-  }) {
-    return this.analysisResultsRepository.createTrace(data);
   }
 }

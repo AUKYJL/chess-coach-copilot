@@ -4,11 +4,11 @@ import {
   GameSourceType,
   StudentColor,
 } from '../generated/prisma/client.js';
-import { GamesRepository } from './games.repository.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 @Injectable()
 export class GamesService {
-  constructor(private readonly gamesRepository: GamesRepository) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async createImportedGame(data: {
     coachAccountId: string;
@@ -21,14 +21,19 @@ export class GamesService {
     annotationCoverage: AnnotationCoverage;
     reducedConfidenceWarning: string | null;
   }) {
-    const duplicate = await this.gamesRepository.findDuplicate(
-      data.studentId,
-      data.normalizedPgnHash,
-    );
+    const duplicate = await this.prisma.game.findFirst({
+      where: {
+        studentId: data.studentId,
+        normalizedPgnHash: data.normalizedPgnHash,
+      },
+      select: { id: true },
+    });
 
-    const game = await this.gamesRepository.create({
-      ...data,
-      sourceType: GameSourceType.MANUAL_PGN,
+    const game = await this.prisma.game.create({
+      data: {
+        ...data,
+        sourceType: GameSourceType.MANUAL_PGN,
+      },
     });
 
     return {

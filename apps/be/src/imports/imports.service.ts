@@ -3,9 +3,9 @@ import {
   Injectable,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { AnalysisJobsService } from '../analysis/analysis-jobs.service.js';
+import { AnalysisJobsService } from '../analysis/jobs/analysis-jobs.service.js';
 import { AnalysisJobResponse } from '../analysis/dto/analysis-job.response.js';
-import { PgnPreparationService } from '../analysis/pgn-preparation.service.js';
+import { PgnPreparationService } from '../analysis/preparation/pgn-preparation.service.js';
 import { GamesService } from '../games/games.service.js';
 import { ANALYSIS_JOB_ENQUEUER } from '../queues/queue.constants.js';
 import type { AnalysisJobEnqueuer } from '../queues/queue.service.js';
@@ -41,6 +41,7 @@ export class ImportsService {
 
     const { extractedContext } = this.pgnPreparationService.parseForAnalysis(
       dto.rawPgn,
+      dto.studentColor,
     );
 
     const { game, isDuplicate } = await this.gamesService.createImportedGame({
@@ -48,7 +49,7 @@ export class ImportsService {
       studentId,
       sourceLabel: dto.sourceLabel?.trim(),
       studentColor: dto.studentColor,
-      rawPgn: dto.rawPgn.trim(),
+      rawPgn: dto.rawPgn,
       normalizedPgnHash: this.pgnPreparationService.createFingerprint(
         dto.rawPgn,
       ),

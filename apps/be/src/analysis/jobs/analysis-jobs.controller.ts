@@ -9,11 +9,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { JwtAccessGuard } from '../auth/guards/jwt-access.guard.js';
-import { CurrentCoach } from '../shared/decorators/current-coach.decorator.js';
-import type { AuthenticatedCoach } from '../shared/types/authenticated-coach.type.js';
-import { AnalysisResultsRepository } from './analysis-results.repository.js';
+import { JwtAccessGuard } from '../../auth/guards/jwt-access.guard.js';
+import { CurrentCoach } from '../../shared/decorators/current-coach.decorator.js';
+import type { AuthenticatedCoach } from '../../shared/types/authenticated-coach.type.js';
 import { AnalysisJobsService } from './analysis-jobs.service.js';
+import { AnalysisQueriesService } from '../results/analysis-queries.service.js';
 
 @ApiTags('Analysis Jobs')
 @ApiBearerAuth()
@@ -22,7 +22,7 @@ import { AnalysisJobsService } from './analysis-jobs.service.js';
 export class AnalysisJobsController {
   constructor(
     private readonly analysisJobsService: AnalysisJobsService,
-    private readonly analysisResultsRepository: AnalysisResultsRepository,
+    private readonly analysisQueriesService: AnalysisQueriesService,
   ) {}
 
   @Get(':jobId')
@@ -49,7 +49,7 @@ export class AnalysisJobsController {
   ) {
     await this.analysisJobsService.getJob(jobId, coach.coachAccountId);
 
-    const analysis = await this.analysisResultsRepository.findOwnedAnalysisByJobId(
+    const analysis = await this.analysisQueriesService.getOwnedAnalysisByJobId(
       jobId,
       coach.coachAccountId,
     );

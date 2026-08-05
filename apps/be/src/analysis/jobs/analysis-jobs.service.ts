@@ -7,13 +7,13 @@ import {
 import {
   AnalysisJobStatus,
   AnalysisJobType,
-} from '../generated/prisma/client.js';
+} from '../../generated/prisma/client.js';
 import {
   ANALYSIS_JOB_ENQUEUER,
   ANALYSIS_QUEUE_NAME,
-} from '../queues/queue.constants.js';
-import type { AnalysisJobEnqueuer } from '../queues/queue.service.js';
-import { AnalysisJobResponse } from './dto/analysis-job.response.js';
+} from '../../queues/queue.constants.js';
+import type { AnalysisJobEnqueuer } from '../../queues/queue.service.js';
+import { AnalysisJobResponse } from '../dto/analysis-job.response.js';
 import { AnalysisJobsRepository } from './analysis-jobs.repository.js';
 
 @Injectable()
@@ -74,7 +74,10 @@ export class AnalysisJobsService {
     };
   }
 
-  async retry(jobId: string, coachAccountId: string): Promise<AnalysisJobResponse> {
+  async retry(
+    jobId: string,
+    coachAccountId: string,
+  ): Promise<AnalysisJobResponse> {
     const job = await this.getJob(jobId, coachAccountId);
 
     if (job.status !== AnalysisJobStatus.FAILED) {
@@ -83,16 +86,22 @@ export class AnalysisJobsService {
       );
     }
 
-    const updatedJob = await this.analysisJobsRepository.update(jobId, {
-      status: AnalysisJobStatus.PENDING,
-      failureCode: null,
-      failureMessage: null,
-      progressPercent: 0,
-      completedAt: null,
-      startedAt: null,
-      lastRetriedAt: new Date(),
-      attemptCount: job.attemptCount + 1,
-    });
+    const result = await this.analysisJobsRepository.retryFailedJob(
+      jobId,
+      job.attemptCount + 1,
+    );
+
+    if (result.count === 0) {
+      throw new UnprocessableEntityException(
+        'Only failed analysis jobs can be retried',
+      );
+    }
+
+    const updatedJob = await this.analysisJobsRepository.findById(jobId);
+
+    if (!updatedJob) {
+      throw new NotFoundException('Analysis job not found');
+    }
 
     await this.analysisJobEnqueuer.enqueueAnalysisJob(updatedJob.id);
 

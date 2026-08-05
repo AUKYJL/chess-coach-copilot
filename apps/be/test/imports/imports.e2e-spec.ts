@@ -1,4 +1,5 @@
 import { INestApplication } from '@nestjs/common';
+import { readFileSync } from 'fs';
 import request from 'supertest';
 import { createE2eApp } from '../helpers/create-e2e-app.js';
 
@@ -15,6 +16,13 @@ describe('ImportsController (e2e)', () => {
 
   it('creates game and pending analysis job for a valid annotated PGN', async () => {
     const { accessToken, studentId } = await registerCoachAndStudent(app);
+    const rawPgn = readFileSync(
+      new URL(
+        '../fixtures/pgn/annotated-lichess-with-eval.pgn',
+        import.meta.url,
+      ),
+      'utf8',
+    );
 
     const response = await request(app.getHttpServer())
       .post(`/students/${studentId}/imports/pgn`)
@@ -22,10 +30,7 @@ describe('ImportsController (e2e)', () => {
       .send({
         studentColor: 'WHITE',
         sourceLabel: 'Annotated export',
-        rawPgn: `[Event "Training"]
-[Result "1-0"]
-
-1. e4 { [%eval 0.2] } e5 { [%eval 0.1] } 2. Nf3 { [%eval 0.5] } Nc6 1-0`,
+        rawPgn,
       })
       .expect(201);
 

@@ -1,9 +1,10 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { readFileSync } from 'fs';
 import { Test } from '@nestjs/testing';
 import { AnalysisModule } from '../../src/analysis/analysis.module.js';
-import { AnalysisJobsRepository } from '../../src/analysis/analysis-jobs.repository.js';
-import { AnalysisProcessor } from '../../src/analysis/workers/analysis.processor.js';
+import { AnalysisJobsRepository } from '../../src/analysis/jobs/analysis-jobs.repository.js';
+import { AnalysisProcessor } from '../../src/analysis/jobs/analysis.processor.js';
 import { AuthModule } from '../../src/auth/auth.module.js';
 import {
   appConfig,
@@ -21,12 +22,12 @@ import { ANALYSIS_JOB_ENQUEUER } from '../../src/queues/queue.constants.js';
 import { InMemoryPrismaService } from '../helpers/in-memory-prisma.js';
 
 class FakeAnalysisJobEnqueuer {
-  async enqueueAnalysisJob(analysisJobId: string) {
-    return {
+  enqueueAnalysisJob(analysisJobId: string) {
+    return Promise.resolve({
       id: analysisJobId,
       name: 'process-analysis',
       data: { analysisJobId },
-    };
+    });
   }
 }
 
@@ -78,24 +79,24 @@ describe('AnalysisProcessor (integration)', () => {
       .useValue(prisma)
       .overrideProvider(LlmService)
       .useValue({
-        classify: async () => ({
-          model: 'fake-llm',
-          promptVersion: 'test-v1',
-          rawText: '',
-          payload: {
-            confidenceLevel: 'HIGH',
-            overallDiagnosis: 'Completed analysis',
-            openingName: 'Test Opening',
-            result: 'WIN',
-            mainWeaknessTag: 'calculation',
-            secondaryWeaknessTags: ['time-management'],
-            recommendedLessonTitle: 'Review tactics',
-            recommendedLessonWhy: 'Missed tactical detail',
-            recommendedFocusPoints: ['Count checks and captures'],
-            criticalMoments: [],
-            mistakes: [],
-          },
-        }),
+        classify: () =>
+          Promise.resolve({
+            model: 'fake-llm',
+            promptVersion: 'test-v1',
+            rawText: '',
+            payload: {
+              confidenceLevel: 'HIGH',
+              overallDiagnosis: 'Completed analysis',
+              openingName: 'Test Opening',
+              result: 'WIN',
+              mainWeaknessTag: 'calculation',
+              secondaryWeaknessTags: ['time-management'],
+              recommendedLessonTitle: 'Review tactics',
+              recommendedLessonWhy: 'Missed tactical detail',
+              recommendedFocusPoints: ['Count checks and captures'],
+              mistakes: [],
+            },
+          }),
       })
       .compile();
 
@@ -148,6 +149,13 @@ describe('AnalysisProcessor (integration)', () => {
   });
 
   it('marks the job failed when classification throws', async () => {
+    const rawAnnotatedPgn = readFileSync(
+      new URL(
+        '../fixtures/pgn/annotated-lichess-with-eval.pgn',
+        import.meta.url,
+      ),
+      'utf8',
+    );
     const prisma = new InMemoryPrismaService();
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -174,9 +182,7 @@ describe('AnalysisProcessor (integration)', () => {
       .useValue(prisma)
       .overrideProvider(LlmService)
       .useValue({
-        classify: async () => {
-          throw new Error('boom');
-        },
+        classify: () => Promise.reject(new Error('boom')),
       })
       .compile();
 
@@ -202,13 +208,10 @@ describe('AnalysisProcessor (integration)', () => {
         sourceType: 'MANUAL_PGN',
         sourceLabel: null,
         studentColor: 'WHITE',
-        rawPgn: `[Event "Training"]
-[Result "1-0"]
-
-1. e4 { [%eval 0.2] } e5 1-0`,
+        rawPgn: rawAnnotatedPgn,
         normalizedPgnHash: 'hash2',
         hasEngineAnnotations: true,
-        annotationCoverage: 'PARTIAL',
+        annotationCoverage: 'FULL',
         reducedConfidenceWarning: null,
       },
     });
@@ -225,5 +228,109 @@ describe('AnalysisProcessor (integration)', () => {
     const updated = await jobsRepository.findById(job.id);
     expect(updated?.status).toBe('FAILED');
     expect(updated?.failureCode).toBe('ANALYSIS_FAILED');
+  });
+
+  it('marks the job failed and skips persistence when classification payload is invalid', async () => {
+    const rawAnnotatedPgn = readFileSync(
+      new URL(
+        '../fixtures/pgn/annotated-lichess-with-eval.pgn',
+        import.meta.url,
+      ),
+      'utf8',
+    );
+    const prisma = new InMemoryPrismaService();
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          ignoreEnvFile: true,
+          validate: validateEnv,
+          load: [
+            appConfig,
+            databaseConfig,
+            redisConfig,
+            jwtConfig,
+            openrouterConfig,
+          ],
+        }),
+        PrismaModule,
+        TestingQueueModule,
+        AuthModule,
+        GamesModule,
+        AnalysisModule,
+      ],
+    })
+      .overrideProvider(PrismaService)
+      .useValue(prisma)
+      .overrideProvider(LlmService)
+      .useValue({
+        classify: () =>
+          Promise.resolve({
+            model: 'fake-llm',
+            promptVersion: 'test-v1',
+            rawText: '',
+            payload: {
+              confidenceLevel: 'HIGH',
+              overallDiagnosis: 'Invalid analysis payload',
+              result: 'WIN',
+              secondaryWeaknessTags: ['time-management'],
+              recommendedFocusPoints: ['Count checks and captures'],
+              mistakes: [
+                {
+                  criticalMomentPly: 12,
+                  severity: 'MISTAKE',
+                  category: 'calculation',
+                  explanation: 'Invalid source evidence shape.',
+                  sourceEvidence: [],
+                },
+              ],
+            },
+          }),
+      })
+      .compile();
+
+    const jobsRepository = moduleRef.get(AnalysisJobsRepository);
+    const processor = moduleRef.get(AnalysisProcessor);
+    const coach = await prisma.coachAccount.create({
+      data: {
+        email: 'coach3@example.com',
+        passwordHash: 'hash',
+        displayName: 'Coach',
+      },
+    });
+    const student = await prisma.student.create({
+      data: {
+        coachAccountId: coach.id,
+        displayName: 'Student',
+      },
+    });
+    const game = await prisma.game.create({
+      data: {
+        coachAccountId: coach.id,
+        studentId: student.id,
+        sourceType: 'MANUAL_PGN',
+        sourceLabel: null,
+        studentColor: 'WHITE',
+        rawPgn: rawAnnotatedPgn,
+        normalizedPgnHash: 'hash3',
+        hasEngineAnnotations: true,
+        annotationCoverage: 'FULL',
+        reducedConfidenceWarning: null,
+      },
+    });
+    const job = await jobsRepository.create({
+      coachAccountId: coach.id,
+      studentId: student.id,
+      gameId: game.id,
+      jobType: 'ANALYSIS',
+      queueName: 'analysis',
+    });
+
+    await processor.processAnalysisJob(job.id);
+
+    const updated = await jobsRepository.findById(job.id);
+    expect(updated?.status).toBe('FAILED');
+    expect(updated?.failureCode).toBe('ANALYSIS_FAILED');
+    expect(updated?.analysis).toBeNull();
   });
 });

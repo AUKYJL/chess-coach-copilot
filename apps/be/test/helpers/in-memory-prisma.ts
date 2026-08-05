@@ -11,6 +11,7 @@ import {
   GameResult,
   GameSourceType,
   MomentSeverity,
+  MoveColor,
   StudentColor,
 } from '../../src/generated/prisma/client.js';
 
@@ -120,21 +121,22 @@ type GameAnalysisRecord = {
 type CriticalMomentRecord = {
   id: string;
   analysisId: string;
+  ply: number;
+  fullMoveNumber: number;
   moveNumber: string;
-  movePlayed: string;
+  moveColor: MoveColor;
+  san: string;
+  lan: string | null;
+  uci: string | null;
+  beforeFen: string;
+  afterFen: string;
   bestMove: string | null;
-  fen: string | null;
-  evaluationBefore: string | null;
-  evaluationAfter: string | null;
-  evalChange: string | null;
+  bestVariation: string[];
+  nags: string[];
+  comments: string[];
+  evaluationBefore: Record<string, unknown> | null;
+  evaluationAfter: Record<string, unknown> | null;
   severity: MomentSeverity;
-  mainTag: string;
-  secondaryTags: string[];
-  confidence: number;
-  whatHappened: string;
-  studentExplanation: string;
-  coachNote: string;
-  trainingTheme: string | null;
   sourceEvidence: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -143,9 +145,7 @@ type CriticalMomentRecord = {
 type MistakeRecord = {
   id: string;
   analysisId: string;
-  moveNumber: string;
-  movePlayed: string;
-  bestMove: string | null;
+  criticalMomentId: string | null;
   severity: MomentSeverity;
   category: string;
   explanation: string;
@@ -521,7 +521,15 @@ export class InMemoryPrismaService {
       return applySelect(record, args.select);
     },
     create: async (args: {
-      data: Omit<GameRecord, 'id' | 'importedAt' | 'createdAt' | 'updatedAt' | 'sourceLabel' | 'reducedConfidenceWarning'> & {
+      data: Omit<
+        GameRecord,
+        | 'id'
+        | 'importedAt'
+        | 'createdAt'
+        | 'updatedAt'
+        | 'sourceLabel'
+        | 'reducedConfidenceWarning'
+      > & {
         sourceLabel?: string | null;
         reducedConfidenceWarning?: string | null;
       };
@@ -540,7 +548,10 @@ export class InMemoryPrismaService {
       this.games.push(record);
       return structuredClone(record);
     },
-    update: async (args: { where: { id: string }; data: Partial<GameRecord> }) => {
+    update: async (args: {
+      where: { id: string };
+      data: Partial<GameRecord>;
+    }) => {
       const record = this.games.find((item) => item.id === args.where.id);
 
       if (!record) {
@@ -618,8 +629,13 @@ export class InMemoryPrismaService {
 
       return this.attachAnalysisJobRelations(record, args.include);
     },
-    update: async (args: { where: { id: string }; data: Partial<AnalysisJobRecord> }) => {
-      const record = this.analysisJobs.find((item) => item.id === args.where.id);
+    update: async (args: {
+      where: { id: string };
+      data: Partial<AnalysisJobRecord>;
+    }) => {
+      const record = this.analysisJobs.find(
+        (item) => item.id === args.where.id,
+      );
 
       if (!record) {
         throw new Error('Analysis job not found');
@@ -629,10 +645,46 @@ export class InMemoryPrismaService {
       record.updatedAt = new Date();
       return structuredClone(record);
     },
+    updateMany: async (args: {
+      where: {
+        id?: string;
+        status?: AnalysisJobStatus | { in: AnalysisJobStatus[] };
+      };
+      data: Partial<AnalysisJobRecord>;
+    }) => {
+      let count = 0;
+
+      for (const record of this.analysisJobs) {
+        if (args.where.id && record.id !== args.where.id) {
+          continue;
+        }
+
+        if (args.where.status) {
+          if (typeof args.where.status === 'string') {
+            if (record.status !== args.where.status) {
+              continue;
+            }
+          } else if (!args.where.status.in.includes(record.status)) {
+            continue;
+          }
+        }
+
+        assignDefined(record, args.data);
+        record.updatedAt = new Date();
+        count += 1;
+      }
+
+      return { count };
+    },
   };
 
   gameAnalysis = {
-    create: async (args: { data: Omit<GameAnalysisRecord, 'id' | 'resultVersion' | 'createdAt' | 'updatedAt'> }) => {
+    create: async (args: {
+      data: Omit<
+        GameAnalysisRecord,
+        'id' | 'resultVersion' | 'createdAt' | 'updatedAt'
+      >;
+    }) => {
       const now = new Date();
       const record: GameAnalysisRecord = {
         id: randomUUID(),
@@ -647,11 +699,18 @@ export class InMemoryPrismaService {
     },
     findFirst: async (args: {
       where: { analysisJobId?: string; id?: string; coachAccountId?: string };
-      include?: { game?: boolean; criticalMoments?: boolean; mistakes?: boolean };
+      include?: {
+        game?: boolean;
+        criticalMoments?: boolean;
+        mistakes?: boolean;
+      };
     }) => {
       const record =
         this.analyses.find((item) => {
-          if (args.where.analysisJobId && item.analysisJobId !== args.where.analysisJobId) {
+          if (
+            args.where.analysisJobId &&
+            item.analysisJobId !== args.where.analysisJobId
+          ) {
             return false;
           }
 
@@ -688,10 +747,15 @@ export class InMemoryPrismaService {
 
           return true;
         })
-        .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+        .sort(
+          (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
+        )
         .map((item) => this.attachGameAnalysisRelations(item, args.include));
     },
-    update: async (args: { where: { id: string }; data: Partial<GameAnalysisRecord> }) => {
+    update: async (args: {
+      where: { id: string };
+      data: Partial<GameAnalysisRecord>;
+    }) => {
       const record = this.analyses.find((item) => item.id === args.where.id);
 
       if (!record) {
@@ -705,9 +769,18 @@ export class InMemoryPrismaService {
   };
 
   criticalMoment = {
+    findMany: async (args: { where: { analysisId: string } }) => {
+      return this.criticalMoments
+        .filter((item) => item.analysisId === args.where.analysisId)
+        .map((item) => structuredClone(item));
+    },
     deleteMany: async (args: { where: { analysisId: string } }) => {
       const before = this.criticalMoments.length;
-      for (let index = this.criticalMoments.length - 1; index >= 0; index -= 1) {
+      for (
+        let index = this.criticalMoments.length - 1;
+        index >= 0;
+        index -= 1
+      ) {
         if (this.criticalMoments[index].analysisId === args.where.analysisId) {
           this.criticalMoments.splice(index, 1);
         }
@@ -715,7 +788,9 @@ export class InMemoryPrismaService {
 
       return { count: before - this.criticalMoments.length };
     },
-    createMany: async (args: { data: Array<Omit<CriticalMomentRecord, 'id' | 'createdAt' | 'updatedAt'>> }) => {
+    createMany: async (args: {
+      data: Array<Omit<CriticalMomentRecord, 'id' | 'createdAt' | 'updatedAt'>>;
+    }) => {
       const now = new Date();
       for (const item of args.data) {
         this.criticalMoments.push({
@@ -741,7 +816,9 @@ export class InMemoryPrismaService {
 
       return { count: before - this.mistakes.length };
     },
-    createMany: async (args: { data: Array<Omit<MistakeRecord, 'id' | 'createdAt' | 'updatedAt'>> }) => {
+    createMany: async (args: {
+      data: Array<Omit<MistakeRecord, 'id' | 'createdAt' | 'updatedAt'>>;
+    }) => {
       const now = new Date();
       for (const item of args.data) {
         this.mistakes.push({
@@ -758,7 +835,15 @@ export class InMemoryPrismaService {
 
   generationTrace = {
     create: async (args: {
-      data: Omit<GenerationTraceRecord, 'id' | 'reportId' | 'homeworkId' | 'progressSnapshotId' | 'createdAt' | 'updatedAt'>;
+      data: Omit<
+        GenerationTraceRecord,
+        | 'id'
+        | 'reportId'
+        | 'homeworkId'
+        | 'progressSnapshotId'
+        | 'createdAt'
+        | 'updatedAt'
+      >;
     }) => {
       const now = new Date();
       const record: GenerationTraceRecord = {
@@ -811,9 +896,7 @@ export class InMemoryPrismaService {
         ? {
             analysis:
               structuredClone(
-                this.analyses.find(
-                  (item) => item.analysisJobId === record.id,
-                ),
+                this.analyses.find((item) => item.analysisJobId === record.id),
               ) ?? null,
           }
         : {}),

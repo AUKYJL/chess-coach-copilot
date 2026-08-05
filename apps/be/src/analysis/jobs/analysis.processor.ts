@@ -7,11 +7,11 @@ import {
   ANALYSIS_QUEUE_NAME,
 } from '../../queues/queue.constants.js';
 import type { AnalysisQueueJobData } from '../../queues/queue.service.js';
-import { AnalysisJobsRepository } from '../analysis-jobs.repository.js';
-import { PgnPreparationService } from '../pgn-preparation.service.js';
-import { AnalysisClassifierService } from '../services/analysis-classifier.service.js';
-import { AnalysisResultsService } from '../services/analysis-results.service.js';
-import { GenerationTraceService } from '../services/generation-trace.service.js';
+import { AnalysisClassifierService } from '../classification/analysis-classifier.service.js';
+import { GenerationTraceService } from '../classification/generation-trace.service.js';
+import { PgnPreparationService } from '../preparation/pgn-preparation.service.js';
+import { AnalysisResultsService } from '../results/analysis-results.service.js';
+import { AnalysisJobsRepository } from './analysis-jobs.repository.js';
 
 @Injectable()
 @Processor(ANALYSIS_QUEUE_NAME)
@@ -43,28 +43,39 @@ export class AnalysisProcessor extends WorkerHost {
     }
 
     try {
-      await this.analysisJobsRepository.updateStatus(
-        analysisJobId,
-        AnalysisJobStatus.PARSING,
-        {
-          progressPercent: 10,
-          startedAt: analysisJob.startedAt ?? new Date(),
-        },
-      );
+      const parsingTransition =
+        await this.analysisJobsRepository.transitionStatus(
+          analysisJobId,
+          [AnalysisJobStatus.PENDING],
+          AnalysisJobStatus.PARSING,
+          {
+            progressPercent: 10,
+            startedAt: analysisJob.startedAt ?? new Date(),
+          },
+        );
+
+      if (parsingTransition.count === 0) {
+        return;
+      }
 
       const { parsedPgn, extractedContext } =
-        this.pgnPreparationService.parseForAnalysis(analysisJob.game.rawPgn);
+        this.pgnPreparationService.parseForAnalysis(
+          analysisJob.game.rawPgn,
+          analysisJob.game.studentColor,
+        );
 
-      await this.analysisJobsRepository.updateStatus(
+      await this.analysisJobsRepository.transitionStatus(
         analysisJobId,
+        [AnalysisJobStatus.PARSING],
         AnalysisJobStatus.EXTRACTING_ANNOTATIONS,
         {
           progressPercent: 45,
         },
       );
 
-      await this.analysisJobsRepository.updateStatus(
+      await this.analysisJobsRepository.transitionStatus(
         analysisJobId,
+        [AnalysisJobStatus.EXTRACTING_ANNOTATIONS],
         AnalysisJobStatus.CLASSIFICATION,
         {
           progressPercent: 75,
@@ -87,8 +98,9 @@ export class AnalysisProcessor extends WorkerHost {
         classifiedResult,
       });
 
-      await this.analysisJobsRepository.updateStatus(
+      await this.analysisJobsRepository.transitionStatus(
         analysisJobId,
+        [AnalysisJobStatus.CLASSIFICATION],
         AnalysisJobStatus.COMPLETED,
         {
           progressPercent: 100,
@@ -98,12 +110,17 @@ export class AnalysisProcessor extends WorkerHost {
         },
       );
     } catch (error) {
-      console.log(error);
       const failureMessage =
         error instanceof Error ? error.message : 'Unknown analysis failure';
 
-      await this.analysisJobsRepository.updateStatus(
+      await this.analysisJobsRepository.transitionStatus(
         analysisJobId,
+        [
+          AnalysisJobStatus.PENDING,
+          AnalysisJobStatus.PARSING,
+          AnalysisJobStatus.EXTRACTING_ANNOTATIONS,
+          AnalysisJobStatus.CLASSIFICATION,
+        ],
         AnalysisJobStatus.FAILED,
         {
           progressPercent: 100,
