@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import type { AuthenticatedCoach } from '../../shared/types/authenticated-coach.type.js';
+import type { AuthenticatedCoach } from '../types/authenticated-coach.type.js';
 
 @Injectable()
 export class CoachStudentAccessGuard implements CanActivate {

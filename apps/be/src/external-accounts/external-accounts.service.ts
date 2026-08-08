@@ -7,6 +7,7 @@ import {
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateExternalAccountDto } from './dto/create-external-account.dto.js';
+import { UpdateExternalAccountDto } from './dto/update-external-account.dto.js';
 
 @Injectable()
 export class ExternalAccountsService {
@@ -46,12 +47,72 @@ export class ExternalAccountsService {
       throw new ConflictException('External account already exists');
     }
 
-    return this.prisma.externalAccount.create({
-      data: {
+    try {
+      return await this.prisma.externalAccount.create({
+        data: {
+          studentId,
+          platform: dto.platform,
+          username: dto.username.trim(),
+        },
+      });
+    } catch (error) {
+      if (this.isUniqueConstraintError(error)) {
+        throw new ConflictException('External account already exists');
+      }
+
+      throw error;
+    }
+  }
+
+  async update(
+    studentId: string,
+    externalAccountId: string,
+    coachAccountId: string,
+    dto: UpdateExternalAccountDto,
+  ) {
+    await this.assertStudentExists(studentId, coachAccountId);
+    await this.assertOwnedExternalAccount(studentId, externalAccountId);
+
+    const username = dto.username.trim();
+    const existingAccount = await this.prisma.externalAccount.findFirst({
+      where: {
         studentId,
         platform: dto.platform,
-        username: dto.username.trim(),
+        username,
       },
+    });
+
+    if (existingAccount && existingAccount.id !== externalAccountId) {
+      throw new ConflictException('External account already exists');
+    }
+
+    try {
+      return await this.prisma.externalAccount.update({
+        where: { id: externalAccountId },
+        data: {
+          platform: dto.platform,
+          username,
+        },
+      });
+    } catch (error) {
+      if (this.isUniqueConstraintError(error)) {
+        throw new ConflictException('External account already exists');
+      }
+
+      throw error;
+    }
+  }
+
+  async remove(
+    studentId: string,
+    externalAccountId: string,
+    coachAccountId: string,
+  ) {
+    await this.assertStudentExists(studentId, coachAccountId);
+    await this.assertOwnedExternalAccount(studentId, externalAccountId);
+
+    await this.prisma.externalAccount.delete({
+      where: { id: externalAccountId },
     });
   }
 
@@ -68,5 +129,32 @@ export class ExternalAccountsService {
     }
 
     return student;
+  }
+
+  private async assertOwnedExternalAccount(
+    studentId: string,
+    externalAccountId: string,
+  ) {
+    const externalAccount = await this.prisma.externalAccount.findFirst({
+      where: {
+        id: externalAccountId,
+        studentId,
+      },
+    });
+
+    if (!externalAccount) {
+      throw new NotFoundException('External account not found');
+    }
+
+    return externalAccount;
+  }
+
+  private isUniqueConstraintError(error: unknown) {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2002'
+    );
   }
 }

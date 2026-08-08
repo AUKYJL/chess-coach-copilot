@@ -28,13 +28,25 @@ describe('Analysis jobs (e2e)', () => {
     await app.close();
   });
 
-  it('returns job status, completed result, and retries a failed job on the same record', async () => {
+  it('returns job status/history, keeps raw analysis artifacts out of details, removes the debug endpoint, and retries a failed job on the same record', async () => {
     const { accessToken, jobId } = await importGame(app);
     const server = getServer(app);
-    const job = await prisma.analysisJob.findUnique({
+    const job = (await prisma.analysisJob.findUnique({
       where: { id: jobId },
       include: { game: true },
-    });
+    })) as
+      | ({
+          game: {
+            annotationCoverage: AnnotationCoverage;
+            reducedConfidenceWarning: string | null;
+          };
+        } & {
+          id: string;
+          coachAccountId: string;
+          studentId: string;
+          gameId: string;
+        })
+      | null;
 
     expect(job).toBeTruthy();
     expect(job?.game).toBeTruthy();
@@ -45,6 +57,17 @@ describe('Analysis jobs (e2e)', () => {
       .get(`/analysis/jobs/${jobId}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
+
+    const historyResponse = await request(server)
+      .get('/analysis/jobs')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(historyResponse.body.items[0]).toMatchObject({
+      id: jobId,
+      jobType: 'ANALYSIS',
+      analysisId: null,
+    });
 
     await prisma.gameAnalysis.create({
       data: {
@@ -129,31 +152,19 @@ describe('Analysis jobs (e2e)', () => {
       },
     });
 
-    const resultResponse = await request(server)
-      .get(`/analysis/jobs/${jobId}/result`)
+    const completedJobResponse = await request(server)
+      .get(`/analysis/jobs/${jobId}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
 
-    expect(resultResponse.body.analysis).toMatchObject({
-      id: analysis!.id,
-      analysisJobId: jobId,
-      game: {
-        id: job!.gameId,
-        annotationCoverage: jobGame?.annotationCoverage,
-      },
-      criticalMoments: [
-        {
-          id: criticalMoment.id,
-          ply: 5,
-        },
-      ],
-      mistakes: [
-        {
-          criticalMomentId: criticalMoment.id,
-          category: 'calculation',
-        },
-      ],
+    expect(completedJobResponse.body).toMatchObject({
+      id: jobId,
+      jobType: 'ANALYSIS',
+      analysisId: analysis!.id,
     });
+    expect(completedJobResponse.body.reportId).toBeNull();
+    expect(completedJobResponse.body.homeworkId).toBeNull();
+    expect(completedJobResponse.body.progressSnapshotId).toBeNull();
 
     const listResponse = await request(server)
       .get('/analysis')
@@ -198,9 +209,34 @@ describe('Analysis jobs (e2e)', () => {
           category: 'calculation',
         },
       ],
-      rawAnalysisJson: {
-        source: 'seeded-e2e',
-      },
+    });
+    expect(detailsResponse.body.game).toBeUndefined();
+    expect(detailsResponse.body.rawAnalysisJson).toBeUndefined();
+    expect(detailsResponse.body.rawExtractedContext).toBeUndefined();
+
+    await request(server)
+      .get(`/analysis/${analysis!.id}/debug`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(404);
+
+    const gameDetailResponse = await request(server)
+      .get(`/games/${job!.gameId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(gameDetailResponse.body).toMatchObject({
+      id: job!.gameId,
+      latestAnalysisJobId: jobId,
+      latestAnalysisId: analysis!.id,
+    });
+
+    const pgnResponse = await request(server)
+      .get(`/games/${job!.gameId}/pgn`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(pgnResponse.body).toMatchObject({
+      gameId: job!.gameId,
     });
 
     const outsider = await registerCoach(
@@ -212,6 +248,16 @@ describe('Analysis jobs (e2e)', () => {
       .get(`/analysis/${analysis!.id}`)
       .set('Authorization', `Bearer ${outsider}`)
       .expect(404);
+
+    await request(server)
+      .get(`/games/${job!.gameId}`)
+      .set('Authorization', `Bearer ${outsider}`)
+      .expect(404);
+
+    await request(server)
+      .get('/analysis/jobs')
+      .set('Authorization', `Bearer ${outsider}`)
+      .expect(200);
 
     await prisma.analysisJob.update({
       where: { id: jobId },
@@ -258,10 +304,7 @@ describe('Analysis jobs (e2e)', () => {
   it('marks a newly created import job as failed when enqueueing to the queue fails', async () => {
     const server = getServer(app);
     const coachEmail = `queue-failure-${Math.random()}@example.com`;
-    const accessToken = await registerCoach(
-      app,
-      coachEmail,
-    );
+    const accessToken = await registerCoach(app, coachEmail);
     const studentResponse = await request(server)
       .post('/students')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -302,6 +345,158 @@ describe('Analysis jobs (e2e)', () => {
       progressPercent: 100,
     });
     expect(createdJob?.completedAt).not.toBeNull();
+  });
+
+  it('paginates jobs by createdAt/id and returns the latest generation trace', async () => {
+    const server = getServer(app);
+    const coachEmail = `jobs-pagination-${Math.random()}@example.com`;
+    const accessToken = await registerCoach(app, coachEmail);
+    const studentResponse = await request(server)
+      .post('/students')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        displayName: 'Student',
+      })
+      .expect(201);
+    const studentId = studentResponse.body.id as string;
+    const coach = (await prisma.coachAccount.findUnique({
+      where: { email: coachEmail },
+    })) as { id: string } | null;
+
+    expect(coach).toBeTruthy();
+
+    const game = await prisma.game.create({
+      data: {
+        coachAccountId: coach!.id,
+        studentId,
+        sourceType: 'MANUAL_PGN',
+        sourceLabel: 'Seeded game',
+        studentColor: 'WHITE',
+        event: 'Training',
+        site: null,
+        whitePlayerName: null,
+        blackPlayerName: null,
+        openingHeader: null,
+        ecoCode: null,
+        rawResult: '1-0',
+        derivedResult: 'WIN',
+        plyCount: 20,
+        rawPgn: '1. e4 e5 1-0',
+        normalizedPgnHash: 'jobs-pagination-game',
+        hasEngineAnnotations: false,
+        annotationCoverage: 'NONE',
+        reducedConfidenceWarning: null,
+      },
+    });
+    const jobs = await Promise.all([
+      prisma.analysisJob.create({
+        data: {
+          coachAccountId: coach!.id,
+          studentId,
+          gameId: game.id,
+          jobType: 'REPORT_GENERATION',
+          queueName: 'analysis',
+        },
+      }),
+      prisma.analysisJob.create({
+        data: {
+          coachAccountId: coach!.id,
+          studentId,
+          gameId: game.id,
+          jobType: 'HOMEWORK_GENERATION',
+          queueName: 'analysis',
+        },
+      }),
+      prisma.analysisJob.create({
+        data: {
+          coachAccountId: coach!.id,
+          studentId,
+          gameId: game.id,
+          jobType: 'PROGRESS_GENERATION',
+          queueName: 'analysis',
+        },
+      }),
+    ]);
+
+    for (const job of jobs) {
+      await prisma.analysisJob.update({
+        where: { id: job.id },
+        data: {
+          createdAt: new Date('2026-08-08T12:00:00.000Z'),
+        },
+      });
+    }
+
+    const expectedOrder = jobs
+      .map((job) => job.id)
+      .sort((left, right) => right.localeCompare(left));
+
+    await prisma.generationTrace.create({
+      data: {
+        coachAccountId: coach!.id,
+        analysisJobId: jobs[0].id,
+        analysisId: null,
+        reportId: 'report-old',
+        homeworkId: null,
+        progressSnapshotId: null,
+        promptVersion: 'test-v1',
+        model: 'fake-llm',
+        inputPayload: { order: 'old' },
+        outputPayload: { order: 'old' },
+        failureCode: null,
+        failureMessage: null,
+      },
+    });
+    await prisma.generationTrace.create({
+      data: {
+        coachAccountId: coach!.id,
+        analysisJobId: jobs[0].id,
+        analysisId: null,
+        reportId: null,
+        homeworkId: null,
+        progressSnapshotId: 'progress-latest',
+        promptVersion: 'test-v1',
+        model: 'fake-llm',
+        inputPayload: { order: 'latest' },
+        outputPayload: { order: 'latest' },
+        failureCode: null,
+        failureMessage: null,
+      },
+    });
+
+    const firstPageResponse = await request(server)
+      .get('/analysis/jobs?limit=2')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+    const firstPageItems = firstPageResponse.body.items as Array<{
+      id: string;
+    }>;
+
+    expect(firstPageItems.map((item) => item.id)).toEqual(
+      expectedOrder.slice(0, 2),
+    );
+    expect(firstPageResponse.body.nextCursor).toBe(expectedOrder[1]);
+
+    const secondPageResponse = await request(server)
+      .get(`/analysis/jobs?limit=2&cursor=${firstPageResponse.body.nextCursor}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(secondPageResponse.body.items).toHaveLength(1);
+    expect(secondPageResponse.body.items[0].id).toBe(expectedOrder[2]);
+    expect(secondPageResponse.body.nextCursor).toBeNull();
+
+    const jobResponse = await request(server)
+      .get(`/analysis/jobs/${jobs[0].id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(jobResponse.body).toMatchObject({
+      id: jobs[0].id,
+      reportId: null,
+      homeworkId: null,
+      progressSnapshotId: 'progress-latest',
+    });
   });
 });
 

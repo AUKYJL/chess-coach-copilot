@@ -107,6 +107,8 @@ model AnalysisJob {
   @@index([coachAccountId])
   @@index([studentId])
   @@index([gameId])
+  @@index([gameId, createdAt])
+  @@index([studentId, createdAt])
 }
 
 model GameAnalysis {
@@ -142,6 +144,7 @@ model GameAnalysis {
   @@index([coachAccountId])
   @@index([studentId])
   @@index([gameId])
+  @@index([studentId, createdAt])
 }
 
 model CriticalMoment {

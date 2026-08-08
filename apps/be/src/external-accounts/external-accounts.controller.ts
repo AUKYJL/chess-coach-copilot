@@ -1,9 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -17,18 +21,19 @@ import {
 } from '@nestjs/swagger';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard.js';
 import { CurrentCoach } from '../shared/decorators/current-coach.decorator.js';
+import { CoachStudentAccessGuard } from '../shared/guards/coach-student-access.guard.js';
 import {
   swaggerParamExamples,
   swaggerRequestExamples,
 } from '../shared/swagger/swagger-examples.js';
 import type { AuthenticatedCoach } from '../shared/types/authenticated-coach.type.js';
-import { CoachStudentAccessGuard } from '../students/guards/coach-student-access.guard.js';
 import { CreateExternalAccountDto } from './dto/create-external-account.dto.js';
+import { UpdateExternalAccountDto } from './dto/update-external-account.dto.js';
 import { ExternalAccountsService } from './external-accounts.service.js';
 
 @ApiTags('External Accounts')
 @ApiBearerAuth()
-@ApiExtraModels(CreateExternalAccountDto)
+@ApiExtraModels(CreateExternalAccountDto, UpdateExternalAccountDto)
 @UseGuards(JwtAccessGuard, CoachStudentAccessGuard)
 @Controller('students/:studentId/external-accounts')
 export class ExternalAccountsController {
@@ -75,6 +80,45 @@ export class ExternalAccountsController {
       studentId,
       coach.coachAccountId,
       dto,
+    );
+  }
+
+  @ApiParam({
+    name: 'studentId',
+    example: swaggerParamExamples.studentId,
+    format: 'uuid',
+  })
+  @Patch(':externalAccountId')
+  update(
+    @CurrentCoach() coach: AuthenticatedCoach,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('externalAccountId', new ParseUUIDPipe()) externalAccountId: string,
+    @Body() dto: UpdateExternalAccountDto,
+  ) {
+    return this.externalAccountsService.update(
+      studentId,
+      externalAccountId,
+      coach.coachAccountId,
+      dto,
+    );
+  }
+
+  @ApiParam({
+    name: 'studentId',
+    example: swaggerParamExamples.studentId,
+    format: 'uuid',
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete(':externalAccountId')
+  async remove(
+    @CurrentCoach() coach: AuthenticatedCoach,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('externalAccountId', new ParseUUIDPipe()) externalAccountId: string,
+  ) {
+    await this.externalAccountsService.remove(
+      studentId,
+      externalAccountId,
+      coach.coachAccountId,
     );
   }
 }

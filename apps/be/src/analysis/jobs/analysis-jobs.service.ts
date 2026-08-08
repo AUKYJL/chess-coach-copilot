@@ -16,6 +16,10 @@ import {
 } from '../../queues/queue.constants.js';
 import type { AnalysisJobEnqueuer } from '../../queues/queue.service.js';
 import { AnalysisJobResponse } from '../dto/analysis-job.response.js';
+import {
+  mapAnalysisJobResponse,
+  type AnalysisJobResponseRow,
+} from './analysis-jobs.read-model.js';
 import { AnalysisJobsRepository } from './analysis-jobs.repository.js';
 
 @Injectable()
@@ -79,22 +83,29 @@ export class AnalysisJobsService {
   ): Promise<AnalysisJobResponse> {
     const job = await this.getJob(jobId, coachAccountId);
 
+    return this.toJobResponse(job);
+  }
+
+  async listOwnedJobs(args: {
+    coachAccountId: string;
+    studentId?: string;
+    gameId?: string;
+    jobType?: AnalysisJobType;
+    status?: AnalysisJobStatus;
+    limit?: number;
+    cursor?: string;
+  }) {
+    const limit = args.limit ?? 20;
+    const jobs = await this.analysisJobsRepository.findOwnedJobs({
+      ...args,
+      limit,
+    });
+    const items = jobs.slice(0, limit).map((job) => this.toJobResponse(job));
+
     return {
-      id: job.id,
-      gameId: job.gameId,
-      studentId: job.studentId,
-      status: job.status,
-      attemptCount: job.attemptCount,
-      maxAttempts: job.maxAttempts,
-      progressPercent: job.progressPercent ?? null,
-      isDuplicate: false,
-      annotationCoverage: job.game.annotationCoverage,
-      reducedConfidenceWarning: job.game.reducedConfidenceWarning,
-      failureCode: job.failureCode ?? null,
-      failureMessage: job.failureMessage ?? null,
-      completedAt: job.completedAt ?? null,
-      createdAt: job.createdAt,
-      updatedAt: job.updatedAt,
+      items,
+      nextCursor:
+        jobs.length > limit ? (items[items.length - 1]?.id ?? null) : null,
     };
   }
 
@@ -172,5 +183,9 @@ export class AnalysisJobsService {
 
   private toFailureMessage(error: unknown) {
     return error instanceof Error ? error.message : 'Queue enqueue failed';
+  }
+
+  private toJobResponse(job: AnalysisJobResponseRow): AnalysisJobResponse {
+    return mapAnalysisJobResponse(job);
   }
 }

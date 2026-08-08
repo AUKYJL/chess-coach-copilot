@@ -58,6 +58,8 @@ describe('Swagger docs (e2e)', () => {
       getOperation(document, '/analysis/{analysisId}/reports/generate', 'post')
         .requestBody,
     ).toBeDefined();
+    expect(getOperation(document, '/students/{studentId}/overview', 'get')).toBeDefined();
+    expect(hasOperation(document, '/analysis/jobs/{jobId}/result', 'get')).toBe(false);
   });
 
   it('downloads the OpenAPI document as YAML on /docs-yaml', async () => {
@@ -120,4 +122,12 @@ function getOperation(
   }
 
   return operation as Record<string, unknown>;
+}
+
+function hasOperation(
+  document: SwaggerDocumentBody,
+  path: string,
+  method: string,
+): boolean {
+  return document.paths?.[path]?.[method] !== undefined;
 }

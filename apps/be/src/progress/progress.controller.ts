@@ -9,8 +9,8 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard.js';
 import { CurrentCoach } from '../shared/decorators/current-coach.decorator.js';
+import { CoachStudentAccessGuard } from '../shared/guards/coach-student-access.guard.js';
 import type { AuthenticatedCoach } from '../shared/types/authenticated-coach.type.js';
-import { CoachStudentAccessGuard } from '../students/guards/coach-student-access.guard.js';
 import { ProgressService } from './progress.service.js';
 
 @ApiTags('Progress')
@@ -35,6 +35,9 @@ export class ProgressController {
     @CurrentCoach() coach: AuthenticatedCoach,
     @Param('studentId', new ParseUUIDPipe()) studentId: string,
   ) {
-    return this.progressService.requestGeneration(studentId, coach.coachAccountId);
+    return this.progressService.requestGeneration(
+      studentId,
+      coach.coachAccountId,
+    );
   }
 }

@@ -21,6 +21,15 @@ model Game {
   sourceType               GameSourceType
   sourceLabel              String?
   studentColor             StudentColor
+  event                    String?
+  site                     String?
+  whitePlayerName          String?
+  blackPlayerName          String?
+  openingHeader            String?
+  ecoCode                  String?
+  rawResult                String?
+  derivedResult            GameResult         @default(UNKNOWN)
+  plyCount                 Int?
   rawPgn                   String
   normalizedPgnHash        String
   hasEngineAnnotations     Boolean            @default(false)
@@ -36,5 +45,7 @@ model Game {
 
   @@index([coachAccountId])
   @@index([studentId])
+  @@index([studentId, importedAt])
+  @@index([studentId, importedAt, createdAt])
   @@index([studentId, normalizedPgnHash])
 }

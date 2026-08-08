@@ -1,22 +1,27 @@
 import { INestApplication } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import request from 'supertest';
+import { AnalysisJobStatus } from '../../src/generated/prisma/client.js';
 import { createE2eApp } from '../helpers/create-e2e-app.js';
+import { InMemoryPrismaService } from '../helpers/in-memory-prisma.js';
 
 type TestServer = Parameters<typeof request>[0];
 
 describe('ImportsController (e2e)', () => {
   let app: INestApplication;
+  let prisma: InMemoryPrismaService;
 
   beforeEach(async () => {
-    ({ app } = await createE2eApp());
+    const fixture = await createE2eApp();
+    app = fixture.app;
+    prisma = fixture.prisma;
   });
 
   afterEach(async () => {
     await app.close();
   });
 
-  it('creates game and pending analysis job for a valid annotated PGN', async () => {
+  it('creates game summaries and pending analysis job for a valid annotated PGN', async () => {
     const { accessToken, studentId } = await registerCoachAndStudent(app);
     const rawPgn = readFileSync(
       new URL(
@@ -38,9 +43,39 @@ describe('ImportsController (e2e)', () => {
 
     expect(response.body).toMatchObject({
       status: 'PENDING',
+      jobType: 'ANALYSIS',
       studentId,
       isDuplicate: false,
       annotationCoverage: 'FULL',
+    });
+
+    const gamesResponse = await request(getServer(app))
+      .get(`/students/${studentId}/games`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(gamesResponse.body.items[0]).toMatchObject({
+      id: response.body.gameId,
+      event: 'Live Chess',
+      site: 'Chess.com',
+      whitePlayerName: 'yeeet555555',
+      blackPlayerName: 'AUKYJL',
+      openingHeader: "Bishop's Opening: Warsaw Gambit",
+      rawResult: '1-0',
+      derivedResult: 'WIN',
+      latestAnalysisJobStatus: 'PENDING',
+    });
+
+    const jobHistoryResponse = await request(getServer(app))
+      .get(`/analysis/jobs?studentId=${studentId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(jobHistoryResponse.body.items[0]).toMatchObject({
+      id: response.body.id,
+      gameId: response.body.gameId,
+      studentId,
+      jobType: 'ANALYSIS',
     });
   });
 
@@ -93,6 +128,186 @@ describe('ImportsController (e2e)', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .send(payload)
       .expect(422);
+  });
+
+  it('paginates games by DB cursor and filters by latest job status only', async () => {
+    const { accessToken, studentId } = await registerCoachAndStudent(app);
+    const coach = (await prisma.coachAccount.findUnique({
+      where: { email: 'coach@example.com' },
+    })) as { id: string } | null;
+
+    expect(coach).toBeTruthy();
+
+    const gameA = await prisma.game.create({
+      data: {
+        coachAccountId: coach!.id,
+        studentId,
+        sourceType: 'MANUAL_PGN',
+        sourceLabel: 'Game A',
+        studentColor: 'WHITE',
+        event: 'Game A',
+        site: null,
+        whitePlayerName: null,
+        blackPlayerName: null,
+        openingHeader: null,
+        ecoCode: null,
+        rawResult: '1-0',
+        derivedResult: 'WIN',
+        plyCount: 20,
+        rawPgn: '1. e4 e5 1-0',
+        normalizedPgnHash: 'hash-a',
+        hasEngineAnnotations: false,
+        annotationCoverage: 'NONE',
+        reducedConfidenceWarning: null,
+      },
+    });
+    const gameB = await prisma.game.create({
+      data: {
+        coachAccountId: coach!.id,
+        studentId,
+        sourceType: 'MANUAL_PGN',
+        sourceLabel: 'Game B',
+        studentColor: 'WHITE',
+        event: 'Game B',
+        site: null,
+        whitePlayerName: null,
+        blackPlayerName: null,
+        openingHeader: null,
+        ecoCode: null,
+        rawResult: '0-1',
+        derivedResult: 'LOSS',
+        plyCount: 24,
+        rawPgn: '1. d4 d5 0-1',
+        normalizedPgnHash: 'hash-b',
+        hasEngineAnnotations: false,
+        annotationCoverage: 'NONE',
+        reducedConfidenceWarning: null,
+      },
+    });
+
+    await prisma.game.update({
+      where: { id: gameA.id },
+      data: {
+        importedAt: new Date('2026-08-08T09:00:00.000Z'),
+        createdAt: new Date('2026-08-08T09:00:00.000Z'),
+      },
+    });
+    await prisma.game.update({
+      where: { id: gameB.id },
+      data: {
+        importedAt: new Date('2026-08-08T08:00:00.000Z'),
+        createdAt: new Date('2026-08-08T08:00:00.000Z'),
+      },
+    });
+
+    const olderJobA = await prisma.analysisJob.create({
+      data: {
+        coachAccountId: coach!.id,
+        studentId,
+        gameId: gameA.id,
+        jobType: 'ANALYSIS',
+        queueName: 'analysis',
+      },
+    });
+    const latestJobA = await prisma.analysisJob.create({
+      data: {
+        coachAccountId: coach!.id,
+        studentId,
+        gameId: gameA.id,
+        jobType: 'ANALYSIS',
+        queueName: 'analysis',
+      },
+    });
+    const olderJobB = await prisma.analysisJob.create({
+      data: {
+        coachAccountId: coach!.id,
+        studentId,
+        gameId: gameB.id,
+        jobType: 'ANALYSIS',
+        queueName: 'analysis',
+      },
+    });
+    const latestJobB = await prisma.analysisJob.create({
+      data: {
+        coachAccountId: coach!.id,
+        studentId,
+        gameId: gameB.id,
+        jobType: 'ANALYSIS',
+        queueName: 'analysis',
+      },
+    });
+
+    await prisma.analysisJob.update({
+      where: { id: olderJobA.id },
+      data: {
+        status: AnalysisJobStatus.COMPLETED,
+        createdAt: new Date('2026-08-08T09:01:00.000Z'),
+      },
+    });
+    await prisma.analysisJob.update({
+      where: { id: latestJobA.id },
+      data: {
+        status: AnalysisJobStatus.FAILED,
+        createdAt: new Date('2026-08-08T09:02:00.000Z'),
+      },
+    });
+    await prisma.analysisJob.update({
+      where: { id: olderJobB.id },
+      data: {
+        status: AnalysisJobStatus.FAILED,
+        createdAt: new Date('2026-08-08T08:01:00.000Z'),
+      },
+    });
+    await prisma.analysisJob.update({
+      where: { id: latestJobB.id },
+      data: {
+        status: AnalysisJobStatus.COMPLETED,
+        createdAt: new Date('2026-08-08T08:02:00.000Z'),
+      },
+    });
+
+    const firstPageResponse = await request(getServer(app))
+      .get(`/students/${studentId}/games?limit=1`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(firstPageResponse.body.items).toEqual([
+      expect.objectContaining({
+        id: gameA.id,
+        latestAnalysisJobId: latestJobA.id,
+        latestAnalysisJobStatus: AnalysisJobStatus.FAILED,
+      }),
+    ]);
+    expect(firstPageResponse.body.nextCursor).toBe(gameA.id);
+
+    const secondPageResponse = await request(getServer(app))
+      .get(
+        `/students/${studentId}/games?limit=1&cursor=${firstPageResponse.body.nextCursor}`,
+      )
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(secondPageResponse.body.items).toEqual([
+      expect.objectContaining({
+        id: gameB.id,
+        latestAnalysisJobId: latestJobB.id,
+        latestAnalysisJobStatus: AnalysisJobStatus.COMPLETED,
+      }),
+    ]);
+    expect(secondPageResponse.body.nextCursor).toBeNull();
+
+    const filteredResponse = await request(getServer(app))
+      .get(`/students/${studentId}/games?analysisStatus=FAILED`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(filteredResponse.body.items).toEqual([
+      expect.objectContaining({
+        id: gameA.id,
+        latestAnalysisJobId: latestJobA.id,
+        latestAnalysisJobStatus: AnalysisJobStatus.FAILED,
+      }),
+    ]);
   });
 });
 

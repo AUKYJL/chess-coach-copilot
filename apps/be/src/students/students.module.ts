@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
+import { GuardsModule } from '../shared/guards/guards.module.js';
 import { StudentsController } from './students.controller.js';
-import { CoachStudentAccessGuard } from './guards/coach-student-access.guard.js';
 import { StudentsService } from './students.service.js';
 
 @Module({
+  imports: [GuardsModule],
   controllers: [StudentsController],
-  providers: [StudentsService, CoachStudentAccessGuard],
+  providers: [StudentsService],
   exports: [StudentsService],
 })
 export class StudentsModule {}

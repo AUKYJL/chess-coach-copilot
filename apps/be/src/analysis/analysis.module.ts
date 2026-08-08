@@ -19,7 +19,7 @@ import { AnalysisController } from './results/analysis.controller.js';
 
 @Module({
   imports: [PrismaModule, AuthModule, LlmModule],
-  controllers: [AnalysisController, AnalysisJobsController],
+  controllers: [AnalysisJobsController, AnalysisController],
   providers: [
     AnalysisJobsRepository,
     AnalysisJobsService,

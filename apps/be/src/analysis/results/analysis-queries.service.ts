@@ -73,32 +73,8 @@ export class AnalysisQueriesService {
       recommendedFocusPoints: analysis.recommendedFocusPoints,
       criticalMoments: analysis.criticalMoments,
       mistakes: analysis.mistakes,
-      rawExtractedContext: analysis.rawExtractedContext,
-      rawAnalysisJson: analysis.rawAnalysisJson,
       createdAt: analysis.createdAt,
       updatedAt: analysis.updatedAt,
     };
-  }
-
-  getOwnedAnalysisByJobId(analysisJobId: string, coachAccountId: string) {
-    return this.prisma.gameAnalysis
-      .findFirst({
-        where: {
-          analysisJobId,
-          coachAccountId,
-        },
-        include: {
-          game: true,
-          criticalMoments: true,
-          mistakes: true,
-        },
-      })
-      .then((analysis) => {
-        if (!analysis) {
-          return null;
-        }
-
-        return analysis;
-      });
   }
 }

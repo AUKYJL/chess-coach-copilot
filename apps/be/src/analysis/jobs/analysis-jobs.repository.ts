@@ -5,6 +5,10 @@ import {
   type AnalysisJobType,
 } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import {
+  ANALYSIS_JOB_LIST_ORDER_BY,
+  ANALYSIS_JOB_RESPONSE_SELECT,
+} from './analysis-jobs.read-model.js';
 
 @Injectable()
 export class AnalysisJobsRepository {
@@ -28,11 +32,32 @@ export class AnalysisJobsRepository {
         id: jobId,
         coachAccountId,
       },
-      include: {
-        game: true,
-        analysis: true,
-        student: true,
+      select: ANALYSIS_JOB_RESPONSE_SELECT,
+    });
+  }
+
+  findOwnedJobs(args: {
+    coachAccountId: string;
+    studentId?: string;
+    gameId?: string;
+    jobType?: AnalysisJobType;
+    status?: AnalysisJobStatus;
+    limit: number;
+    cursor?: string;
+  }) {
+    return this.prisma.analysisJob.findMany({
+      where: {
+        coachAccountId: args.coachAccountId,
+        ...(args.studentId ? { studentId: args.studentId } : {}),
+        ...(args.gameId ? { gameId: args.gameId } : {}),
+        ...(args.jobType ? { jobType: args.jobType } : {}),
+        ...(args.status ? { status: args.status } : {}),
       },
+      select: ANALYSIS_JOB_RESPONSE_SELECT,
+      orderBy: ANALYSIS_JOB_LIST_ORDER_BY,
+      cursor: args.cursor ? { id: args.cursor } : undefined,
+      skip: args.cursor ? 1 : undefined,
+      take: args.limit + 1,
     });
   }
 

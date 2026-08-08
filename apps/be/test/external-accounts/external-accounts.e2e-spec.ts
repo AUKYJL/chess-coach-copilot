@@ -27,11 +27,11 @@ describe('ExternalAccountsController (e2e)', () => {
     await app.close();
   });
 
-  it('creates and lists external accounts for the owning coach', async () => {
+  it('creates, updates, deletes, and lists external accounts for the owning coach', async () => {
     const coach = await registerCoach(app, 'coach-a@example.com');
     const studentId = await createStudent(app, coach.accessToken);
 
-    await request(getServer(app))
+    const createResponse = await request(getServer(app))
       .post(`/students/${studentId}/external-accounts`)
       .set('Authorization', `Bearer ${coach.accessToken}`)
       .send({
@@ -39,6 +39,7 @@ describe('ExternalAccountsController (e2e)', () => {
         username: 'student-a',
       })
       .expect(201);
+    const externalAccountId = (createResponse.body as ExternalAccountBody).id;
 
     await request(getServer(app))
       .post(`/students/${studentId}/external-accounts`)
@@ -60,6 +61,38 @@ describe('ExternalAccountsController (e2e)', () => {
       platform: ExternalPlatform.LICHESS,
       username: 'student-a',
     });
+
+    await request(getServer(app))
+      .patch(`/students/${studentId}/external-accounts/${externalAccountId}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({
+        platform: ExternalPlatform.CHESS_COM,
+        username: 'student-a-chesscom',
+      })
+      .expect(200);
+
+    const updatedListResponse = await request(getServer(app))
+      .get(`/students/${studentId}/external-accounts`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    expect(updatedListResponse.body.items[0]).toMatchObject({
+      id: externalAccountId,
+      platform: ExternalPlatform.CHESS_COM,
+      username: 'student-a-chesscom',
+    });
+
+    await request(getServer(app))
+      .delete(`/students/${studentId}/external-accounts/${externalAccountId}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(204);
+
+    const afterDeleteResponse = await request(getServer(app))
+      .get(`/students/${studentId}/external-accounts`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    expect(afterDeleteResponse.body.items).toHaveLength(0);
   });
 
   it('blocks cross-coach access and archived-student writes', async () => {

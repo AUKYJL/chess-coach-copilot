@@ -23,5 +23,6 @@ model GenerationTrace {
 
   @@index([coachAccountId])
   @@index([analysisJobId])
+  @@index([analysisJobId, createdAt])
   @@index([analysisId])
 }

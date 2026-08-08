@@ -16,12 +16,12 @@ import {
 } from '@nestjs/swagger';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard.js';
 import { CurrentCoach } from '../shared/decorators/current-coach.decorator.js';
+import { CoachStudentAccessGuard } from '../shared/guards/coach-student-access.guard.js';
 import {
   swaggerParamExamples,
   swaggerRequestExamples,
 } from '../shared/swagger/swagger-examples.js';
 import type { AuthenticatedCoach } from '../shared/types/authenticated-coach.type.js';
-import { CoachStudentAccessGuard } from '../students/guards/coach-student-access.guard.js';
 import { ImportPgnDto } from './dto/import-pgn.dto.js';
 import { ImportsService } from './imports.service.js';
 

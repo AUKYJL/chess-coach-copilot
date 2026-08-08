@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -20,15 +21,16 @@ import {
 } from '@nestjs/swagger';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard.js';
 import { CurrentCoach } from '../shared/decorators/current-coach.decorator.js';
+import { CoachStudentAccessGuard } from '../shared/guards/coach-student-access.guard.js';
 import {
   swaggerParamExamples,
   swaggerRequestExamples,
 } from '../shared/swagger/swagger-examples.js';
 import type { AuthenticatedCoach } from '../shared/types/authenticated-coach.type.js';
 import { CreateStudentDto } from './dto/create-student.dto.js';
+import { ListStudentsQueryDto } from './dto/list-students.query.js';
 import { SetStudentArchiveDto } from './dto/set-student-archive.dto.js';
 import { UpdateStudentDto } from './dto/update-student.dto.js';
-import { CoachStudentAccessGuard } from './guards/coach-student-access.guard.js';
 import { StudentsService } from './students.service.js';
 
 @ApiTags('Students')
@@ -40,8 +42,11 @@ export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
 
   @Get()
-  async list(@CurrentCoach() coach: AuthenticatedCoach) {
-    const items = await this.studentsService.list(coach.coachAccountId);
+  async list(
+    @CurrentCoach() coach: AuthenticatedCoach,
+    @Query() query: ListStudentsQueryDto,
+  ) {
+    const items = await this.studentsService.list(coach.coachAccountId, query);
     return { items };
   }
 
@@ -71,6 +76,27 @@ export class StudentsController {
     @Param('studentId', new ParseUUIDPipe()) studentId: string,
   ) {
     return this.studentsService.getOne(studentId, coach.coachAccountId);
+  }
+
+  @UseGuards(CoachStudentAccessGuard)
+  @Get(':studentId/overview')
+  getOverview(
+    @CurrentCoach() coach: AuthenticatedCoach,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+  ) {
+    return this.studentsService.getOverview(studentId, coach.coachAccountId);
+  }
+
+  @UseGuards(CoachStudentAccessGuard)
+  @Get(':studentId/analysis-profile')
+  getAnalysisProfile(
+    @CurrentCoach() coach: AuthenticatedCoach,
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+  ) {
+    return this.studentsService.getAnalysisProfile(
+      studentId,
+      coach.coachAccountId,
+    );
   }
 
   @UseGuards(CoachStudentAccessGuard)
