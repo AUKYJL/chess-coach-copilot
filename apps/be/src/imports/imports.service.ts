@@ -1,14 +1,8 @@
-import {
-  Inject,
-  Injectable,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { AnalysisJobsService } from '../analysis/jobs/analysis-jobs.service.js';
 import { AnalysisJobResponse } from '../analysis/dto/analysis-job.response.js';
 import { PgnPreparationService } from '../analysis/preparation/pgn-preparation.service.js';
 import { GamesService } from '../games/games.service.js';
-import { ANALYSIS_JOB_ENQUEUER } from '../queues/queue.constants.js';
-import type { AnalysisJobEnqueuer } from '../queues/queue.service.js';
 import { StudentsService } from '../students/students.service.js';
 import { ImportPgnDto } from './dto/import-pgn.dto.js';
 
@@ -19,8 +13,6 @@ export class ImportsService {
     private readonly gamesService: GamesService,
     private readonly analysisJobsService: AnalysisJobsService,
     private readonly pgnPreparationService: PgnPreparationService,
-    @Inject(ANALYSIS_JOB_ENQUEUER)
-    private readonly analysisJobEnqueuer: AnalysisJobEnqueuer,
   ) {}
 
   async importPgn(
@@ -58,13 +50,12 @@ export class ImportsService {
       reducedConfidenceWarning: extractedContext.reducedConfidenceWarning,
     });
 
-    const analysisJob = await this.analysisJobsService.createPendingJob({
-      coachAccountId,
-      studentId,
-      gameId: game.id,
-    });
-
-    await this.analysisJobEnqueuer.enqueueAnalysisJob(analysisJob.id);
+    const analysisJob =
+      await this.analysisJobsService.createAndEnqueueAnalysisJob({
+        coachAccountId,
+        studentId,
+        gameId: game.id,
+      });
 
     return {
       id: analysisJob.id,

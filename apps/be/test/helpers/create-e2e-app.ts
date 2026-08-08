@@ -10,6 +10,7 @@ import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { AuthModule } from '../../src/auth/auth.module.js';
 import { AnalysisModule } from '../../src/analysis/analysis.module.js';
+import { AnalysisProcessingModule } from '../../src/analysis/jobs/analysis-processing.module.js';
 import {
   appConfig,
   databaseConfig,
@@ -20,28 +21,62 @@ import {
 } from '../../src/config/index.js';
 import { ExternalAccountsModule } from '../../src/external-accounts/external-accounts.module.js';
 import { GamesModule } from '../../src/games/games.module.js';
+import { HomeworkModule } from '../../src/homework/homework.module.js';
 import { ImportsModule } from '../../src/imports/imports.module.js';
 import { LlmService } from '../../src/llm/llm.service.js';
 import { PrismaModule } from '../../src/prisma/prisma.module.js';
+import { ProgressModule } from '../../src/progress/progress.module.js';
+import { ReportsModule } from '../../src/reports/reports.module.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { ANALYSIS_JOB_ENQUEUER } from '../../src/queues/queue.constants.js';
+import type { AnalysisQueueJobData } from '../../src/queues/queue.service.js';
 import { HttpExceptionFilter } from '../../src/shared/filters/http-exception.filter.js';
 import { setupSwagger } from '../../src/shared/swagger/swagger.config.js';
 import { StudentsModule } from '../../src/students/students.module.js';
-import { WeaknessTag } from '../../src/generated/prisma/client.js';
+import {
+  ConfidenceLevel,
+  ReportAudience,
+  WeaknessTag,
+} from '../../src/generated/prisma/client.js';
 import { InMemoryPrismaService } from './in-memory-prisma.js';
 
+process.env.DATABASE_URL ??= 'postgresql://test:test@localhost:5432/test';
+process.env.JWT_ACCESS_SECRET ??= 'test-access-secret';
+process.env.JWT_REFRESH_SECRET ??= 'test-refresh-secret';
+process.env.OPENROUTER_API_KEY ??= 'test-openrouter-key';
+
 class FakeAnalysisJobEnqueuer {
-  readonly analysisJobIds: string[] = [];
+  readonly jobs: Array<{
+    id: string;
+    name: string;
+    data: AnalysisQueueJobData;
+  }> = [];
+  nextError: Error | null = null;
 
   enqueueAnalysisJob(analysisJobId: string) {
-    this.analysisJobIds.push(analysisJobId);
+    return this.enqueue({ analysisJobId });
+  }
 
-    return Promise.resolve({
-      id: analysisJobId,
+  enqueueGenerationJob(analysisJobId: string) {
+    return this.enqueue({ analysisJobId });
+  }
+
+  private enqueue(data: AnalysisQueueJobData) {
+    if (this.nextError) {
+      const error = this.nextError;
+      this.nextError = null;
+      return Promise.reject(error);
+    }
+
+    const job = {
+      id: data.analysisJobId,
       name: 'process-analysis',
-      data: { analysisJobId },
-    });
+      data,
+    };
+
+    this.jobs.push(job);
+
+    return Promise.resolve(job);
   }
 }
 
@@ -77,6 +112,85 @@ class FakeLlmService {
           suggestedFix: 'Check forcing moves first.',
           sourceEvidence: moment.sourceEvidence,
         })),
+      },
+    });
+  }
+
+  generate(request: { userPrompt: string }) {
+    const parsed = JSON.parse(request.userPrompt) as {
+      audience?: string;
+      analysis?: {
+        openingName?: string | null;
+        overallDiagnosis?: string;
+      };
+      analyses?: Array<{
+        overallDiagnosis?: string;
+      }>;
+    };
+
+    const shouldForceInvalid =
+      parsed.analysis?.overallDiagnosis?.includes('__FORCE_INVALID__') ||
+      parsed.analyses?.some((analysis) =>
+        analysis.overallDiagnosis?.includes('__FORCE_INVALID__'),
+      );
+
+    if (shouldForceInvalid) {
+      return Promise.resolve({
+        model: 'fake-llm',
+        promptVersion: 'test-v1',
+        rawText: '{"invalid":true}',
+        payload: {
+          invalid: true,
+        },
+      });
+    }
+
+    if (parsed.analysis && typeof parsed.audience === 'string') {
+      return Promise.resolve({
+        model: 'fake-llm',
+        promptVersion: 'test-v1',
+        rawText: '',
+        payload: {
+          title: `${parsed.audience === ReportAudience.PARENT ? 'Parent' : 'Coach'} report: ${parsed.analysis?.openingName ?? 'Game review'}`,
+          summary: 'Structured review of the saved analysis.',
+          highlights: [
+            'Opening recall improved',
+            'Move-order discipline needs work',
+          ],
+          lessonFocus: ['Candidate move discipline'],
+          nextSteps: ['Review the critical moment on move 18'],
+        },
+      });
+    }
+
+    if (parsed.analysis) {
+      return Promise.resolve({
+        model: 'fake-llm',
+        promptVersion: 'test-v1',
+        rawText: '',
+        payload: {
+          title: 'Homework: candidate move discipline',
+          overview: 'Use the saved analysis to rehearse forcing-move checks.',
+          exercises: [
+            'Annotate move 18 alternatives',
+            'Solve five fork puzzles',
+          ],
+          focusPoints: ['Checks, captures, threats'],
+          notes: ['Discuss move-order discipline in the next lesson'],
+        },
+      });
+    }
+
+    return Promise.resolve({
+      model: 'fake-llm',
+      promptVersion: 'test-v1',
+      rawText: '',
+      payload: {
+        summary: 'Progress is visible across the saved analyses.',
+        improvements: ['More stable opening decisions'],
+        recurringWeaknesses: ['Tactical forcing lines are still missed'],
+        nextFocusPoints: ['Slow down before forcing moves'],
+        confidenceLevel: ConfidenceLevel.HIGH,
       },
     });
   }
@@ -117,8 +231,11 @@ class TestingQueueModule {}
     GamesModule,
     AnalysisModule,
     ImportsModule,
+    ReportsModule,
+    HomeworkModule,
+    ProgressModule,
+    AnalysisProcessingModule,
   ],
-  providers: [{ provide: LlmService, useClass: FakeLlmService }],
 })
 class E2eAppModule {}
 
@@ -137,6 +254,8 @@ export async function createE2eApp(options: CreateE2eAppOptions = {}): Promise<{
   })
     .overrideProvider(PrismaService)
     .useValue(prisma)
+    .overrideProvider(LlmService)
+    .useClass(FakeLlmService)
     .compile();
 
   const app = moduleRef.createNestApplication();

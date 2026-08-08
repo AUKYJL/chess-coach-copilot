@@ -209,7 +209,6 @@ describe('AnalysisClassifierService', () => {
           },
         ],
       }),
-      schemaName: 'analysis-result',
     });
     expect(result.promptVersion).toBe('v2');
     expect(result.model).toBe('test-model');

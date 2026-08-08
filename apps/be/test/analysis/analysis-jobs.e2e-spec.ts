@@ -15,11 +15,13 @@ type TestServer = Parameters<typeof request>[0];
 describe('Analysis jobs (e2e)', () => {
   let app: INestApplication;
   let prisma: InMemoryPrismaService;
+  let fakeQueue: Awaited<ReturnType<typeof createE2eApp>>['fakeQueue'];
 
   beforeEach(async () => {
     const fixture = await createE2eApp();
     app = fixture.app;
     prisma = fixture.prisma;
+    fakeQueue = fixture.fakeQueue;
   });
 
   afterEach(async () => {
@@ -251,6 +253,55 @@ describe('Analysis jobs (e2e)', () => {
       startedAt: null,
       completedAt: null,
     });
+  });
+
+  it('marks a newly created import job as failed when enqueueing to the queue fails', async () => {
+    const server = getServer(app);
+    const coachEmail = `queue-failure-${Math.random()}@example.com`;
+    const accessToken = await registerCoach(
+      app,
+      coachEmail,
+    );
+    const studentResponse = await request(server)
+      .post('/students')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        displayName: 'Student',
+      })
+      .expect(201);
+
+    fakeQueue.nextError = new Error('queue offline');
+
+    await request(server)
+      .post(`/students/${studentResponse.body.id as string}/imports/pgn`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        studentColor: 'WHITE',
+        rawPgn: `[Event "Training"]\n[Result "1-0"]\n\n1. e4 { [%eval 0.2] } e5 1-0`,
+      })
+      .expect(503);
+
+    const coach = (await prisma.coachAccount.findUnique({
+      where: { email: coachEmail },
+    })) as { id: string } | null;
+
+    const createdJob = (await prisma.analysisJob.findFirst({
+      where: { coachAccountId: coach!.id },
+    })) as {
+      status: AnalysisJobStatus;
+      failureCode: string | null;
+      failureMessage: string | null;
+      completedAt: Date | null;
+      progressPercent: number | null;
+    } | null;
+
+    expect(createdJob).toMatchObject({
+      status: AnalysisJobStatus.FAILED,
+      failureCode: 'QUEUE_ENQUEUE_FAILED',
+      failureMessage: 'queue offline',
+      progressPercent: 100,
+    });
+    expect(createdJob?.completedAt).not.toBeNull();
   });
 });
 

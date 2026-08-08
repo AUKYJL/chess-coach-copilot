@@ -2,11 +2,13 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import {
   AnalysisJobStatus,
   AnalysisJobType,
+  ReportAudience,
 } from '../../generated/prisma/client.js';
 import {
   ANALYSIS_JOB_ENQUEUER,
@@ -24,16 +26,38 @@ export class AnalysisJobsService {
     private readonly analysisJobEnqueuer: AnalysisJobEnqueuer,
   ) {}
 
-  createPendingJob(data: {
+  async createAndEnqueueAnalysisJob(data: {
     coachAccountId: string;
     studentId: string;
     gameId: string;
   }) {
-    return this.analysisJobsRepository.create({
+    const job = await this.analysisJobsRepository.create({
       ...data,
       jobType: AnalysisJobType.ANALYSIS,
       queueName: ANALYSIS_QUEUE_NAME,
     });
+
+    return this.enqueueCreatedJob(job.id, () =>
+      this.analysisJobEnqueuer.enqueueAnalysisJob(job.id),
+    );
+  }
+
+  async createAndEnqueueGenerationJob(data: {
+    coachAccountId: string;
+    studentId: string;
+    gameId: string;
+    jobType: AnalysisJobType;
+    sourceAnalysisId?: string;
+    reportAudience?: ReportAudience;
+  }) {
+    const job = await this.analysisJobsRepository.create({
+      ...data,
+      queueName: ANALYSIS_QUEUE_NAME,
+    });
+
+    return this.enqueueCreatedJob(job.id, () =>
+      this.analysisJobEnqueuer.enqueueGenerationJob(job.id),
+    );
   }
 
   async getJob(jobId: string, coachAccountId: string) {
@@ -103,8 +127,50 @@ export class AnalysisJobsService {
       throw new NotFoundException('Analysis job not found');
     }
 
-    await this.analysisJobEnqueuer.enqueueAnalysisJob(updatedJob.id);
+    try {
+      if (updatedJob.jobType === AnalysisJobType.ANALYSIS) {
+        await this.analysisJobEnqueuer.enqueueAnalysisJob(updatedJob.id);
+      } else {
+        await this.analysisJobEnqueuer.enqueueGenerationJob(updatedJob.id);
+      }
+    } catch (error) {
+      await this.analysisJobsRepository.markFailed(updatedJob.id, {
+        failureCode: 'QUEUE_ENQUEUE_FAILED',
+        failureMessage: this.toFailureMessage(error),
+      });
+
+      throw new ServiceUnavailableException(
+        'Analysis job queue is temporarily unavailable',
+      );
+    }
 
     return this.getJobResponse(updatedJob.id, coachAccountId);
+  }
+
+  private async enqueueCreatedJob<T>(jobId: string, enqueue: () => Promise<T>) {
+    try {
+      await enqueue();
+    } catch (error) {
+      await this.analysisJobsRepository.markFailed(jobId, {
+        failureCode: 'QUEUE_ENQUEUE_FAILED',
+        failureMessage: this.toFailureMessage(error),
+      });
+
+      throw new ServiceUnavailableException(
+        'Analysis job queue is temporarily unavailable',
+      );
+    }
+
+    const job = await this.analysisJobsRepository.findById(jobId);
+
+    if (!job) {
+      throw new NotFoundException('Analysis job not found');
+    }
+
+    return job;
+  }
+
+  private toFailureMessage(error: unknown) {
+    return error instanceof Error ? error.message : 'Queue enqueue failed';
   }
 }

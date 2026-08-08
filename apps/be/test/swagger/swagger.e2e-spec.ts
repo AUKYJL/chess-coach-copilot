@@ -10,6 +10,7 @@ interface SwaggerDocumentBody {
     title: string;
     version: string;
   };
+  paths?: Record<string, Record<string, unknown>>;
 }
 
 describe('Swagger docs (e2e)', () => {
@@ -45,6 +46,18 @@ describe('Swagger docs (e2e)', () => {
     expect(document.openapi).toBeTruthy();
     expect(document.info.title).toBe('Chess Coach Copilot');
     expect(document.info.version).toBe('0.1.0');
+    expect(
+      getOperation(document, '/analysis/{analysisId}/homework/generate', 'post')
+        .requestBody,
+    ).toBeUndefined();
+    expect(
+      getOperation(document, '/students/{studentId}/progress/generate', 'post')
+        .requestBody,
+    ).toBeUndefined();
+    expect(
+      getOperation(document, '/analysis/{analysisId}/reports/generate', 'post')
+        .requestBody,
+    ).toBeDefined();
   });
 
   it('downloads the OpenAPI document as YAML on /docs-yaml', async () => {
@@ -93,4 +106,18 @@ function isSwaggerDocumentBody(value: unknown): value is SwaggerDocumentBody {
   const info = document.info as Record<string, unknown>;
 
   return typeof info.title === 'string' && typeof info.version === 'string';
+}
+
+function getOperation(
+  document: SwaggerDocumentBody,
+  path: string,
+  method: string,
+): Record<string, unknown> {
+  const operation = document.paths?.[path]?.[method];
+
+  if (typeof operation !== 'object' || operation === null) {
+    throw new Error(`Expected OpenAPI operation ${method.toUpperCase()} ${path}`);
+  }
+
+  return operation as Record<string, unknown>;
 }

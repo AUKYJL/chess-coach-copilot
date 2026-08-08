@@ -8,8 +8,11 @@ export class GenerationTraceService {
 
   persistSuccess(data: {
     coachAccountId: string;
-    analysisJobId: string;
-    analysisId: string;
+    analysisJobId: string | null;
+    analysisId?: string;
+    reportId?: string;
+    homeworkId?: string;
+    progressSnapshotId?: string;
     promptVersion: string;
     model: string;
     inputPayload: Prisma.InputJsonValue;
@@ -17,7 +20,14 @@ export class GenerationTraceService {
   }) {
     return this.prisma.generationTrace.create({
       data: {
-        ...data,
+        coachAccountId: data.coachAccountId,
+        analysisJobId: data.analysisJobId,
+        analysisId: data.analysisId ?? null,
+        reportId: data.reportId ?? null,
+        homeworkId: data.homeworkId ?? null,
+        progressSnapshotId: data.progressSnapshotId ?? null,
+        promptVersion: data.promptVersion,
+        model: data.model,
         inputPayload: data.inputPayload,
         outputPayload: data.outputPayload,
       },
@@ -26,7 +36,13 @@ export class GenerationTraceService {
 
   persistFailure(data: {
     coachAccountId: string;
-    analysisJobId: string;
+    analysisJobId: string | null;
+    analysisId?: string;
+    reportId?: string;
+    homeworkId?: string;
+    progressSnapshotId?: string;
+    promptVersion?: string;
+    model?: string;
     inputPayload: Prisma.InputJsonValue;
     outputPayload: Prisma.InputJsonValue;
     failureCode: string;
@@ -36,8 +52,12 @@ export class GenerationTraceService {
       data: {
         coachAccountId: data.coachAccountId,
         analysisJobId: data.analysisJobId,
-        promptVersion: 'failed-analysis-v1',
-        model: 'analysis-processor',
+        analysisId: data.analysisId ?? null,
+        reportId: data.reportId ?? null,
+        homeworkId: data.homeworkId ?? null,
+        progressSnapshotId: data.progressSnapshotId ?? null,
+        promptVersion: data.promptVersion ?? 'failed-analysis-v1',
+        model: data.model ?? 'analysis-processor',
         inputPayload: data.inputPayload,
         outputPayload: data.outputPayload,
         failureCode: data.failureCode,

@@ -4,7 +4,7 @@ model Report {
   studentId        String
   analysisId       String
   title            String
-  audience         String
+  audience         ReportAudience
   content          Json
   promptVersion    String
   model            String

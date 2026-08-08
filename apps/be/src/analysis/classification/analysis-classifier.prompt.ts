@@ -88,6 +88,15 @@ export const PARENT_REPORT_PROMPT = [
   'Use plain language, stay supportive, avoid engine jargon, and explain the main growth area plus what the next lesson or homework will reinforce.',
 ].join('\n');
 
+export const HOMEWORK_PROMPT = [
+  PRODUCT_CONTEXT,
+  'MODE: homework',
+  '',
+  'Transform a saved analysis into an actionable homework draft for the student.',
+  'Include a concise title, short overview, concrete exercises, and practical focus points for the next lesson cycle.',
+  'Ground every exercise in the supplied structured analysis instead of inventing unsupported tactical claims.',
+].join('\n');
+
 export const FULL_PIPELINE_PROMPT = [
   PRODUCT_CONTEXT,
   'MODE: full_pipeline',
@@ -108,6 +117,7 @@ export const ANALYSIS_PROMPTS_BY_MODE = {
   json_analysis: JSON_ANALYSIS_PROMPT,
   coach_report: COACH_REPORT_PROMPT,
   parent_report: PARENT_REPORT_PROMPT,
+  homework: HOMEWORK_PROMPT,
   full_pipeline: FULL_PIPELINE_PROMPT,
   progress_analysis: PROGRESS_ANALYSIS_PROMPT,
 } as const;

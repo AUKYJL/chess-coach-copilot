@@ -9,7 +9,6 @@ describe('LlmService', () => {
       service.classify({
         systemPrompt: 'system',
         userPrompt: 'user',
-        schemaName: 'schema',
       }),
     ).resolves.toEqual({
       model: 'test-model',
@@ -29,7 +28,6 @@ describe('LlmService', () => {
       service.classify({
         systemPrompt: 'system',
         userPrompt: 'user',
-        schemaName: 'schema',
       }),
     ).rejects.toThrow('LLM returned an empty response body');
   });
@@ -41,7 +39,6 @@ describe('LlmService', () => {
       service.classify({
         systemPrompt: 'system',
         userPrompt: 'user',
-        schemaName: 'schema',
       }),
     ).rejects.toThrow('LLM returned invalid JSON in the response body');
   });

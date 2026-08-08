@@ -10,9 +10,14 @@ enum AnalysisJobStatus {
   PARSING
   EXTRACTING_ANNOTATIONS
   CLASSIFICATION
-  REPORT_GENERATION
+  GENERATING_OUTPUT
   COMPLETED
   FAILED
+}
+
+enum ReportAudience {
+  COACH
+  PARENT
 }
 
 enum ConfidenceLevel {
@@ -79,6 +84,8 @@ model AnalysisJob {
   studentId        String
   gameId           String
   jobType          AnalysisJobType
+  sourceAnalysisId String?
+  reportAudience   ReportAudience?
   status           AnalysisJobStatus @default(PENDING)
   queueName        String
   attemptCount     Int               @default(0)

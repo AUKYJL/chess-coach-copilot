@@ -84,7 +84,6 @@ export class AnalysisClassifierService {
     const llmResponse = await this.llmService.classify({
       systemPrompt: ANALYSIS_CLASSIFIER_SYSTEM_PROMPT,
       userPrompt: JSON.stringify(inputPayload),
-      schemaName: 'analysis-result',
     });
 
     return {

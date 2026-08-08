@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { readFileSync } from 'fs';
 import { Test } from '@nestjs/testing';
 import { AnalysisModule } from '../../src/analysis/analysis.module.js';
+import { AnalysisProcessingModule } from '../../src/analysis/jobs/analysis-processing.module.js';
 import { AnalysisJobsRepository } from '../../src/analysis/jobs/analysis-jobs.repository.js';
 import { AnalysisProcessor } from '../../src/analysis/jobs/analysis.processor.js';
 import { AuthModule } from '../../src/auth/auth.module.js';
@@ -20,10 +21,23 @@ import { PrismaModule } from '../../src/prisma/prisma.module.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { ANALYSIS_JOB_ENQUEUER } from '../../src/queues/queue.constants.js';
 import { InMemoryPrismaService } from '../helpers/in-memory-prisma.js';
-import { WeaknessTag } from '../../src/generated/prisma/client.js';
+import {
+  AnalysisJobStatus,
+  AnalysisJobType,
+  ReportAudience,
+  WeaknessTag,
+} from '../../src/generated/prisma/client.js';
 
 class FakeAnalysisJobEnqueuer {
   enqueueAnalysisJob(analysisJobId: string) {
+    return Promise.resolve({
+      id: analysisJobId,
+      name: 'process-analysis',
+      data: { analysisJobId },
+    });
+  }
+
+  enqueueGenerationJob(analysisJobId: string) {
     return Promise.resolve({
       id: analysisJobId,
       name: 'process-analysis',
@@ -74,6 +88,7 @@ describe('AnalysisProcessor (integration)', () => {
         AuthModule,
         GamesModule,
         AnalysisModule,
+        AnalysisProcessingModule,
       ],
     })
       .overrideProvider(PrismaService)
@@ -177,6 +192,7 @@ describe('AnalysisProcessor (integration)', () => {
         AuthModule,
         GamesModule,
         AnalysisModule,
+        AnalysisProcessingModule,
       ],
     })
       .overrideProvider(PrismaService)
@@ -259,6 +275,7 @@ describe('AnalysisProcessor (integration)', () => {
         AuthModule,
         GamesModule,
         AnalysisModule,
+        AnalysisProcessingModule,
       ],
     })
       .overrideProvider(PrismaService)
@@ -333,5 +350,124 @@ describe('AnalysisProcessor (integration)', () => {
     expect(updated?.status).toBe('FAILED');
     expect(updated?.failureCode).toBe('ANALYSIS_FAILED');
     expect(updated?.analysis).toBeNull();
+  });
+
+  it('fails a report generation job with ANALYSIS_SCOPE_MISMATCH when the persisted analysis scope does not match', async () => {
+    const prisma = new InMemoryPrismaService();
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          ignoreEnvFile: true,
+          validate: validateEnv,
+          load: [
+            appConfig,
+            databaseConfig,
+            redisConfig,
+            jwtConfig,
+            openrouterConfig,
+          ],
+        }),
+        PrismaModule,
+        TestingQueueModule,
+        AuthModule,
+        GamesModule,
+        AnalysisModule,
+        AnalysisProcessingModule,
+      ],
+    })
+      .overrideProvider(PrismaService)
+      .useValue(prisma)
+      .overrideProvider(LlmService)
+      .useValue({
+        classify: () => Promise.resolve(null),
+        generate: () => Promise.resolve(null),
+      })
+      .compile();
+
+    const jobsRepository = moduleRef.get(AnalysisJobsRepository);
+    const processor = moduleRef.get(AnalysisProcessor);
+    const coach = await prisma.coachAccount.create({
+      data: {
+        email: 'coach4@example.com',
+        passwordHash: 'hash',
+        displayName: 'Coach',
+      },
+    });
+    const student = await prisma.student.create({
+      data: {
+        coachAccountId: coach.id,
+        displayName: 'Student',
+      },
+    });
+    const sourceGame = await prisma.game.create({
+      data: {
+        coachAccountId: coach.id,
+        studentId: student.id,
+        sourceType: 'MANUAL_PGN',
+        sourceLabel: null,
+        studentColor: 'WHITE',
+        rawPgn: '[Event "Source"]\n[Result "1-0"]\n\n1. e4 e5 1-0',
+        normalizedPgnHash: 'source-hash',
+        hasEngineAnnotations: true,
+        annotationCoverage: 'FULL',
+        reducedConfidenceWarning: null,
+      },
+    });
+    const sourceJob = await jobsRepository.create({
+      coachAccountId: coach.id,
+      studentId: student.id,
+      gameId: sourceGame.id,
+      jobType: AnalysisJobType.ANALYSIS,
+      queueName: 'analysis',
+    });
+    const sourceAnalysis = await prisma.gameAnalysis.create({
+      data: {
+        coachAccountId: coach.id,
+        studentId: student.id,
+        gameId: sourceGame.id,
+        analysisJobId: sourceJob.id,
+        confidenceLevel: 'HIGH',
+        overallDiagnosis: 'Source analysis',
+        openingName: 'Italian Game',
+        result: 'WIN',
+        mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
+        secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
+        recommendedLessonTitle: 'Review tactics',
+        recommendedLessonWhy: 'Missed tactical detail',
+        recommendedFocusPoints: ['Count checks and captures'],
+        rawExtractedContext: { source: 'fixture' },
+        rawAnalysisJson: { source: 'fixture' },
+      },
+    });
+    const mismatchedGame = await prisma.game.create({
+      data: {
+        coachAccountId: coach.id,
+        studentId: student.id,
+        sourceType: 'MANUAL_PGN',
+        sourceLabel: null,
+        studentColor: 'WHITE',
+        rawPgn: '[Event "Mismatch"]\n[Result "1-0"]\n\n1. d4 d5 1-0',
+        normalizedPgnHash: 'mismatch-hash',
+        hasEngineAnnotations: true,
+        annotationCoverage: 'FULL',
+        reducedConfidenceWarning: null,
+      },
+    });
+    const generationJob = await jobsRepository.create({
+      coachAccountId: coach.id,
+      studentId: student.id,
+      gameId: mismatchedGame.id,
+      jobType: AnalysisJobType.REPORT_GENERATION,
+      queueName: 'analysis',
+      sourceAnalysisId: sourceAnalysis.id,
+      reportAudience: ReportAudience.COACH,
+    });
+
+    await processor.processPersistedJob({ analysisJobId: generationJob.id });
+
+    const updated = await jobsRepository.findById(generationJob.id);
+    expect(updated?.status).toBe(AnalysisJobStatus.FAILED);
+    expect(updated?.failureCode).toBe('ANALYSIS_SCOPE_MISMATCH');
   });
 });

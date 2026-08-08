@@ -9,6 +9,7 @@ export interface AnalysisQueueJobData {
 
 export interface AnalysisJobEnqueuer {
   enqueueAnalysisJob(analysisJobId: string): Promise<Job<AnalysisQueueJobData>>;
+  enqueueGenerationJob(analysisJobId: string): Promise<Job<AnalysisQueueJobData>>;
 }
 
 @Injectable()
@@ -21,6 +22,18 @@ export class QueueService implements AnalysisJobEnqueuer {
   enqueueAnalysisJob(
     analysisJobId: string,
   ): Promise<Job<AnalysisQueueJobData>> {
-    return this.analysisQueue.add(ANALYSIS_JOB_NAME, { analysisJobId });
+    return this.enqueueJob({ analysisJobId });
+  }
+
+  enqueueGenerationJob(
+    analysisJobId: string,
+  ): Promise<Job<AnalysisQueueJobData>> {
+    return this.enqueueJob({ analysisJobId });
+  }
+
+  private enqueueJob(
+    data: AnalysisQueueJobData,
+  ): Promise<Job<AnalysisQueueJobData>> {
+    return this.analysisQueue.add(ANALYSIS_JOB_NAME, data);
   }
 }

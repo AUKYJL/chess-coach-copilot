@@ -12,6 +12,7 @@ import {
   GameSourceType,
   MomentSeverity,
   MoveColor,
+  ReportAudience,
   StudentColor,
   WeaknessTag,
 } from '../../src/generated/prisma/client.js';
@@ -83,6 +84,8 @@ type AnalysisJobRecord = {
   studentId: string;
   gameId: string;
   jobType: AnalysisJobType;
+  sourceAnalysisId: string | null;
+  reportAudience: ReportAudience | null;
   status: AnalysisJobStatus;
   queueName: string;
   attemptCount: number;
@@ -174,6 +177,45 @@ type GenerationTraceRecord = {
   updatedAt: Date;
 };
 
+type ReportRecord = {
+  id: string;
+  coachAccountId: string;
+  studentId: string;
+  analysisId: string;
+  title: string;
+  audience: ReportAudience;
+  content: Record<string, unknown>;
+  promptVersion: string;
+  model: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type HomeworkRecord = {
+  id: string;
+  coachAccountId: string;
+  studentId: string;
+  analysisId: string;
+  title: string;
+  content: Record<string, unknown>;
+  promptVersion: string;
+  model: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type ProgressSnapshotRecord = {
+  id: string;
+  coachAccountId: string;
+  studentId: string;
+  analysisCount: number;
+  summary: Record<string, unknown>;
+  promptVersion: string;
+  model: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 type SelectMap = Record<string, boolean> | undefined;
 
 function applySelect<TRecord extends Record<string, unknown>>(
@@ -223,6 +265,9 @@ export class InMemoryPrismaService {
   private readonly criticalMoments: CriticalMomentRecord[] = [];
   private readonly mistakes: MistakeRecord[] = [];
   private readonly generationTraces: GenerationTraceRecord[] = [];
+  private readonly reports: ReportRecord[] = [];
+  private readonly homeworks: HomeworkRecord[] = [];
+  private readonly progressSnapshots: ProgressSnapshotRecord[] = [];
 
   async $transaction<T>(callback: (tx: this) => Promise<T>): Promise<T> {
     return callback(this);
@@ -573,6 +618,8 @@ export class InMemoryPrismaService {
         gameId: string;
         jobType: AnalysisJobType;
         queueName: string;
+        sourceAnalysisId?: string | null;
+        reportAudience?: ReportAudience | null;
       };
     }) => {
       const now = new Date();
@@ -582,6 +629,8 @@ export class InMemoryPrismaService {
         studentId: args.data.studentId,
         gameId: args.data.gameId,
         jobType: args.data.jobType,
+        sourceAnalysisId: args.data.sourceAnalysisId ?? null,
+        reportAudience: args.data.reportAudience ?? null,
         queueName: args.data.queueName,
         status: AnalysisJobStatus.PENDING,
         attemptCount: 0,
@@ -601,7 +650,7 @@ export class InMemoryPrismaService {
     },
     findFirst: async (args: {
       where: { id?: string; coachAccountId?: string };
-      include?: { game?: boolean; analysis?: boolean };
+      include?: { game?: boolean; analysis?: boolean; student?: boolean };
     }) => {
       const record =
         this.analysisJobs.find((item) => {
@@ -623,7 +672,7 @@ export class InMemoryPrismaService {
     },
     findUnique: async (args: {
       where: { id: string };
-      include?: { game?: boolean; analysis?: boolean };
+      include?: { game?: boolean; analysis?: boolean; student?: boolean };
     }) => {
       const record =
         this.analysisJobs.find((item) => item.id === args.where.id) ?? null;
@@ -731,14 +780,40 @@ export class InMemoryPrismaService {
 
       return this.attachGameAnalysisRelations(record, args.include);
     },
+    findUnique: async (args: {
+      where: { id: string };
+      select?: {
+        id?: boolean;
+        coachAccountId?: boolean;
+        studentId?: boolean;
+        gameId?: boolean;
+      };
+      include?: {
+        game?: boolean;
+        criticalMoments?: boolean;
+        mistakes?: boolean;
+      };
+    }) => {
+      const record =
+        this.analyses.find((item) => item.id === args.where.id) ?? null;
+
+      if (args.select) {
+        return applySelect(record, args.select);
+      }
+
+      return this.attachGameAnalysisRelations(record, args.include);
+    },
     findMany: async (args: {
-      where: { coachAccountId: string; studentId?: string };
+      where: { coachAccountId?: string; studentId?: string };
       orderBy?: { createdAt: 'desc' };
-      include?: { game?: boolean };
+      include?: { game?: boolean; criticalMoments?: boolean; mistakes?: boolean };
     }) => {
       return this.analyses
         .filter((item) => {
-          if (item.coachAccountId !== args.where.coachAccountId) {
+          if (
+            args.where.coachAccountId &&
+            item.coachAccountId !== args.where.coachAccountId
+          ) {
             return false;
           }
 
@@ -834,6 +909,243 @@ export class InMemoryPrismaService {
     },
   };
 
+  report = {
+    create: async (args: {
+      data: Omit<ReportRecord, 'id' | 'createdAt' | 'updatedAt'>;
+    }) => {
+      const now = new Date();
+      const record: ReportRecord = {
+        id: randomUUID(),
+        createdAt: now,
+        updatedAt: now,
+        ...args.data,
+      };
+
+      this.reports.push(record);
+      return structuredClone(record);
+    },
+    findMany: async (args: {
+      where: {
+        coachAccountId: string;
+        studentId?: string;
+        analysisId?: string;
+      };
+      orderBy?: { createdAt: 'desc' };
+    }) => {
+      return this.reports
+        .filter((item) => {
+          if (item.coachAccountId !== args.where.coachAccountId) {
+            return false;
+          }
+
+          if (args.where.studentId && item.studentId !== args.where.studentId) {
+            return false;
+          }
+
+          if (
+            args.where.analysisId &&
+            item.analysisId !== args.where.analysisId
+          ) {
+            return false;
+          }
+
+          return true;
+        })
+        .sort(
+          (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
+        )
+        .map((item) => structuredClone(item));
+    },
+    findFirst: async (args: {
+      where: { id?: string; coachAccountId?: string };
+    }) => {
+      const record =
+        this.reports.find((item) => {
+          if (args.where.id && item.id !== args.where.id) {
+            return false;
+          }
+
+          if (
+            args.where.coachAccountId &&
+            item.coachAccountId !== args.where.coachAccountId
+          ) {
+            return false;
+          }
+
+          return true;
+        }) ?? null;
+
+      return record ? structuredClone(record) : null;
+    },
+    update: async (args: {
+      where: { id: string };
+      data: Partial<ReportRecord>;
+    }) => {
+      const record = this.reports.find((item) => item.id === args.where.id);
+
+      if (!record) {
+        throw new Error('Report not found');
+      }
+
+      assignDefined(record, args.data);
+      record.updatedAt = new Date();
+      return structuredClone(record);
+    },
+    delete: async (args: { where: { id: string } }) => {
+      const index = this.reports.findIndex((item) => item.id === args.where.id);
+
+      if (index === -1) {
+        throw new Error('Report not found');
+      }
+
+      const [record] = this.reports.splice(index, 1);
+      return structuredClone(record);
+    },
+  };
+
+  homework = {
+    create: async (args: {
+      data: Omit<HomeworkRecord, 'id' | 'createdAt' | 'updatedAt'>;
+    }) => {
+      const now = new Date();
+      const record: HomeworkRecord = {
+        id: randomUUID(),
+        createdAt: now,
+        updatedAt: now,
+        ...args.data,
+      };
+
+      this.homeworks.push(record);
+      return structuredClone(record);
+    },
+    findMany: async (args: {
+      where: {
+        coachAccountId: string;
+        studentId?: string;
+        analysisId?: string;
+      };
+      orderBy?: { createdAt: 'desc' };
+    }) => {
+      return this.homeworks
+        .filter((item) => {
+          if (item.coachAccountId !== args.where.coachAccountId) {
+            return false;
+          }
+
+          if (args.where.studentId && item.studentId !== args.where.studentId) {
+            return false;
+          }
+
+          if (
+            args.where.analysisId &&
+            item.analysisId !== args.where.analysisId
+          ) {
+            return false;
+          }
+
+          return true;
+        })
+        .sort(
+          (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
+        )
+        .map((item) => structuredClone(item));
+    },
+    findFirst: async (args: {
+      where: { id?: string; coachAccountId?: string };
+    }) => {
+      const record =
+        this.homeworks.find((item) => {
+          if (args.where.id && item.id !== args.where.id) {
+            return false;
+          }
+
+          if (
+            args.where.coachAccountId &&
+            item.coachAccountId !== args.where.coachAccountId
+          ) {
+            return false;
+          }
+
+          return true;
+        }) ?? null;
+
+      return record ? structuredClone(record) : null;
+    },
+    update: async (args: {
+      where: { id: string };
+      data: Partial<HomeworkRecord>;
+    }) => {
+      const record = this.homeworks.find((item) => item.id === args.where.id);
+
+      if (!record) {
+        throw new Error('Homework not found');
+      }
+
+      assignDefined(record, args.data);
+      record.updatedAt = new Date();
+      return structuredClone(record);
+    },
+    delete: async (args: { where: { id: string } }) => {
+      const index = this.homeworks.findIndex(
+        (item) => item.id === args.where.id,
+      );
+
+      if (index === -1) {
+        throw new Error('Homework not found');
+      }
+
+      const [record] = this.homeworks.splice(index, 1);
+      return structuredClone(record);
+    },
+  };
+
+  progressSnapshot = {
+    create: async (args: {
+      data: Omit<ProgressSnapshotRecord, 'id' | 'createdAt' | 'updatedAt'>;
+    }) => {
+      const now = new Date();
+      const record: ProgressSnapshotRecord = {
+        id: randomUUID(),
+        createdAt: now,
+        updatedAt: now,
+        ...args.data,
+      };
+
+      this.progressSnapshots.push(record);
+      return structuredClone(record);
+    },
+    findFirst: async (args: {
+      where: { studentId?: string; coachAccountId?: string };
+      orderBy?: { createdAt: 'desc' };
+    }) => {
+      const record =
+        this.progressSnapshots
+          .filter((item) => {
+            if (
+              args.where.studentId &&
+              item.studentId !== args.where.studentId
+            ) {
+              return false;
+            }
+
+            if (
+              args.where.coachAccountId &&
+              item.coachAccountId !== args.where.coachAccountId
+            ) {
+              return false;
+            }
+
+            return true;
+          })
+          .sort(
+            (left, right) =>
+              right.createdAt.getTime() - left.createdAt.getTime(),
+          )[0] ?? null;
+
+      return record ? structuredClone(record) : null;
+    },
+  };
+
   generationTrace = {
     create: async (args: {
       data: Omit<
@@ -860,12 +1172,37 @@ export class InMemoryPrismaService {
       this.generationTraces.push(record);
       return structuredClone(record);
     },
-    findMany: async (args?: { where?: { analysisJobId?: string } }) => {
+    findMany: async (args?: {
+      where?: {
+        analysisJobId?: string;
+        reportId?: string;
+        homeworkId?: string;
+        progressSnapshotId?: string;
+      };
+    }) => {
       return this.generationTraces
         .filter((item) => {
           if (
             args?.where?.analysisJobId &&
             item.analysisJobId !== args.where.analysisJobId
+          ) {
+            return false;
+          }
+
+          if (args?.where?.reportId && item.reportId !== args.where.reportId) {
+            return false;
+          }
+
+          if (
+            args?.where?.homeworkId &&
+            item.homeworkId !== args.where.homeworkId
+          ) {
+            return false;
+          }
+
+          if (
+            args?.where?.progressSnapshotId &&
+            item.progressSnapshotId !== args.where.progressSnapshotId
           ) {
             return false;
           }
@@ -878,7 +1215,7 @@ export class InMemoryPrismaService {
 
   private attachAnalysisJobRelations(
     record: AnalysisJobRecord | null,
-    include?: { game?: boolean; analysis?: boolean },
+    include?: { game?: boolean; analysis?: boolean; student?: boolean },
   ) {
     if (!record) {
       return null;
@@ -901,12 +1238,24 @@ export class InMemoryPrismaService {
               ) ?? null,
           }
         : {}),
+      ...(include?.student
+        ? {
+            student:
+              structuredClone(
+                this.students.find((item) => item.id === record.studentId),
+              ) ?? null,
+          }
+        : {}),
     };
   }
 
   private attachGameAnalysisRelations(
     record: GameAnalysisRecord | null,
-    include?: { game?: boolean; criticalMoments?: boolean; mistakes?: boolean },
+    include?: {
+      game?: boolean;
+      criticalMoments?: boolean;
+      mistakes?: boolean;
+    },
   ) {
     if (!record) {
       return null;
