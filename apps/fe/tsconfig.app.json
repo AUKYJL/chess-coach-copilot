@@ -1,40 +1,25 @@
 {
   "compilerOptions": {
-    "baseUrl": "src",
     "paths": {
-      "@/pages/*": ["pages/*"],
-      "@/ui/*": ["shared/ui/*"],
-      "@/model/*": ["shared/model/*"],
-      "@/api/*": ["shared/api/*"],
-      "@/shared/*": ["shared/*"],
-      "@/assets/*": ["assets/*"],
-      "@/utils/*": ["shared/model/utils/*"],
-      "@/config/*": ["app/config/*"],
-      "@/store/*": ["shared/model/store/*"],
-      "@/*": ["*"],
+      "@/*": ["./src/*"]
     },
-
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "target": "es2023",
+    "target": "ES2023",
     "lib": ["ES2023", "DOM"],
-    "module": "esnext",
-    "types": ["vite/client"],
-    "allowArbitraryExtensions": true,
+    "module": "ESNext",
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "skipLibCheck": true,
-
-    /* Bundler mode */
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-
-    /* Linting */
+    "resolveJsonModule": true,
+    "useDefineForClassFields": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
+    "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"],
+  "include": ["src"]
 }

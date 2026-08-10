@@ -1,0 +1,249 @@
+import { useParams } from "react-router-dom";
+
+import { getStudentOverviewScenarioOptions } from "@/app/router/student-overview-scenario";
+import {
+  AnalyzeGameDialog,
+  ChessAccountsDialog,
+  CoachNotesDialog,
+  EditStudentDialog,
+  NextLessonSection,
+  OverviewErrorState,
+  OverviewTabs,
+  PerformanceTrendSection,
+  ProgressInsightSection,
+  RecentGamesSection,
+  RecentMaterialsSection,
+  ScenarioSwitcher,
+  SectionErrorState,
+  SectionSkeletonCard,
+  StudentContextPanel,
+  StudentHeader,
+  type StudentOverviewScenarioId,
+  StudentOverviewSkeleton,
+  SummaryCards,
+  WeaknessProfileSection,
+  useStudentOverviewData,
+} from "@/features/student-overview";
+
+export type StudentOverviewPageProps = {
+  scenarioId?: StudentOverviewScenarioId;
+  showScenarioSwitcher?: boolean;
+  onScenarioChange?: (scenarioId: StudentOverviewScenarioId) => void;
+};
+
+export function StudentOverviewPage({
+  scenarioId = "populated",
+  showScenarioSwitcher = false,
+  onScenarioChange,
+}: StudentOverviewPageProps) {
+  const { studentId = "demo-student" } = useParams();
+  const query = useStudentOverviewData({ studentId, scenarioId });
+  const scenarioOptions = getStudentOverviewScenarioOptions();
+  const overview = query.scenario.resources.overview.data;
+  const editingAccount = overview?.externalAccounts.find(
+    (account) => account.id === query.dialogState.editingChessAccountId,
+  );
+  const editStudentDraft = {
+    displayName: overview?.student.displayName ?? "",
+    birthYear: overview?.student.birthYear ?? null,
+    rating: overview?.student.rating ?? null,
+    notes: overview?.student.notes ?? "",
+  };
+  const analyzeGameDraft = query.scenario.localState?.analyzeGameDraft ?? {
+    rawPgn: "",
+    studentColor: "WHITE" as const,
+    sourceLabel: "",
+  };
+  const chessAccountDraft = editingAccount
+    ? {
+        platform: editingAccount.platform,
+        username: editingAccount.username,
+      }
+    : (query.scenario.localState?.chessAccountDraft ?? {
+        platform: "LICHESS" as const,
+        username: "",
+      });
+  const coachNotesDraft = {
+    notes: overview?.student.notes ?? "",
+  };
+
+  const content =
+    query.status === "error" ? (
+      <OverviewErrorState
+        description={query.error ?? ""}
+        onRetry={query.retry}
+      />
+    ) : query.status === "loading" || !query.data ? (
+      <StudentOverviewSkeleton />
+    ) : (
+      <>
+        <StudentHeader
+          student={query.data.student}
+          onAnalyzeGame={() => query.openDialog("analyze-game")}
+          onEditStudent={() => query.openDialog("edit-student")}
+          onToggleArchived={query.toggleArchived}
+        />
+        <OverviewTabs />
+        <SummaryCards cards={query.data.summaryCards} />
+
+        <section className="grid gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.62fr)_minmax(320px,0.94fr)]">
+          <div className="order-1 min-w-0 xl:col-start-1">
+            {query.scenario.resources.performanceTrend.status === "error" ? (
+              <SectionErrorState
+                title="Performance trend unavailable"
+                description={
+                  query.scenario.resources.performanceTrend.errorMessage ??
+                  "The trend section failed to load."
+                }
+                onRetry={query.retry}
+              />
+            ) : query.scenario.resources.performanceTrend.status ===
+              "loading" ? (
+              <SectionSkeletonCard
+                title="Performance trend loading"
+                lines={5}
+                tall
+              />
+            ) : (
+              <PerformanceTrendSection trend={query.data.performanceTrend} />
+            )}
+          </div>
+
+          <div className="order-2 min-w-0 xl:col-start-2 xl:row-span-2">
+            <RecentGamesSection games={query.data.recentGames} />
+          </div>
+
+          <div className="order-3 min-w-0 xl:col-start-1">
+            <ProgressInsightSection insight={query.data.progressInsight} />
+          </div>
+
+          <div className="order-4 min-w-0 xl:col-start-1">
+            <div className="grid gap-5 md:gap-6 lg:grid-cols-2">
+              {query.scenario.resources.analysisProfile.status === "error" ? (
+                <SectionErrorState
+                  title="Weakness profile unavailable"
+                  description={
+                    query.scenario.resources.analysisProfile.errorMessage ??
+                    "The weakness profile section failed to load."
+                  }
+                  onRetry={query.retry}
+                />
+              ) : query.scenario.resources.analysisProfile.status ===
+                "loading" ? (
+                <SectionSkeletonCard
+                  title="Weakness profile loading"
+                  lines={6}
+                />
+              ) : (
+                <WeaknessProfileSection profile={query.data.weaknessProfile} />
+              )}
+
+              {query.scenario.resources.analysisProfile.status === "error" ? (
+                <SectionErrorState
+                  title="Next lesson unavailable"
+                  description={
+                    query.scenario.resources.analysisProfile.errorMessage ??
+                    "The next lesson section failed to load."
+                  }
+                  onRetry={query.retry}
+                />
+              ) : query.scenario.resources.analysisProfile.status ===
+                "loading" ? (
+                <SectionSkeletonCard title="Next lesson loading" lines={6} />
+              ) : (
+                <NextLessonSection lesson={query.data.nextLesson} />
+              )}
+            </div>
+          </div>
+
+          <div className="order-5 min-w-0 xl:col-start-1">
+            <RecentMaterialsSection materials={query.data.recentMaterials} />
+          </div>
+
+          <div className="order-6 min-w-0 xl:col-start-2">
+            <StudentContextPanel
+              accounts={query.data.chessAccounts}
+              coachNotes={query.data.coachNotes}
+              studentInformation={query.data.studentInformation}
+              onOpenChessAccounts={() => query.openDialog("chess-accounts")}
+              onOpenCoachNotes={() => query.openDialog("coach-notes")}
+            />
+          </div>
+        </section>
+      </>
+    );
+
+  return (
+    <div className="space-y-5 md:space-y-6 xl:space-y-8">
+      {showScenarioSwitcher && onScenarioChange ? (
+        <ScenarioSwitcher
+          scenarioId={scenarioId}
+          options={scenarioOptions}
+          onScenarioChange={onScenarioChange}
+        />
+      ) : null}
+
+      {content}
+
+      {query.status === "error" ||
+      query.status === "loading" ||
+      !query.data ? null : (
+        <>
+          <AnalyzeGameDialog
+            open={query.dialogState.kind === "analyze-game"}
+            draft={analyzeGameDraft}
+            onOpenChange={(open) => {
+              if (!open) {
+                query.closeDialog();
+              }
+            }}
+            onSubmit={query.submitAnalyzeGame}
+          />
+
+          <EditStudentDialog
+            open={query.dialogState.kind === "edit-student"}
+            draft={editStudentDraft}
+            onOpenChange={(open) => {
+              if (!open) {
+                query.closeDialog();
+              }
+            }}
+            onSubmit={query.submitEditStudent}
+          />
+
+          <ChessAccountsDialog
+            open={query.dialogState.kind === "chess-accounts"}
+            accounts={query.data.chessAccounts}
+            editingAccountId={query.dialogState.editingChessAccountId}
+            draft={chessAccountDraft}
+            onOpenChange={(open) => {
+              if (!open) {
+                query.closeDialog();
+              }
+            }}
+            onSubmit={(draft, accountId) =>
+              query.submitChessAccount(draft, { accountId })
+            }
+            onEditAccount={(accountId) =>
+              query.openDialog("chess-accounts", {
+                editingChessAccountId: accountId || null,
+              })
+            }
+            onRemoveAccount={query.removeChessAccount}
+          />
+
+          <CoachNotesDialog
+            open={query.dialogState.kind === "coach-notes"}
+            draft={coachNotesDraft}
+            onOpenChange={(open) => {
+              if (!open) {
+                query.closeDialog();
+              }
+            }}
+            onSubmit={query.submitCoachNotes}
+          />
+        </>
+      )}
+    </div>
+  );
+}
