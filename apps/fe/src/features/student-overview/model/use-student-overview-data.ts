@@ -12,7 +12,6 @@ import type {
   EditStudentDraft,
   ExternalAccountRecord,
   OverviewScenario,
-  OverviewScenarioResources,
   StudentOverviewDialogState,
   StudentOverviewQueryResult,
   StudentOverviewScenarioId,
@@ -85,36 +84,6 @@ function applyRetryToScenario(scenario: OverviewScenario): OverviewScenario {
   return nextScenario;
 }
 
-function getProgressDetailsForViewModel(resources: OverviewScenarioResources) {
-  const latestProgress = resources.overview.data?.latestProgress;
-  const progressDetails = resources.progressDetails;
-
-  if (!progressDetails || !latestProgress) {
-    return progressDetails;
-  }
-
-  if (progressDetails.status !== "ready") {
-    return undefined;
-  }
-
-  const snapshot = progressDetails.data?.snapshot;
-
-  if (!snapshot || snapshot.id !== latestProgress.id) {
-    return undefined;
-  }
-
-  return progressDetails;
-}
-
-function createViewModelResources(
-  resources: OverviewScenarioResources,
-): OverviewScenarioResources {
-  return {
-    ...resources,
-    progressDetails: getProgressDetailsForViewModel(resources),
-  };
-}
-
 export function useStudentOverviewData({
   studentId,
   scenarioId = "populated",
@@ -129,7 +98,6 @@ export function useStudentOverviewData({
     setDialogState(createDefaultDialogState());
   }, [scenarioId]);
 
-  const viewModelResources = createViewModelResources(scenario.resources);
   const status = getStudentOverviewStatus(scenario.resources);
 
   return {
@@ -139,7 +107,7 @@ export function useStudentOverviewData({
     status,
     data:
       status === "ready"
-        ? mapStudentOverviewViewModel(viewModelResources)
+        ? mapStudentOverviewViewModel(scenario.resources)
         : null,
     error:
       status === "error"

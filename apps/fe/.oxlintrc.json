@@ -30,6 +30,7 @@
   ],
 
   "rules": {
+    "react/react-in-jsx-scope": "off",
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "warn",
     "react/only-export-components": [

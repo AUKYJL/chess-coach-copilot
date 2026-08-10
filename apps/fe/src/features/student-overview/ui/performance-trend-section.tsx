@@ -13,12 +13,13 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig,
 } from "@/shared/ui";
 
+import { toneChipClasses } from "../model/semantic-tones";
 import type { PerformanceTrendViewModel } from "../model/types";
 
 type PerformanceTrendSectionProps = {
@@ -103,14 +104,16 @@ export function PerformanceTrendSection({
               {trend.metricLabel} · {trend.rangeLabel}
             </p>
           </div>
-          <span className="bg-success-soft text-success rounded-full px-3 py-1 text-xs font-semibold">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${toneChipClasses[trend.tone]}`}
+          >
             {trend.directionLabel}
           </span>
         </div>
       </CardHeader>
       <CardContent className="pt-2">
         <ChartContainer config={chartConfig} className="w-full">
-          <div className="h-72 min-w-0 w-full sm:h-64">
+          <div className="h-72 w-full min-w-0 sm:h-64">
             <ResponsiveContainer
               height="100%"
               initialDimension={{ height: 256, width: 560 }}
@@ -146,7 +149,9 @@ export function PerformanceTrendSection({
                     <ChartTooltipContent
                       indicator="dot"
                       labelFormatter={(label) =>
-                        formatTooltipDate(String(label))
+                        typeof label === "string"
+                          ? formatTooltipDate(label)
+                          : null
                       }
                     />
                   }

@@ -1,9 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-
-import type { EditStudentDraft } from "../model/types";
+import { z } from "zod";
 
 import {
   Button,
@@ -23,6 +21,8 @@ import {
   Textarea,
 } from "@/shared/ui";
 
+import type { EditStudentDraft } from "../model/types";
+
 const editStudentSchema = z.object({
   displayName: z.string().trim().min(1, "Student name is required."),
   birthYear: z
@@ -31,10 +31,8 @@ const editStudentSchema = z.object({
     .refine(
       (value) =>
         value === "" ||
-        (/^\d+$/.test(value) &&
-          Number(value) >= 1990 &&
-          Number(value) <= 2026),
-      "Birth year must be between 1990 and 2026.",
+        (/^\d+$/.test(value) && Number(value) >= 1900 && Number(value) <= 2100),
+      "Birth year must be between 1900 and 2100.",
     ),
   rating: z
     .string()
@@ -103,7 +101,9 @@ export function EditStudentDialog({
             onSubmit={form.handleSubmit((values) =>
               onSubmit({
                 displayName: values.displayName.trim(),
-                birthYear: values.birthYear.trim() ? Number(values.birthYear) : null,
+                birthYear: values.birthYear.trim()
+                  ? Number(values.birthYear)
+                  : null,
                 rating: values.rating.trim() ? Number(values.rating) : null,
                 notes: values.notes.trim(),
               }),
@@ -131,11 +131,7 @@ export function EditStudentDialog({
                   <FormItem>
                     <FormLabel>Birth year</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        placeholder="2012"
-                      />
+                      <Input {...field} type="number" placeholder="2012" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -149,11 +145,7 @@ export function EditStudentDialog({
                   <FormItem>
                     <FormLabel>Rating</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        placeholder="1620"
-                      />
+                      <Input {...field} type="number" placeholder="1620" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

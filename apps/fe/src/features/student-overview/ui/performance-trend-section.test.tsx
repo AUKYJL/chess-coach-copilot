@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { PerformanceTrendSection } from "./performance-trend-section";
+
 vi.mock("recharts", async () => {
   const actual = await vi.importActual<typeof import("recharts")>("recharts");
 
@@ -21,14 +23,13 @@ vi.mock("recharts", async () => {
   };
 });
 
-import { PerformanceTrendSection } from "./performance-trend-section";
-
 describe("PerformanceTrendSection", () => {
   it("renders a line chart with axis labels and visible dots for populated data", () => {
     const { container } = render(
       <PerformanceTrendSection
         trend={{
           directionLabel: "Improving",
+          tone: "success",
           metricLabel: "Overall lesson-readiness score",
           points: [
             { date: "2026-05-08", value: 1470 },
@@ -51,11 +52,31 @@ describe("PerformanceTrendSection", () => {
     expect(
       screen.getByText("Overall lesson-readiness score · 90D"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Improving")).toBeInTheDocument();
+    expect(screen.getByText("Improving")).toHaveClass("bg-success-soft");
     expect(screen.getByText("May 8")).toBeInTheDocument();
     expect(screen.getByText("Aug 7")).toBeInTheDocument();
     expect(container.querySelector(".recharts-line-curve")).not.toBeNull();
     expect(container.querySelectorAll(".recharts-dot")).toHaveLength(8);
+  });
+
+  it("renders stable trends with an informational tone", () => {
+    render(
+      <PerformanceTrendSection
+        trend={{
+          directionLabel: "Stable",
+          tone: "info",
+          metricLabel: "Initial lesson-readiness signal",
+          points: [
+            { date: "2026-07-20", value: 1172 },
+            { date: "2026-07-29", value: 1179 },
+            { date: "2026-08-08", value: 1180 },
+          ],
+          rangeLabel: "90D",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Stable")).toHaveClass("bg-info-soft");
   });
 
   it("keeps the empty state copy when there are no trend points", () => {
@@ -63,6 +84,7 @@ describe("PerformanceTrendSection", () => {
       <PerformanceTrendSection
         trend={{
           directionLabel: "Unknown",
+          tone: "neutral",
           metricLabel: "Trend unavailable",
           points: [],
           rangeLabel: "90D",

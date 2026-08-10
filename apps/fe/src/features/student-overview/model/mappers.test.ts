@@ -143,6 +143,7 @@ describe("student overview mappers", () => {
       studentPerformanceTrendMock.primaryMetric,
     );
     expect(viewModel.performanceTrend.directionLabel).toBe("Improving");
+    expect(viewModel.performanceTrend.tone).toBe("success");
   });
 
   it("falls back to overview.latestProgress when no matching /progress snapshot is needed", () => {
@@ -196,5 +197,68 @@ describe("student overview mappers", () => {
       /narrative progress summary will appear here/i,
     );
     expect(viewModel.summaryCards[3]?.value).toBe("Improving");
+  });
+
+  it("keeps progress insight loading and error states visible even with latestProgress present", () => {
+    const loadingViewModel = mapStudentOverviewViewModel(
+      createResources({
+        progressDetails: {
+          status: "loading",
+          data: null,
+          retriable: false,
+        },
+      }),
+    );
+    const errorViewModel = mapStudentOverviewViewModel(
+      createResources({
+        progressDetails: {
+          status: "error",
+          data: null,
+          errorMessage:
+            "Progress insight is temporarily unavailable in this review state.",
+          retriable: true,
+        },
+      }),
+    );
+
+    expect(loadingViewModel.progressInsight?.summary).toMatch(
+      /still being processed/i,
+    );
+    expect(errorViewModel.progressInsight?.summary).toBe(
+      "Progress insight is temporarily unavailable in this review state.",
+    );
+  });
+
+  it("maps stable trends and severity counts to semantic tones instead of positional styling", () => {
+    const viewModel = mapStudentOverviewViewModel(
+      createResources({
+        analysisProfile: {
+          status: "ready",
+          retriable: false,
+          data: {
+            ...structuredClone(studentAnalysisProfileMock),
+            severityCounts: [{ severity: "INACCURACY", count: 2 }],
+          },
+        },
+        performanceTrend: {
+          status: "ready",
+          retriable: false,
+          data: {
+            ...structuredClone(studentPerformanceTrendMock),
+            direction: "STABLE",
+          },
+        },
+      }),
+    );
+
+    expect(viewModel.performanceTrend.tone).toBe("info");
+    expect(viewModel.summaryCards[3]?.tone).toBe("info");
+    expect(viewModel.weaknessProfile.severitySummary).toEqual([
+      {
+        label: "Inaccuracy",
+        count: 2,
+        tone: "info",
+      },
+    ]);
   });
 });

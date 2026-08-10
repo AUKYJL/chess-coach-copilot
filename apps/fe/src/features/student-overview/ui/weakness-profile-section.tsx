@@ -2,17 +2,12 @@ import { ArrowRight, ShieldAlert } from "lucide-react";
 
 import { Button, Card, CardContent, CardHeader, CardTitle } from "@/shared/ui";
 
+import { toneChipClasses } from "../model/semantic-tones";
 import type { WeaknessProfileViewModel } from "../model/types";
 
 type WeaknessProfileSectionProps = {
   profile: WeaknessProfileViewModel;
 };
-
-const severityToneClasses = [
-  "bg-danger-soft text-danger",
-  "bg-warning-soft text-warning",
-  "bg-info-soft text-accent",
-] as const;
 
 export function WeaknessProfileSection({
   profile,
@@ -28,7 +23,8 @@ export function WeaknessProfileSection({
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-foreground text-sm leading-7">
-            There is not enough reviewed analysis yet to describe a reliable weakness pattern.
+            There is not enough reviewed analysis yet to describe a reliable
+            weakness pattern.
           </p>
           <p className="text-muted-foreground text-sm">
             Add more annotated games or retry the local review state.
@@ -49,9 +45,11 @@ export function WeaknessProfileSection({
               <ShieldAlert className="text-accent size-4" />
               <CardTitle>Weakness profile</CardTitle>
             </div>
-            <p className="text-muted-foreground text-sm">Main pattern: {profile.mainWeakness}</p>
+            <p className="text-muted-foreground text-sm">
+              Main pattern: {profile.mainWeakness}
+            </p>
           </div>
-          <Button variant="ghost" size="sm" className="shrink-0">
+          <Button variant="ghost" size="sm" className="shrink-0" disabled>
             Full analysis
             <ArrowRight className="size-4" />
           </Button>
@@ -76,10 +74,10 @@ export function WeaknessProfileSection({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {profile.severitySummary.map((item, index) => (
+          {profile.severitySummary.map((item) => (
             <span
               key={item.label}
-              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${severityToneClasses[index] ?? "bg-surface-subtle text-muted-foreground"}`}
+              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${toneChipClasses[item.tone]}`}
             >
               {item.count} {item.label}
             </span>
@@ -88,7 +86,9 @@ export function WeaknessProfileSection({
 
         {profile.sampleInsight ? (
           <div className="bg-surface-card rounded-[20px] px-4 py-4">
-            <p className="text-foreground text-sm leading-6">{profile.sampleInsight}</p>
+            <p className="text-foreground text-sm leading-6">
+              {profile.sampleInsight}
+            </p>
           </div>
         ) : null}
       </CardContent>

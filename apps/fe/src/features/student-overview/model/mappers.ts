@@ -1,3 +1,4 @@
+import { getPerformanceDirectionTone, getSeverityTone } from "./semantic-tones";
 import type {
   ChessAccountItem,
   MaterialRowViewModel,
@@ -11,7 +12,6 @@ import type {
   StudentOverviewQueryStatus,
   StudentOverviewResponse,
   StudentOverviewViewModel,
-  SummaryCardTone,
 } from "./types";
 
 const weaknessLabels: Record<string, string> = {
@@ -48,19 +48,6 @@ function formatDate(value: string) {
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
-}
-
-function directionToTone(direction: PerformanceDirection): SummaryCardTone {
-  switch (direction) {
-    case "IMPROVING":
-      return "success";
-    case "DECLINING":
-      return "danger";
-    case "STABLE":
-      return "warning";
-    default:
-      return "neutral";
-  }
 }
 
 function directionToLabel(direction: PerformanceDirection) {
@@ -153,8 +140,29 @@ export function mapProgressInsightToViewModel(
   resources: OverviewScenarioResources,
 ): ProgressInsightViewModel | null {
   const latestProgress = resources.overview.data?.latestProgress;
-  const progressDetails = resources.progressDetails?.data;
+  const progressResource = resources.progressDetails;
+  const progressDetails = progressResource?.data;
   const progressSnapshot = progressDetails?.snapshot;
+
+  if (progressResource?.status === "loading") {
+    return {
+      title: "Progress insight",
+      summary:
+        "The latest annotated game is still being processed, so the narrative summary is not ready yet.",
+      supportingText:
+        "Progress insight will appear after local analysis finishes.",
+    };
+  }
+
+  if (progressResource?.status === "error") {
+    return {
+      title: "Progress insight",
+      summary:
+        progressResource.errorMessage ??
+        "The narrative progress summary is unavailable in this local review state.",
+      supportingText: "Use Retry locally to rebuild the mock-only section.",
+    };
+  }
 
   if (
     progressSnapshot &&
@@ -182,26 +190,6 @@ export function mapProgressInsightToViewModel(
       summary:
         "Recent analysis snapshots are available, but the richer narrative summary is not required for this transport yet.",
       supportingText: `Latest snapshot captured ${formatDate(latestProgress.createdAt)}`,
-    };
-  }
-
-  if (resources.progressDetails?.status === "loading") {
-    return {
-      title: "Progress insight",
-      summary:
-        "The latest annotated game is still being processed, so the narrative summary is not ready yet.",
-      supportingText:
-        "Progress insight will appear after local analysis finishes.",
-    };
-  }
-
-  if (resources.progressDetails?.status === "error") {
-    return {
-      title: "Progress insight",
-      summary:
-        resources.progressDetails.errorMessage ??
-        "The narrative progress summary is unavailable in this local review state.",
-      supportingText: "Use Retry locally to rebuild the mock-only section.",
     };
   }
 
@@ -261,9 +249,11 @@ export function mapPerformanceTrendToViewModel(
   resources: OverviewScenarioResources,
 ): PerformanceTrendViewModel {
   const performanceTrend = resources.performanceTrend.data;
+  const direction = performanceTrend?.direction ?? "UNKNOWN";
 
   return {
-    directionLabel: directionToLabel(performanceTrend?.direction ?? "UNKNOWN"),
+    directionLabel: directionToLabel(direction),
+    tone: getPerformanceDirectionTone(direction),
     metricLabel: performanceTrend?.primaryMetric ?? "Trend unavailable",
     rangeLabel: performanceTrend?.range ?? "90D",
     points: performanceTrend?.points ?? [],
@@ -469,7 +459,7 @@ export function mapStudentOverviewViewModel(
         supportingText: performanceTrendTransport
           ? `${performanceTrendTransport.primaryMetric} · ${performanceTrendTransport.range}`
           : "Trend data is not available for this state",
-        tone: directionToTone(
+        tone: getPerformanceDirectionTone(
           performanceTrendTransport?.direction ?? "UNKNOWN",
         ),
       },
@@ -485,6 +475,7 @@ export function mapStudentOverviewViewModel(
       severitySummary: (analysisProfile?.severityCounts ?? []).map((item) => ({
         label: titleCase(item.severity),
         count: item.count,
+        tone: getSeverityTone(item.severity),
       })),
       sampleInsight: sampleMistake?.suggestedFix ?? null,
     },

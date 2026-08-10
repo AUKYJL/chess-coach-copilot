@@ -29,15 +29,49 @@ describe("useStudentOverviewData", () => {
     );
 
     expect(result.current.status).toBe("ready");
-    expect(result.current.scenario.resources.analysisProfile.status).toBe("error");
+    expect(result.current.scenario.resources.analysisProfile.status).toBe(
+      "error",
+    );
 
     act(() => {
       result.current.retry();
     });
 
     expect(result.current.status).toBe("ready");
-    expect(result.current.scenario.resources.analysisProfile.status).toBe("ready");
-    expect(result.current.scenario.resources.performanceTrend.status).toBe("ready");
+    expect(result.current.scenario.resources.analysisProfile.status).toBe(
+      "ready",
+    );
+    expect(result.current.scenario.resources.performanceTrend.status).toBe(
+      "ready",
+    );
+  });
+
+  it("keeps progress insight loading state truthful when overview.latestProgress exists", () => {
+    const { result } = renderHook(() =>
+      useStudentOverviewData({
+        studentId: "demo-student",
+        scenarioId: "analysis-processing",
+      }),
+    );
+
+    expect(result.current.status).toBe("ready");
+    expect(result.current.data?.progressInsight?.summary).toMatch(
+      /still being processed/i,
+    );
+  });
+
+  it("keeps progress insight error state truthful when section resources fail", () => {
+    const { result } = renderHook(() =>
+      useStudentOverviewData({
+        studentId: "demo-student",
+        scenarioId: "section-error",
+      }),
+    );
+
+    expect(result.current.status).toBe("ready");
+    expect(result.current.data?.progressInsight?.summary).toBe(
+      "Progress insight is temporarily unavailable in this review state.",
+    );
   });
 
   it("recovers overview errors locally on retry", () => {
@@ -108,9 +142,9 @@ describe("useStudentOverviewData", () => {
       });
     });
 
-    expect(result.current.scenario.localState?.analyzeGameDraft?.sourceLabel).toBe(
-      "Annotated export",
-    );
+    expect(
+      result.current.scenario.localState?.analyzeGameDraft?.sourceLabel,
+    ).toBe("Annotated export");
 
     act(() => {
       result.current.submitEditStudent({

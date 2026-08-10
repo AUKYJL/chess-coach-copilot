@@ -80,6 +80,7 @@ export function StudentOverviewPage({
         <StudentHeader
           student={query.data.student}
           onAnalyzeGame={() => query.openDialog("analyze-game")}
+          onOpenChessAccounts={() => query.openDialog("chess-accounts")}
           onEditStudent={() => query.openDialog("edit-student")}
           onToggleArchived={query.toggleArchived}
         />

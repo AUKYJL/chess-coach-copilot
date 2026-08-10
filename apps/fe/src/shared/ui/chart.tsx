@@ -40,9 +40,7 @@ type ChartContainerProps = React.ComponentProps<"div"> & {
   children: React.ReactNode;
 };
 
-function getColorToken(
-  item: ChartConfig[string],
-): string | undefined {
+function getColorToken(item: ChartConfig[string]): string | undefined {
   if ("color" in item) {
     return item.color;
   }
@@ -145,8 +143,7 @@ function getConfigEntry(
     nameKey && typeof item.payload?.[nameKey] === "string"
       ? item.payload[nameKey]
       : undefined;
-  const dataKey =
-    typeof item.dataKey === "string" ? item.dataKey : undefined;
+  const dataKey = typeof item.dataKey === "string" ? item.dataKey : undefined;
   const name = typeof item.name === "string" ? item.name : undefined;
 
   const key = payloadName ?? dataKey ?? name;
@@ -207,7 +204,35 @@ function toRenderableNode(value: unknown): React.ReactNode {
     return value;
   }
 
-  return String(value);
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function toTooltipFormatterName(value: React.ReactNode) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "bigint") {
+    return value.toString();
+  }
+
+  return "";
+}
+
+function toLegendItemKey(value: React.ReactNode, index: number) {
+  if (typeof value === "string" || typeof value === "number") {
+    return `${value}-${index}`;
+  }
+
+  return `legend-item-${index}`;
 }
 
 function ChartTooltipContent({
@@ -245,7 +270,7 @@ function ChartTooltipContent({
   return (
     <div
       className={cn(
-        "grid min-w-40 gap-2 rounded-2xl border border-border bg-surface px-3 py-2 text-xs shadow-[0_16px_40px_-28px_rgba(32,33,36,0.38)]",
+        "border-border bg-surface grid min-w-40 gap-2 rounded-2xl border px-3 py-2 text-xs shadow-[0_16px_40px_-28px_rgba(32,33,36,0.38)]",
         className,
       )}
     >
@@ -275,7 +300,7 @@ function ChartTooltipContent({
             if (formatter) {
               const formatted = formatter(
                 item.value,
-                String(defaultName ?? ""),
+                toTooltipFormatterName(defaultName),
                 item,
                 index,
               );
@@ -334,7 +359,7 @@ function ChartLegendContent({
     <div className={cn("flex items-center justify-center gap-4", className)}>
       {payload.map((item, index) => (
         <div
-          key={`${String(item.value)}-${index}`}
+          key={toLegendItemKey(item.value, index)}
           className="flex items-center gap-1.5"
         >
           {hideIcon ? null : (

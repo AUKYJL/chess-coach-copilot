@@ -1,9 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-
-import type { AnalyzeGameDraft } from "../model/types";
 
 import {
   Button,
@@ -25,43 +22,11 @@ import {
   Textarea,
 } from "@/shared/ui";
 
-function looksLikePgn(value: string) {
-  return /\[Event\s+".*"\]/.test(value) && /\d+\./.test(value);
-}
-
-function hasAnnotation(value: string) {
-  return /\{[^}]+\}|\$\d+|(?:\!\!|\?\?|\!\?|\?\!|!|\?)(?=\s|$)/.test(value);
-}
-
-function isAnnotatedPgn(value: string) {
-  return looksLikePgn(value) && hasAnnotation(value);
-}
-
-const analyzeGameSchema = z.object({
-  rawPgn: z
-    .string()
-    .trim()
-    .min(1, "Annotated PGN is required.")
-    .superRefine((value, context) => {
-      if (!looksLikePgn(value)) {
-        context.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Enter a valid PGN with headers and move text.",
-        });
-        return;
-      }
-
-      if (!hasAnnotation(value)) {
-        context.addIssue({
-          code: z.ZodIssueCode.custom,
-          message:
-            "Only annotated PGN is supported in this prototype. Add comments or move annotations before importing.",
-        });
-      }
-    }),
-  studentColor: z.enum(["WHITE", "BLACK"]),
-  sourceLabel: z.string().trim().max(80, "Keep the source label under 80 characters."),
-});
+import {
+  analyzeGameSchema,
+  isAnnotatedPgn,
+} from "../model/analyze-game-schema";
+import type { AnalyzeGameDraft } from "../model/types";
 
 type AnalyzeGameDialogProps = {
   open: boolean;
@@ -91,8 +56,8 @@ export function AnalyzeGameDialog({
         <DialogHeader>
           <DialogTitle>Analyze game</DialogTitle>
           <DialogDescription>
-            This mock-only workflow accepts already annotated PGN only. No network
-            request is made in this prototype.
+            This mock-only workflow accepts already annotated PGN only. No
+            network request is made in this prototype.
           </DialogDescription>
         </DialogHeader>
 

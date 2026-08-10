@@ -25,7 +25,10 @@ export function NextLessonSection({ lesson }: NextLessonSectionProps) {
         {lesson.focusPoints.length > 0 ? (
           <ul className="space-y-2 text-sm">
             {lesson.focusPoints.map((point) => (
-              <li key={point} className="text-muted-foreground flex items-start gap-3">
+              <li
+                key={point}
+                className="text-muted-foreground flex items-start gap-3"
+              >
                 <span className="bg-accent mt-1.5 size-1.5 shrink-0 rounded-full" />
                 <span>{point}</span>
               </li>
@@ -33,12 +36,15 @@ export function NextLessonSection({ lesson }: NextLessonSectionProps) {
           </ul>
         ) : (
           <p className="text-muted-foreground text-sm">
-            A concrete lesson checklist will appear here when a stable pattern is available.
+            A concrete lesson checklist will appear here when a stable pattern
+            is available.
           </p>
         )}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--divider)] pt-4">
-          <p className="text-muted-foreground text-sm">{lesson.supportingText}</p>
-          <Button variant="ghost" size="sm">
+          <p className="text-muted-foreground text-sm">
+            {lesson.supportingText}
+          </p>
+          <Button variant="ghost" size="sm" disabled>
             View analysis
             <ArrowRight className="size-4" />
           </Button>

@@ -11,6 +11,7 @@ import {
 type StudentActionsProps = {
   isArchived: boolean;
   onAnalyzeGame: () => void;
+  onOpenChessAccounts: () => void;
   onEditStudent: () => void;
   onToggleArchived: () => void;
 };
@@ -18,6 +19,7 @@ type StudentActionsProps = {
 export function StudentActions({
   isArchived,
   onAnalyzeGame,
+  onOpenChessAccounts,
   onEditStudent,
   onToggleArchived,
 }: StudentActionsProps) {
@@ -36,6 +38,9 @@ export function StudentActions({
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={onEditStudent}>
             Edit student
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onOpenChessAccounts}>
+            Chess accounts
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onToggleArchived}>
             {isArchived ? "Restore student" : "Archive student"}

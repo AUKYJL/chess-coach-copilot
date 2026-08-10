@@ -12,8 +12,12 @@ describe("StudentOverviewPage", () => {
       screen.getByRole("heading", { level: 1, name: "Alexander Ivanov" }),
     ).toBeInTheDocument();
 
-    expect(screen.getByRole("tab", { name: "Overview" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Games" })).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Student workspace sections"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "Overview" }),
+    ).not.toBeInTheDocument();
     expect(screen.getAllByTestId("summary-card")).toHaveLength(4);
 
     expect(
@@ -94,9 +98,50 @@ describe("StudentOverviewPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(screen.getByRole("menuitem", { name: "Chess accounts" }));
+    expect(
+      screen.getByRole("dialog", { name: "Chess accounts" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Done" }));
+
     await user.click(screen.getByRole("button", { name: "Manage" }));
     expect(
       screen.getByRole("dialog", { name: "Chess accounts" }),
     ).toBeInTheDocument();
+  });
+
+  it("renders truthful progress copy for the analysis-processing scenario", () => {
+    renderApp("/students/demo-student?scenario=analysis-processing");
+
+    expect(
+      screen.getByText(
+        /the latest annotated game is still being processed, so the narrative summary is not ready yet/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the section-error progress insight truthfully", () => {
+    renderApp("/students/demo-student?scenario=section-error");
+
+    expect(
+      screen.getByText(
+        "Progress insight is temporarily unavailable in this review state.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("disables unavailable section controls instead of leaving dead affordances", () => {
+    renderApp("/students/demo-student?scenario=early-signal");
+
+    screen.getAllByRole("button", { name: "View all" }).forEach((button) => {
+      expect(button).toBeDisabled();
+    });
+    expect(
+      screen.getByRole("button", { name: "Full analysis" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "View analysis" }),
+    ).toBeDisabled();
   });
 });

@@ -20,6 +20,7 @@ lerna-debug.log*
 
 # OS
 .DS_Store
+Thumbs.db
 
 # Tests
 /.nyc_output
@@ -51,6 +52,8 @@ apps/fe/.env.*
 # temp directory
 .temp
 .tmp
+*.tmp
+*.swp
 
 # Runtime data
 pids
@@ -73,3 +76,4 @@ apps/be/.nestjs-cache
 apps/be/src/generated/prisma/
 specs/
 rules/
+.playwright-mcp

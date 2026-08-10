@@ -33,7 +33,8 @@ export type PerformanceTrendRange = "30D" | "90D" | "180D" | "ALL";
 export type ProgressStatus = "ready" | "not-enough-data";
 export type SeverityLevel =
   "INACCURACY" | "MISTAKE" | "BLUNDER" | "MATE" | "UNKNOWN";
-export type SummaryCardTone = "neutral" | "success" | "warning" | "danger";
+export type SummaryCardTone =
+  "neutral" | "info" | "success" | "warning" | "danger";
 
 // CURRENT BACKEND transport contracts
 export type StudentOverviewStudentRecord = {
@@ -270,6 +271,7 @@ export type ProgressInsightViewModel = {
 
 export type PerformanceTrendViewModel = {
   directionLabel: string;
+  tone: SummaryCardTone;
   metricLabel: string;
   rangeLabel: string;
   points: PerformanceTrendPoint[];
@@ -284,6 +286,7 @@ export type WeaknessProfileViewModel = {
   severitySummary: Array<{
     label: string;
     count: number;
+    tone: SummaryCardTone;
   }>;
   sampleInsight: string | null;
 };
