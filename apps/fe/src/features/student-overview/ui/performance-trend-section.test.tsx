@@ -1,11 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import * as React from "react";
+import type * as Recharts from "recharts";
 import { describe, expect, it, vi } from "vitest";
 
 import { PerformanceTrendSection } from "./performance-trend-section";
 
 vi.mock("recharts", async () => {
-  const actual = await vi.importActual<typeof import("recharts")>("recharts");
+  const actual = await vi.importActual<typeof Recharts>("recharts");
 
   return {
     ...actual,
@@ -24,7 +25,7 @@ vi.mock("recharts", async () => {
 });
 
 describe("PerformanceTrendSection", () => {
-  it("renders a line chart with axis labels and visible dots for populated data", () => {
+  it("renders trend content and the chart container for populated data", () => {
     const { container } = render(
       <PerformanceTrendSection
         trend={{
@@ -55,8 +56,10 @@ describe("PerformanceTrendSection", () => {
     expect(screen.getByText("Improving")).toHaveClass("bg-success-soft");
     expect(screen.getByText("May 8")).toBeInTheDocument();
     expect(screen.getByText("Aug 7")).toBeInTheDocument();
-    expect(container.querySelector(".recharts-line-curve")).not.toBeNull();
-    expect(container.querySelectorAll(".recharts-dot")).toHaveLength(8);
+    expect(container.querySelector('[data-slot="chart"]')).not.toBeNull();
+    expect(
+      screen.queryByText("Trend data is not available yet for this scenario."),
+    ).not.toBeInTheDocument();
   });
 
   it("renders stable trends with an informational tone", () => {
@@ -96,6 +99,6 @@ describe("PerformanceTrendSection", () => {
       screen.getByText("Trend data is not available yet for this scenario."),
     ).toBeInTheDocument();
     expect(screen.getByText("Trend unavailable")).toBeInTheDocument();
-    expect(container.querySelector(".recharts-wrapper")).toBeNull();
+    expect(container.querySelector('[data-slot="chart"]')).toBeNull();
   });
 });

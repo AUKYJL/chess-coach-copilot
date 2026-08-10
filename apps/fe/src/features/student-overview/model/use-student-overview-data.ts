@@ -53,11 +53,6 @@ function applyRetryToScenario(scenario: OverviewScenario): OverviewScenario {
   const nextScenario = cloneScenario(scenario);
   const fallback = getStudentOverviewScenario("populated");
 
-  nextScenario.localState = {
-    ...nextScenario.localState,
-    retryCounter: (nextScenario.localState?.retryCounter ?? 0) + 1,
-  };
-
   if (nextScenario.resources.overview.status === "error") {
     nextScenario.resources = structuredClone(fallback.resources);
     return nextScenario;
@@ -175,11 +170,6 @@ export function useStudentOverviewData({
         overview.student.rating = draft.rating;
         overview.student.notes = draft.notes.trim() || null;
 
-        nextScenario.localState = {
-          ...nextScenario.localState,
-          editStudentDraft: draft,
-        };
-
         return nextScenario;
       });
       setDialogState(createDefaultDialogState());
@@ -254,11 +244,6 @@ export function useStudentOverviewData({
         }
 
         overview.student.notes = draft.notes.trim() || null;
-        nextScenario.localState = {
-          ...nextScenario.localState,
-          coachNotesDraft: draft,
-          notesDraft: draft.notes,
-        };
 
         return nextScenario;
       });

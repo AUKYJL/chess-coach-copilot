@@ -68,9 +68,6 @@ function createScenario(
     id,
     label,
     resources,
-    localState: {
-      retryCounter: 0,
-    },
   };
 }
 

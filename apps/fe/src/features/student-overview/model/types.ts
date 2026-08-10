@@ -87,14 +87,8 @@ export type StudentOverviewDialogState = {
 };
 
 export type OverviewScenarioLocalState = {
-  archivedOverride?: boolean;
-  retryCounter?: number;
   analyzeGameDraft?: AnalyzeGameDraft;
-  editStudentDraft?: EditStudentDraft;
   chessAccountDraft?: ChessAccountDraft;
-  coachNotesDraft?: CoachNotesDraft;
-  notesDraft?: string;
-  sectionDismissals?: string[];
 };
 
 export type OverviewScenarioResources = {
@@ -109,7 +103,6 @@ export type OverviewScenario = {
   id: StudentOverviewScenarioId;
   label: string;
   resources: OverviewScenarioResources;
-  artificialDelayMs?: number;
   localState?: OverviewScenarioLocalState;
 };
 
