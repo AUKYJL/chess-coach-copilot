@@ -1,4 +1,4 @@
-import type { StudentProgressResponse } from "@/features/student-overview/model/types";
+import type { StudentProgressResponse } from "@/shared/api/student";
 
 // CURRENT BACKEND: optional detailed progress payload used only when overview.latestProgress is insufficient.
 export const studentProgressMock: StudentProgressResponse = {

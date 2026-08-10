@@ -139,16 +139,16 @@ export function StudentOverviewPage({
                 <WeaknessProfileSection profile={query.data.weaknessProfile} />
               )}
 
-              {query.scenario.resources.analysisProfile.status === "error" ? (
+              {query.scenario.resources.lessonPreview.status === "error" ? (
                 <SectionErrorState
                   title="Next lesson unavailable"
                   description={
-                    query.scenario.resources.analysisProfile.errorMessage ??
+                    query.scenario.resources.lessonPreview.errorMessage ??
                     "The next lesson section failed to load."
                   }
                   onRetry={query.retry}
                 />
-              ) : query.scenario.resources.analysisProfile.status ===
+              ) : query.scenario.resources.lessonPreview.status ===
                 "loading" ? (
                 <SectionSkeletonCard title="Next lesson loading" lines={6} />
               ) : (

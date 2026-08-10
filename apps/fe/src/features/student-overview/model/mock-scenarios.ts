@@ -1,20 +1,24 @@
 import {
   studentAnalysisProfileMock,
+  studentLessonPreviewMock,
   studentOverviewMock,
   studentPerformanceTrendMock,
   studentProgressMock,
 } from "@/shared/mocks/student";
+import type {
+  PerformanceTrendResponse,
+  StudentAnalysisProfileResponse,
+  StudentLessonPreviewResponse,
+  StudentOverviewResponse,
+  StudentProgressResponse,
+} from "@/shared/api/student";
 
 import type {
   OverviewScenario,
   OverviewScenarioResources,
-  PerformanceTrendResponse,
   ResourceStatus,
   SectionResource,
-  StudentAnalysisProfileResponse,
-  StudentOverviewResponse,
   StudentOverviewScenarioId,
-  StudentProgressResponse,
 } from "./types";
 import { studentOverviewScenarioIds } from "./types";
 
@@ -42,6 +46,7 @@ function createBaseResources(): OverviewScenarioResources {
       "ready",
       cloneValue(studentAnalysisProfileMock),
     ),
+    lessonPreview: createResource("ready", cloneValue(studentLessonPreviewMock)),
     performanceTrend: createResource(
       "ready",
       cloneValue(studentPerformanceTrendMock),
@@ -106,6 +111,14 @@ const newStudentScenario = createScenario(
     analysisProfile.severityCounts = [];
     analysisProfile.sampleMistakes = [];
     analysisProfile.recommendedLessonTitle = null;
+    resources.lessonPreview = createResource<StudentLessonPreviewResponse>(
+      "ready",
+      {
+        recommendedLessonTitle: null,
+        recommendedLessonWhy: null,
+        recommendedFocusPoints: [],
+      },
+    );
 
     trend.direction = "UNKNOWN";
     trend.primaryMetric = "Trend will appear after the first annotated games";
@@ -160,6 +173,20 @@ const earlySignalScenario = createScenario(
     ];
     analysisProfile.recommendedLessonTitle =
       "Confirm candidate moves before committing";
+    resources.lessonPreview = createResource<StudentLessonPreviewResponse>(
+      "ready",
+      {
+        recommendedLessonTitle:
+          "Confirm candidate moves before committing",
+        recommendedLessonWhy:
+          "Nora is spotting playable ideas, but she still commits before checking the opponent's forcing replies.",
+        recommendedFocusPoints: [
+          "Checks, captures, and threats before every move",
+          "Compare two candidate moves before choosing",
+          "Name the opponent's direct threat aloud",
+        ],
+      },
+    );
 
     trend.direction = "STABLE";
     trend.primaryMetric = "Initial lesson-readiness signal";
@@ -206,6 +233,10 @@ const analysisProcessingScenario = createScenario(
       "loading",
       null,
     );
+    resources.lessonPreview = createResource<StudentLessonPreviewResponse>(
+      "loading",
+      null,
+    );
     resources.performanceTrend = createResource<PerformanceTrendResponse>(
       "loading",
       null,
@@ -245,6 +276,14 @@ const analysisFailedScenario = createScenario(
     analysisProfile.severityCounts = [];
     analysisProfile.sampleMistakes = [];
     analysisProfile.recommendedLessonTitle = null;
+    resources.lessonPreview = createResource<StudentLessonPreviewResponse>(
+      "ready",
+      {
+        recommendedLessonTitle: null,
+        recommendedLessonWhy: null,
+        recommendedFocusPoints: [],
+      },
+    );
 
     trend.direction = "UNKNOWN";
     trend.primaryMetric = "Trend unavailable until analysis succeeds";
@@ -301,6 +340,11 @@ const sectionErrorScenario = createScenario(
       null,
       "Weakness and lesson signals could not be loaded from local mock state.",
     );
+    resources.lessonPreview = createResource<StudentLessonPreviewResponse>(
+      "error",
+      null,
+      "Lesson recommendation preview is temporarily unavailable in this review state.",
+    );
     resources.performanceTrend = createResource<PerformanceTrendResponse>(
       "error",
       null,
@@ -327,6 +371,10 @@ const overviewErrorScenario = createScenario(
       "ready",
       cloneValue(studentAnalysisProfileMock),
     );
+    resources.lessonPreview = createResource(
+      "ready",
+      cloneValue(studentLessonPreviewMock),
+    );
     resources.performanceTrend = createResource(
       "ready",
       cloneValue(studentPerformanceTrendMock),
@@ -341,6 +389,10 @@ const overviewErrorScenario = createScenario(
 const loadingScenario = createScenario("loading", "Loading", (resources) => {
   resources.overview = createResource<StudentOverviewResponse>("loading", null);
   resources.analysisProfile = createResource<StudentAnalysisProfileResponse>(
+    "loading",
+    null,
+  );
+  resources.lessonPreview = createResource<StudentLessonPreviewResponse>(
     "loading",
     null,
   );

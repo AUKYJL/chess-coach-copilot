@@ -1,4 +1,4 @@
-import type { StudentAnalysisProfileResponse } from "@/features/student-overview/model/types";
+import type { StudentAnalysisProfileResponse } from "@/shared/api/student";
 
 // CURRENT BACKEND: endpoint-shaped mock for GET /api/students/{studentId}/analysis-profile.
 export const studentAnalysisProfileMock: StudentAnalysisProfileResponse = {

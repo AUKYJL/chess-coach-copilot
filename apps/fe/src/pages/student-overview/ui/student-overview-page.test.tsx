@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -109,6 +109,46 @@ describe("StudentOverviewPage", () => {
     expect(
       screen.getByRole("dialog", { name: "Chess accounts" }),
     ).toBeInTheDocument();
+  });
+
+  it("resets local student overview state when the route studentId changes within the same scenario", async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp("/students/student-a?scenario=populated");
+
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(screen.getByText("Edit student"));
+    await user.clear(screen.getByLabelText("Student name"));
+    await user.type(screen.getByLabelText("Student name"), "Edited Student A");
+    await user.clear(screen.getByLabelText("Coach notes"));
+    await user.type(screen.getByLabelText("Coach notes"), "Route-local note");
+    await user.click(screen.getByRole("button", { name: "Save locally" }));
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Edited Student A" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Route-local note")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(screen.getByRole("menuitem", { name: "Chess accounts" }));
+    expect(
+      screen.getByRole("dialog", { name: "Chess accounts" }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await router.navigate("/students/student-b?scenario=populated");
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Alexander Ivanov" }),
+      ).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Route-local note")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "Chess accounts" }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("renders truthful progress copy for the analysis-processing scenario", () => {

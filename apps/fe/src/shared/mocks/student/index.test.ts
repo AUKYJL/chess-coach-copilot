@@ -1,5 +1,6 @@
 import {
   studentAnalysisProfileMock,
+  studentLessonPreviewMock,
   studentOverviewMock,
   studentPerformanceTrendMock,
   studentProgressMock,
@@ -27,6 +28,11 @@ describe("shared student transport mocks", () => {
       "severityCounts",
       "tagCounts",
     ]);
+    expect(Object.keys(studentLessonPreviewMock).sort()).toEqual([
+      "recommendedFocusPoints",
+      "recommendedLessonTitle",
+      "recommendedLessonWhy",
+    ]);
     expect(Object.keys(studentPerformanceTrendMock).sort()).toEqual([
       "direction",
       "points",
@@ -45,6 +51,7 @@ describe("shared student transport mocks", () => {
     expect(studentOverviewMock).not.toHaveProperty("summaryCards");
     expect(studentOverviewMock).not.toHaveProperty("recentMaterials");
     expect(studentAnalysisProfileMock).not.toHaveProperty("mainWeakness");
+    expect(studentLessonPreviewMock).not.toHaveProperty("supportingText");
     expect(studentPerformanceTrendMock).not.toHaveProperty("directionLabel");
     expect(studentProgressMock).not.toHaveProperty("supportingText");
   });

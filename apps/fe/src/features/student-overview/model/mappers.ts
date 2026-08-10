@@ -319,49 +319,42 @@ function mapChessAccounts(
 function mapNextLesson(
   resources: OverviewScenarioResources,
 ): NextLessonViewModel {
-  if (resources.analysisProfile.status === "loading") {
+  const lessonResource = resources.lessonPreview;
+  const analysisProfile = resources.analysisProfile.data;
+  const analyzedGamesCount = getAnalyzedGamesCount(resources);
+  const recommendedLessonTitle =
+    lessonResource.data?.recommendedLessonTitle ??
+    analysisProfile?.recommendedLessonTitle;
+
+  if (lessonResource.status === "loading") {
     return {
       title: "Analysis is still processing",
       rationale:
         "The latest imported game is still being parsed, so a focused recommendation is not ready yet.",
-      focusPoints: [
-        "Wait for the annotated review to finish",
-        "Keep the last imported game in context",
-      ],
+      focusPoints: [],
       supportingText: "Local-only mock processing state",
     };
   }
 
-  if (resources.analysisProfile.status === "error") {
+  if (lessonResource.status === "error") {
     return {
       title: "Lesson focus unavailable",
       rationale:
-        resources.analysisProfile.errorMessage ??
+        lessonResource.errorMessage ??
         "The lesson recommendation failed to load in this review state.",
-      focusPoints: ["Retry locally to restore the recommendation"],
+      focusPoints: [],
       supportingText: "Local-only retry available",
     };
   }
 
-  const analysisProfile = resources.analysisProfile.data;
-  const sampleMistake = analysisProfile?.sampleMistakes.at(0);
-  const analyzedGamesCount = getAnalyzedGamesCount(resources);
-
   return {
-    title:
-      analysisProfile?.recommendedLessonTitle ??
-      "Lesson focus available after analysis",
+    title: recommendedLessonTitle ?? "Lesson focus available after analysis",
     rationale:
-      sampleMistake?.explanation ??
-      "Recent games still need a clearer pattern before a focused lesson recommendation becomes reliable.",
-    focusPoints:
-      analyzedGamesCount === 0
-        ? ["Add the first annotated game to unlock a targeted lesson focus"]
-        : [
-            "Checks, captures, and threats",
-            "Candidate moves before committing",
-            "Defensive tactical motifs",
-          ],
+      lessonResource.data?.recommendedLessonWhy ??
+      (recommendedLessonTitle
+        ? "The current lightweight recommendation data includes the lesson title, but the fuller rationale is not exposed yet."
+        : "Recent games still need a clearer pattern before a focused lesson recommendation becomes reliable."),
+    focusPoints: lessonResource.data?.recommendedFocusPoints ?? [],
     supportingText:
       analyzedGamesCount !== null
         ? `Based on ${formatCount(analyzedGamesCount, "analyzed game")}`

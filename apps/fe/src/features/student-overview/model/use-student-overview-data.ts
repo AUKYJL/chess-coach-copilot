@@ -69,6 +69,12 @@ function applyRetryToScenario(scenario: OverviewScenario): OverviewScenario {
     );
   }
 
+  if (nextScenario.resources.lessonPreview.status === "error") {
+    nextScenario.resources.lessonPreview = structuredClone(
+      fallback.resources.lessonPreview,
+    );
+  }
+
   if (nextScenario.resources.performanceTrend.status === "error") {
     nextScenario.resources.performanceTrend = structuredClone(
       fallback.resources.performanceTrend,
@@ -96,7 +102,7 @@ export function useStudentOverviewData({
   useEffect(() => {
     setScenario(cloneScenario(getStudentOverviewScenario(scenarioId)));
     setDialogState(createDefaultDialogState());
-  }, [scenarioId]);
+  }, [scenarioId, studentId]);
 
   const status = getStudentOverviewStatus(scenario.resources);
 

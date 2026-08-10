@@ -43,5 +43,10 @@ describe("student overview mock scenarios", () => {
       tagCounts: expect.any(Array),
       sampleMistakes: expect.any(Array),
     });
+    expect(scenario.resources.lessonPreview.data).toMatchObject({
+      recommendedLessonTitle: expect.any(String),
+      recommendedLessonWhy: expect.any(String),
+      recommendedFocusPoints: expect.any(Array),
+    });
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   studentAnalysisProfileMock,
+  studentLessonPreviewMock,
   studentOverviewMock,
   studentPerformanceTrendMock,
   studentProgressMock,
@@ -26,6 +27,11 @@ function createResources(
     analysisProfile: {
       status: "ready",
       data: structuredClone(studentAnalysisProfileMock),
+      retriable: false,
+    },
+    lessonPreview: {
+      status: "ready",
+      data: structuredClone(studentLessonPreviewMock),
       retriable: false,
     },
     performanceTrend: {
@@ -64,6 +70,9 @@ describe("student overview mappers", () => {
     expect(viewModel.summaryCards[2]?.value).toBe("Missed opponent threats");
     expect(viewModel.summaryCards[3]?.value).toBe("Improving");
     expect(viewModel.nextLesson.title).toBe("Recognizing opponent threats");
+    expect(viewModel.nextLesson.focusPoints).toEqual(
+      studentLessonPreviewMock.recommendedFocusPoints,
+    );
   });
 
   it("prefers overview analyzed games when present", () => {
@@ -176,6 +185,184 @@ describe("student overview mappers", () => {
       "Candidate-move worksheet, week 32",
     );
     expect(viewModel.recentMaterials[0]?.kind).toBe("Homework");
+  });
+
+  it("maps supplied lesson preview details from the transport boundary", () => {
+    const resources = createResources({
+      lessonPreview: {
+        status: "ready",
+        retriable: false,
+        data: {
+          recommendedLessonTitle: "Neutralize forcing replies before attacking",
+          recommendedLessonWhy:
+            "The student is launching play on one wing while the opponent's forcing response is still unresolved.",
+          recommendedFocusPoints: [
+            "List forcing replies before every pawn push",
+            "Compare your plan against the opponent's best counter",
+          ],
+        },
+      },
+    });
+
+    const viewModel = mapStudentOverviewViewModel(resources);
+
+    expect(viewModel.nextLesson.title).toBe(
+      "Neutralize forcing replies before attacking",
+    );
+    expect(viewModel.nextLesson.rationale).toBe(
+      "The student is launching play on one wing while the opponent's forcing response is still unresolved.",
+    );
+    expect(viewModel.nextLesson.focusPoints).toEqual([
+      "List forcing replies before every pawn push",
+      "Compare your plan against the opponent's best counter",
+    ]);
+  });
+
+  it("allows different fixtures to produce different lesson focus points", () => {
+    const firstViewModel = mapStudentOverviewViewModel(
+      createResources({
+        lessonPreview: {
+          status: "ready",
+          retriable: false,
+          data: {
+            recommendedLessonTitle: "Counterplay awareness",
+            recommendedLessonWhy: "First fixture rationale",
+            recommendedFocusPoints: [
+              "Track the opponent's forcing move first",
+              "State the biggest threat before moving",
+            ],
+          },
+        },
+      }),
+    );
+    const secondViewModel = mapStudentOverviewViewModel(
+      createResources({
+        lessonPreview: {
+          status: "ready",
+          retriable: false,
+          data: {
+            recommendedLessonTitle: "Candidate move discipline",
+            recommendedLessonWhy: "Second fixture rationale",
+            recommendedFocusPoints: [
+              "Write down two candidate moves",
+              "Reject moves that fail tactically",
+            ],
+          },
+        },
+      }),
+    );
+
+    expect(firstViewModel.nextLesson.focusPoints).toEqual([
+      "Track the opponent's forcing move first",
+      "State the biggest threat before moving",
+    ]);
+    expect(secondViewModel.nextLesson.focusPoints).toEqual([
+      "Write down two candidate moves",
+      "Reject moves that fail tactically",
+    ]);
+  });
+
+  it("does not synthesize the previous default three lesson bullets when the transport does not supply them", () => {
+    const viewModel = mapStudentOverviewViewModel(
+      createResources({
+        lessonPreview: {
+          status: "ready",
+          retriable: false,
+          data: {
+            recommendedLessonTitle: "Recognizing opponent threats",
+            recommendedLessonWhy: null,
+            recommendedFocusPoints: [],
+          },
+        },
+      }),
+    );
+
+    expect(viewModel.nextLesson.focusPoints).toEqual([]);
+    expect(viewModel.nextLesson.focusPoints).not.toEqual([
+      "Checks, captures, and threats",
+      "Candidate moves before committing",
+      "Defensive tactical motifs",
+    ]);
+  });
+
+  it("renders a truthful reduced lesson state when optional recommendation details are missing", () => {
+    const viewModel = mapStudentOverviewViewModel(
+      createResources({
+        lessonPreview: {
+          status: "ready",
+          retriable: false,
+          data: {
+            recommendedLessonTitle: "Recognizing opponent threats",
+            recommendedLessonWhy: null,
+            recommendedFocusPoints: [],
+          },
+        },
+      }),
+    );
+
+    expect(viewModel.nextLesson.title).toBe("Recognizing opponent threats");
+    expect(viewModel.nextLesson.rationale).toMatch(
+      /lightweight recommendation data includes the lesson title/i,
+    );
+    expect(viewModel.nextLesson.focusPoints).toEqual([]);
+  });
+
+  it("keeps recommendedLessonTitle truthful for early and no-data lesson states", () => {
+    const earlySignalViewModel = mapStudentOverviewViewModel(
+      createResources({
+        analysisProfile: {
+          status: "ready",
+          retriable: false,
+          data: {
+            ...structuredClone(studentAnalysisProfileMock),
+            recommendedLessonTitle:
+              "Confirm candidate moves before committing",
+          },
+        },
+        lessonPreview: {
+          status: "ready",
+          retriable: false,
+          data: {
+            recommendedLessonTitle:
+              "Confirm candidate moves before committing",
+            recommendedLessonWhy:
+              "An early pattern suggests that the first playable move is being chosen too quickly.",
+            recommendedFocusPoints: [
+              "Compare two candidate moves before choosing",
+            ],
+          },
+        },
+      }),
+    );
+    const noDataViewModel = mapStudentOverviewViewModel(
+      createResources({
+        analysisProfile: {
+          status: "ready",
+          retriable: false,
+          data: {
+            ...structuredClone(studentAnalysisProfileMock),
+            analysisCountUsed: 0,
+            recommendedLessonTitle: null,
+          },
+        },
+        lessonPreview: {
+          status: "ready",
+          retriable: false,
+          data: {
+            recommendedLessonTitle: null,
+            recommendedLessonWhy: null,
+            recommendedFocusPoints: [],
+          },
+        },
+      }),
+    );
+
+    expect(earlySignalViewModel.nextLesson.title).toBe(
+      "Confirm candidate moves before committing",
+    );
+    expect(noDataViewModel.nextLesson.title).toBe(
+      "Lesson focus available after analysis",
+    );
   });
 
   it("returns a truthful progress empty state when analytical summary inputs are unavailable", () => {

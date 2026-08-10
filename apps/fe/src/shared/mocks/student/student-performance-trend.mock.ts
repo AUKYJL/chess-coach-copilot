@@ -1,4 +1,4 @@
-import type { PerformanceTrendResponse } from "@/features/student-overview/model/types";
+import type { PerformanceTrendResponse } from "@/shared/api/student";
 
 // PLANNED BACKEND: structured chart transport kept separate from narrative progress copy.
 export const studentPerformanceTrendMock: PerformanceTrendResponse = {
