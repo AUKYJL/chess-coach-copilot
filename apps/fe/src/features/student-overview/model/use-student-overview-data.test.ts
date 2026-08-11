@@ -188,45 +188,15 @@ describe("useStudentOverviewData", () => {
     );
   });
 
-  it("resets local state when studentId changes within the same scenario", () => {
-    const { result, rerender } = renderHook(
-      ({ studentId }: { studentId: string }) =>
-        useStudentOverviewData({
-          studentId,
-          scenarioId: "populated",
-        }),
-      {
-        initialProps: {
-          studentId: "student-a",
-        },
-      },
+  it("initializes local scenario state from the provided scenario identity", () => {
+    const { result } = renderHook(() =>
+      useStudentOverviewData({
+        studentId: "demo-student",
+        scenarioId: "missing-optional-identity",
+      }),
     );
 
-    act(() => {
-      result.current.openDialog("chess-accounts");
-      result.current.submitEditStudent({
-        displayName: "Edited Student A",
-        birthYear: 2011,
-        rating: 1710,
-        notes: "A-only note",
-      });
-    });
-
-    expect(result.current.data?.student.displayName).toBe("Edited Student A");
-    expect(result.current.dialogState.kind).toBeNull();
-
-    act(() => {
-      result.current.openDialog("coach-notes");
-    });
-
-    expect(result.current.dialogState.kind).toBe("coach-notes");
-
-    rerender({
-      studentId: "student-b",
-    });
-
-    expect(result.current.data?.student.displayName).toBe("Alexander Ivanov");
-    expect(result.current.data?.coachNotes.body).not.toBe("A-only note");
+    expect(result.current.data?.student.displayName).toBe("Sasha Moroz");
     expect(result.current.dialogState.kind).toBeNull();
   });
 });

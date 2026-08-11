@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   getStudentOverviewStatus,
@@ -93,11 +93,6 @@ export function useStudentOverviewData({
     cloneScenario(getStudentOverviewScenario(scenarioId)),
   );
   const [dialogState, setDialogState] = useState(createDefaultDialogState);
-
-  useEffect(() => {
-    setScenario(cloneScenario(getStudentOverviewScenario(scenarioId)));
-    setDialogState(createDefaultDialogState());
-  }, [scenarioId, studentId]);
 
   const status = getStudentOverviewStatus(scenario.resources);
 
