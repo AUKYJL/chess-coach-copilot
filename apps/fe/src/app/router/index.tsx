@@ -61,7 +61,7 @@ function WorkspaceLinks({
 
 function AppShell() {
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-dvh">
       <header className="border-divider bg-surface-sidebar/96 sticky top-0 z-20 border-b backdrop-blur xl:hidden">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-start justify-between gap-4">
@@ -87,35 +87,37 @@ function AppShell() {
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-screen max-w-[1600px] min-w-0 flex-col xl:flex-row">
-        <aside className="border-divider bg-surface-sidebar hidden xl:block xl:min-h-screen xl:w-72 xl:border-r xl:px-6 xl:py-8">
-          <div className="flex h-full flex-col justify-between gap-8">
-            <div className="space-y-8">
-              <div className="space-y-2">
-                <p className="text-muted-foreground text-xs font-semibold tracking-[0.24em] uppercase">
-                  Chess Coach Copilot
-                </p>
-                <h2 className="text-foreground text-xl font-semibold tracking-tight">
-                  Workspace
-                </h2>
-              </div>
-
-              <WorkspaceLinks />
-            </div>
-
-            <div className="border-divider bg-surface rounded-[28px] border px-4 py-4">
-              <p className="text-foreground text-sm font-semibold">Vladimir</p>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Coach account
+      <aside className="border-divider bg-surface-sidebar hidden xl:fixed xl:inset-y-0 xl:left-0 xl:z-10 xl:block xl:h-screen xl:h-dvh xl:w-60 xl:border-r xl:px-6 xl:py-8">
+        <div className="flex h-full flex-col justify-between gap-8">
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-semibold tracking-[0.24em] uppercase">
+                Chess Coach Copilot
               </p>
+              <h2 className="text-foreground text-xl font-semibold tracking-tight">
+                Workspace
+              </h2>
             </div>
-          </div>
-        </aside>
 
-        <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-10 xl:py-8">
-          <Outlet />
-        </main>
-      </div>
+            <WorkspaceLinks />
+          </div>
+
+          <div className="border-divider bg-surface rounded-[28px] border px-4 py-4">
+            <p className="text-foreground text-sm font-semibold">Vladimir</p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Coach account
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      <main className="min-w-0 xl:min-h-dvh xl:pl-60">
+        <div className="min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-8 xl:py-8">
+          <div className="mx-auto w-full max-w-[1280px]">
+            <Outlet />
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

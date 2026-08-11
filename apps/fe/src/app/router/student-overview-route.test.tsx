@@ -48,6 +48,33 @@ function renderProfiledApp(
 }
 
 describe("StudentOverviewRoute", () => {
+  it("keeps the desktop sidebar pinned to the viewport instead of stretching with page content", () => {
+    const { container } = renderApp("/students/demo-student?scenario=populated", {
+      environment: { DEV: true },
+    });
+
+    const sidebar = container.querySelector("aside");
+    const main = container.querySelector("main");
+    const mainContent = container.querySelector("main > div > div");
+
+    expect(sidebar).not.toBeNull();
+    expect(sidebar).toHaveClass(
+      "xl:fixed",
+      "xl:inset-y-0",
+      "xl:left-0",
+      "xl:h-screen",
+      "xl:h-dvh",
+      "xl:w-60",
+    );
+    expect(sidebar).not.toHaveClass("xl:self-start", "xl:sticky", "xl:top-0");
+
+    expect(main).not.toBeNull();
+    expect(main).toHaveClass("xl:pl-60");
+
+    expect(mainContent).not.toBeNull();
+    expect(mainContent).toHaveClass("mx-auto", "w-full", "max-w-[1280px]");
+  });
+
   it("shows the scenario selector only in development and respects canonical overrides there", () => {
     renderApp("/students/demo-student?scenario=analysis-failed", {
       environment: { DEV: true },
