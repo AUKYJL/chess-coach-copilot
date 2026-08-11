@@ -17,6 +17,9 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  TYPOGRAPHY_COLOR,
+  TYPOGRAPHY_VARIANT,
+  Typography,
 } from "@/shared/ui";
 
 import { toneChipClasses } from "../model/semantic-tones";
@@ -69,7 +72,12 @@ export function PerformanceTrendSection({
           <p className="text-foreground text-sm leading-7">
             Trend data is not available yet for this scenario.
           </p>
-          <p className="text-muted-foreground text-sm">{trend.metricLabel}</p>
+          <Typography
+            color={TYPOGRAPHY_COLOR.SECONDARY}
+            variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+          >
+            {trend.metricLabel}
+          </Typography>
         </CardContent>
       </Card>
     );
@@ -100,9 +108,12 @@ export function PerformanceTrendSection({
               <LineChart className="text-accent size-4" />
               <CardTitle>Performance trend</CardTitle>
             </div>
-            <p className="text-muted-foreground text-sm">
+            <Typography
+              color={TYPOGRAPHY_COLOR.SECONDARY}
+              variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+            >
               {trend.metricLabel} · {trend.rangeLabel}
-            </p>
+            </Typography>
           </div>
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold ${toneChipClasses[trend.tone]}`}

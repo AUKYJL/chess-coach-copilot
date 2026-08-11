@@ -1,6 +1,15 @@
 import { ArrowRight, GraduationCap } from "lucide-react";
 
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@/shared/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  TYPOGRAPHY_COLOR,
+  TYPOGRAPHY_VARIANT,
+  Typography,
+} from "@/shared/ui";
 
 import type { NextLessonViewModel } from "../model/types";
 
@@ -35,15 +44,21 @@ export function NextLessonSection({ lesson }: NextLessonSectionProps) {
             ))}
           </ul>
         ) : (
-          <p className="text-muted-foreground text-sm">
+          <Typography
+            color={TYPOGRAPHY_COLOR.SECONDARY}
+            variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+          >
             A concrete lesson checklist will appear here when a stable pattern
             is available.
-          </p>
+          </Typography>
         )}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--divider)] pt-4">
-          <p className="text-muted-foreground text-sm">
+          <Typography
+            color={TYPOGRAPHY_COLOR.SECONDARY}
+            variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+          >
             {lesson.supportingText}
-          </p>
+          </Typography>
           <Button variant="ghost" size="sm" disabled>
             View analysis
             <ArrowRight className="size-4" />

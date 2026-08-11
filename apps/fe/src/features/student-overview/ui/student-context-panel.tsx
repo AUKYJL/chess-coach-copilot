@@ -1,6 +1,16 @@
 import { NotebookPen, UserRound } from "lucide-react";
 
-import { Button, Card, CardContent, CardHeader, CardTitle, Separator } from "@/shared/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Separator,
+  TYPOGRAPHY_COLOR,
+  TYPOGRAPHY_VARIANT,
+  Typography,
+} from "@/shared/ui";
 
 import type {
   ChessAccountItem,
@@ -37,7 +47,9 @@ export function StudentContextPanel({
             <div key={item.id} className="space-y-3">
               <div className="flex items-center justify-between gap-4 text-sm">
                 <span className="text-muted-foreground">{item.label}</span>
-                <span className="text-foreground text-right font-medium">{item.value}</span>
+                <span className="text-foreground text-right font-medium">
+                  {item.value}
+                </span>
               </div>
               {index < studentInformation.length - 1 ? <Separator /> : null}
             </div>
@@ -59,16 +71,23 @@ export function StudentContextPanel({
             accounts.map((account, index) => (
               <div key={account.id} className="space-y-3">
                 <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-foreground font-medium">{account.platformLabel}</span>
-                  <span className="text-muted-foreground">{account.username}</span>
+                  <span className="text-foreground font-medium">
+                    {account.platformLabel}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {account.username}
+                  </span>
                 </div>
                 {index < accounts.length - 1 ? <Separator /> : null}
               </div>
             ))
           ) : (
-            <p className="text-muted-foreground text-sm">
+            <Typography
+              color={TYPOGRAPHY_COLOR.SECONDARY}
+              variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+            >
               No linked chess accounts yet.
-            </p>
+            </Typography>
           )}
         </CardContent>
       </Card>

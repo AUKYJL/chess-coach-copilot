@@ -1,6 +1,15 @@
 import { ArrowRight } from "lucide-react";
 
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@/shared/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  TYPOGRAPHY_COLOR,
+  TYPOGRAPHY_VARIANT,
+  Typography,
+} from "@/shared/ui";
 
 import type { MaterialRowViewModel } from "../model/types";
 
@@ -35,9 +44,13 @@ export function RecentMaterialsSection({
               <p className="text-foreground mt-4 text-base leading-6 font-semibold">
                 {material.title}
               </p>
-              <p className="text-muted-foreground mt-3 text-sm">
+              <Typography
+                className="mt-3"
+                color={TYPOGRAPHY_COLOR.SECONDARY}
+                variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+              >
                 {material.supportingText}
-              </p>
+              </Typography>
             </div>
           ))
         ) : (

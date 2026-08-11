@@ -1,6 +1,15 @@
 import { ArrowRight, ShieldAlert } from "lucide-react";
 
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@/shared/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  TYPOGRAPHY_COLOR,
+  TYPOGRAPHY_VARIANT,
+  Typography,
+} from "@/shared/ui";
 
 import { toneChipClasses } from "../model/semantic-tones";
 import type { WeaknessProfileViewModel } from "../model/types";
@@ -26,9 +35,12 @@ export function WeaknessProfileSection({
             There is not enough reviewed analysis yet to describe a reliable
             weakness pattern.
           </p>
-          <p className="text-muted-foreground text-sm">
+          <Typography
+            color={TYPOGRAPHY_COLOR.SECONDARY}
+            variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+          >
             Add more annotated games or retry the local review state.
-          </p>
+          </Typography>
         </CardContent>
       </Card>
     );
@@ -45,9 +57,12 @@ export function WeaknessProfileSection({
               <ShieldAlert className="text-accent size-4" />
               <CardTitle>Weakness profile</CardTitle>
             </div>
-            <p className="text-muted-foreground text-sm">
+            <Typography
+              color={TYPOGRAPHY_COLOR.SECONDARY}
+              variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+            >
               Main pattern: {profile.mainWeakness}
-            </p>
+            </Typography>
           </div>
           <Button variant="ghost" size="sm" className="shrink-0" disabled>
             Full analysis

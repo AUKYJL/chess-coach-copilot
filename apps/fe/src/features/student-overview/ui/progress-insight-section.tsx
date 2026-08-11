@@ -1,6 +1,14 @@
 import { NotebookText } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  TYPOGRAPHY_COLOR,
+  TYPOGRAPHY_VARIANT,
+  Typography,
+} from "@/shared/ui";
 
 import type { ProgressInsightViewModel } from "../model/types";
 
@@ -24,8 +32,15 @@ export function ProgressInsightSection({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-foreground max-w-3xl text-sm leading-7">{insight.summary}</p>
-        <p className="text-muted-foreground text-sm">{insight.supportingText}</p>
+        <p className="text-foreground max-w-3xl text-sm leading-7">
+          {insight.summary}
+        </p>
+        <Typography
+          color={TYPOGRAPHY_COLOR.SECONDARY}
+          variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+        >
+          {insight.supportingText}
+        </Typography>
       </CardContent>
     </Card>
   );

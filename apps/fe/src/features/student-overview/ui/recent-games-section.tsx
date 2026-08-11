@@ -7,6 +7,9 @@ import {
   CardHeader,
   CardTitle,
   Separator,
+  TYPOGRAPHY_COLOR,
+  TYPOGRAPHY_VARIANT,
+  Typography,
 } from "@/shared/ui";
 
 import type { RecentGameRowViewModel } from "../model/types";
@@ -35,10 +38,15 @@ export function RecentGamesSection({ games }: RecentGamesSectionProps) {
                 <p className="text-foreground text-sm font-semibold">
                   {game.playersLabel}
                 </p>
-                <p className="text-muted-foreground text-sm">
+                <Typography
+                  color={TYPOGRAPHY_COLOR.SECONDARY}
+                  variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+                >
                   {game.metaLabel}
-                </p>
-                <p className="text-foreground text-sm">{game.openingName}</p>
+                </Typography>
+                <Typography variant={TYPOGRAPHY_VARIANT.BODY_SMALL}>
+                  {game.openingName}
+                </Typography>
                 <div className="text-muted-foreground flex items-center justify-between gap-3 text-xs tracking-[0.18em] uppercase">
                   <span>{game.importedAtLabel}</span>
                   <span className="flex items-center gap-1.5">

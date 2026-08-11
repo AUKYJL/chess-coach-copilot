@@ -13,6 +13,12 @@ import {
 import { StudentOverviewPage } from "@/pages/student-overview";
 
 import { cn } from "@/shared/lib/cn";
+import {
+  Container,
+  TYPOGRAPHY_COLOR,
+  TYPOGRAPHY_VARIANT,
+  Typography,
+} from "@/shared/ui";
 
 import {
   type StudentOverviewEnvironment,
@@ -76,7 +82,13 @@ function AppShell() {
 
             <div className="border-divider bg-surface min-w-0 rounded-[22px] border px-3 py-2 text-right">
               <p className="text-foreground text-sm font-semibold">Vladimir</p>
-              <p className="text-muted-foreground text-xs">Coach account</p>
+              <Typography
+                as="p"
+                color={TYPOGRAPHY_COLOR.SECONDARY}
+                variant={TYPOGRAPHY_VARIANT.CAPTION}
+              >
+                Coach account
+              </Typography>
             </div>
           </div>
 
@@ -87,7 +99,7 @@ function AppShell() {
         </div>
       </header>
 
-      <aside className="border-divider bg-surface-sidebar hidden xl:fixed xl:inset-y-0 xl:left-0 xl:z-10 xl:block xl:h-screen xl:h-dvh xl:w-60 xl:border-r xl:px-6 xl:py-8">
+      <aside className="border-divider bg-surface-sidebar hidden xl:fixed xl:inset-y-0 xl:left-0 xl:z-10 xl:block xl:h-dvh xl:h-screen xl:w-60 xl:border-r xl:px-6 xl:py-8">
         <div className="flex h-full flex-col justify-between gap-8">
           <div className="space-y-8">
             <div className="space-y-2">
@@ -104,18 +116,23 @@ function AppShell() {
 
           <div className="border-divider bg-surface rounded-[28px] border px-4 py-4">
             <p className="text-foreground text-sm font-semibold">Vladimir</p>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <Typography
+              as="p"
+              className="mt-1"
+              color={TYPOGRAPHY_COLOR.SECONDARY}
+              variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+            >
               Coach account
-            </p>
+            </Typography>
           </div>
         </div>
       </aside>
 
       <main className="min-w-0 xl:min-h-dvh xl:pl-60">
         <div className="min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-8 xl:py-8">
-          <div className="mx-auto w-full max-w-[1280px]">
+          <Container>
             <Outlet />
-          </div>
+          </Container>
         </div>
       </main>
     </div>
