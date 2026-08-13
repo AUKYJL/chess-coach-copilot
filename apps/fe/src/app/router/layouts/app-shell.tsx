@@ -1,0 +1,104 @@
+import { Outlet } from "react-router-dom";
+
+import {
+  SESSION_STATUS,
+  useSessionStore,
+} from "@/entities/session";
+import { LogoutButton } from "@/features/logout-button";
+import {
+  Container,
+  TYPOGRAPHY_COLOR,
+  TYPOGRAPHY_VARIANT,
+  Typography,
+} from "@/shared/ui";
+
+import { WorkspaceLinks } from "./workspace-links";
+
+export function AppShell() {
+  const coach = useSessionStore((state) => state.coach);
+  const status = useSessionStore((state) => state.status);
+  const displayName = coach?.displayName ?? "Coach";
+  const showLogoutButton = status === SESSION_STATUS.AUTHENTICATED;
+
+  return (
+    <div className="bg-background min-h-dvh">
+      <header className="border-divider bg-surface-sidebar/96 sticky top-0 z-20 border-b backdrop-blur xl:hidden">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-[0.7rem] font-semibold tracking-[0.24em] uppercase">
+                Chess Coach Copilot
+              </p>
+              <h2 className="text-foreground text-lg font-semibold tracking-tight">
+                Workspace
+              </h2>
+            </div>
+
+            <div className="border-divider bg-surface min-w-0 rounded-[22px] border px-3 py-2 text-right">
+              <p className="text-foreground text-sm font-semibold">{displayName}</p>
+              <Typography
+                as="p"
+                color={TYPOGRAPHY_COLOR.SECONDARY}
+                variant={TYPOGRAPHY_VARIANT.CAPTION}
+              >
+                Coach account
+              </Typography>
+              {showLogoutButton ? (
+                <div className="mt-2">
+                  <LogoutButton />
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <WorkspaceLinks
+            className="-mx-1 flex [scrollbar-width:none] gap-2 overflow-x-auto px-1 pb-1 [&::-webkit-scrollbar]:hidden"
+            linkClassName="min-w-fit shrink-0 rounded-full px-4 py-2.5"
+          />
+        </div>
+      </header>
+
+      <aside className="border-divider bg-surface-sidebar hidden xl:fixed xl:inset-y-0 xl:left-0 xl:z-10 xl:block xl:h-dvh xl:h-screen xl:w-60 xl:border-r xl:px-6 xl:py-8">
+        <div className="flex h-full flex-col justify-between gap-8">
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-semibold tracking-[0.24em] uppercase">
+                Chess Coach Copilot
+              </p>
+              <h2 className="text-foreground text-xl font-semibold tracking-tight">
+                Workspace
+              </h2>
+            </div>
+
+            <WorkspaceLinks />
+          </div>
+
+          <div className="border-divider bg-surface rounded-[28px] border px-4 py-4">
+            <p className="text-foreground text-sm font-semibold">{displayName}</p>
+            <Typography
+              as="p"
+              className="mt-1"
+              color={TYPOGRAPHY_COLOR.SECONDARY}
+              variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+            >
+              Coach account
+            </Typography>
+            {showLogoutButton ? (
+              <div className="mt-3">
+                <LogoutButton />
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </aside>
+
+      <main className="min-w-0 xl:min-h-dvh xl:pl-60">
+        <div className="min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-8 xl:py-8">
+          <Container>
+            <Outlet />
+          </Container>
+        </div>
+      </main>
+    </div>
+  );
+}

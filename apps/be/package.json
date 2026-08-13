@@ -8,6 +8,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "prebuild": "npm run prisma:generate",
+    "api:export": "npm run build && node ./dist/openapi/export-openapi.js",
     "build": "nest build",
     "format": "prettier --write --no-error-on-unmatched-pattern \"src/**/*.ts\" \"test/**/*.ts\" && prisma format",
     "start": "nest start",

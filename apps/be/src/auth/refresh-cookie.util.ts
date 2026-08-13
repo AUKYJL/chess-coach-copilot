@@ -1,6 +1,6 @@
 import type { CookieOptions } from 'express';
 
-const REFRESH_COOKIE_PATH = '/auth';
+const REFRESH_COOKIE_PATH = '/api/auth';
 
 export function getRefreshCookieBaseOptions(input: {
   isProduction: boolean;

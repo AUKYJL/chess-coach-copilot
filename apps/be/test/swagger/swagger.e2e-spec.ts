@@ -19,6 +19,7 @@ describe('Swagger docs (e2e)', () => {
   beforeEach(async () => {
     const fixture = await createE2eApp({
       withSwagger: true,
+      withGlobalPrefix: true,
     });
     app = fixture.app;
   });
@@ -47,19 +48,93 @@ describe('Swagger docs (e2e)', () => {
     expect(document.info.title).toBe('Chess Coach Copilot');
     expect(document.info.version).toBe('0.1.0');
     expect(
-      getOperation(document, '/analysis/{analysisId}/homework/generate', 'post')
-        .requestBody,
+      getOperation(
+        document,
+        '/api/analysis/{analysisId}/homework/generate',
+        'post',
+      ).requestBody,
     ).toBeUndefined();
     expect(
-      getOperation(document, '/students/{studentId}/progress/generate', 'post')
-        .requestBody,
+      getOperation(
+        document,
+        '/api/students/{studentId}/progress/generate',
+        'post',
+      ).requestBody,
     ).toBeUndefined();
     expect(
-      getOperation(document, '/analysis/{analysisId}/reports/generate', 'post')
-        .requestBody,
+      getOperation(
+        document,
+        '/api/analysis/{analysisId}/reports/generate',
+        'post',
+      ).requestBody,
     ).toBeDefined();
-    expect(getOperation(document, '/students/{studentId}/overview', 'get')).toBeDefined();
-    expect(hasOperation(document, '/analysis/jobs/{jobId}/result', 'get')).toBe(false);
+    expect(
+      getOperation(document, '/api/students/{studentId}/overview', 'get'),
+    ).toBeDefined();
+    expect(getOperation(document, '/api/auth/register', 'post')).toMatchObject({
+      responses: {
+        '201': {
+          content: {
+            'application/json': {
+              schema: {
+                allOf: [{ $ref: '#/components/schemas/AuthResponse' }],
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(getOperation(document, '/api/auth/login', 'post')).toMatchObject({
+      responses: {
+        '200': {
+          content: {
+            'application/json': {
+              schema: {
+                allOf: [{ $ref: '#/components/schemas/AuthResponse' }],
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(getOperation(document, '/api/auth/refresh', 'post')).toMatchObject({
+      responses: {
+        '200': {
+          content: {
+            'application/json': {
+              schema: {
+                allOf: [
+                  { $ref: '#/components/schemas/RefreshAccessTokenResponse' },
+                ],
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(getOperation(document, '/api/auth/logout', 'post')).toMatchObject({
+      responses: {
+        '204': {
+          description: 'Refresh session revoked.',
+        },
+      },
+    });
+    expect(getOperation(document, '/api/auth/me', 'get')).toMatchObject({
+      responses: {
+        '200': {
+          content: {
+            'application/json': {
+              schema: {
+                allOf: [{ $ref: '#/components/schemas/CoachProfileResponse' }],
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(
+      hasOperation(document, '/api/analysis/jobs/{jobId}/result', 'get'),
+    ).toBe(false);
   });
 
   it('downloads the OpenAPI document as YAML on /docs-yaml', async () => {
@@ -118,7 +193,9 @@ function getOperation(
   const operation = document.paths?.[path]?.[method];
 
   if (typeof operation !== 'object' || operation === null) {
-    throw new Error(`Expected OpenAPI operation ${method.toUpperCase()} ${path}`);
+    throw new Error(
+      `Expected OpenAPI operation ${method.toUpperCase()} ${path}`,
+    );
   }
 
   return operation as Record<string, unknown>;

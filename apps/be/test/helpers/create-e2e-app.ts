@@ -1,16 +1,10 @@
-import cookieParser from 'cookie-parser';
-import {
-  Global,
-  INestApplication,
-  Module,
-  ValidationPipe,
-} from '@nestjs/common';
-import type { ConfigType } from '@nestjs/config';
+import { Global, INestApplication, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { AuthModule } from '../../src/auth/auth.module.js';
 import { AnalysisModule } from '../../src/analysis/analysis.module.js';
 import { AnalysisProcessingModule } from '../../src/analysis/jobs/analysis-processing.module.js';
+import { configureHttpApp } from '../../src/bootstrap/configure-http-app.js';
 import {
   appConfig,
   databaseConfig,
@@ -26,11 +20,10 @@ import { ImportsModule } from '../../src/imports/imports.module.js';
 import { LlmService } from '../../src/llm/llm.service.js';
 import { PrismaModule } from '../../src/prisma/prisma.module.js';
 import { ProgressModule } from '../../src/progress/progress.module.js';
-import { ReportsModule } from '../../src/reports/reports.module.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import { ANALYSIS_JOB_ENQUEUER } from '../../src/queues/queue.constants.js';
 import type { AnalysisQueueJobData } from '../../src/queues/queue.service.js';
-import { HttpExceptionFilter } from '../../src/shared/filters/http-exception.filter.js';
+import { ReportsModule } from '../../src/reports/reports.module.js';
 import { setupSwagger } from '../../src/shared/swagger/swagger.config.js';
 import { StudentsModule } from '../../src/students/students.module.js';
 import {
@@ -241,6 +234,7 @@ class E2eAppModule {}
 
 interface CreateE2eAppOptions {
   withSwagger?: boolean;
+  withGlobalPrefix?: boolean;
 }
 
 export async function createE2eApp(options: CreateE2eAppOptions = {}): Promise<{
@@ -259,23 +253,9 @@ export async function createE2eApp(options: CreateE2eAppOptions = {}): Promise<{
     .compile();
 
   const app = moduleRef.createNestApplication();
-  const applicationConfiguration = app.get<ConfigType<typeof appConfig>>(
-    appConfig.KEY,
-  );
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
-  app.use(cookieParser());
-  app.enableCors({
-    origin: applicationConfiguration.corsOrigins,
-    credentials: true,
+  configureHttpApp(app, {
+    withGlobalPrefix: options.withGlobalPrefix ?? false,
   });
-  app.useGlobalFilters(new HttpExceptionFilter());
 
   if (options.withSwagger) {
     setupSwagger(app);

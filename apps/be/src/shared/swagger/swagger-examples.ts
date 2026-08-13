@@ -6,6 +6,7 @@ import {
 } from '../../generated/prisma/client.js';
 
 const coach = {
+  id: '3d7f7e9a-6e2e-4db7-9ee4-f66cc5967e42',
   email: 'coach.alex.petrov@example.com',
   displayName: 'Alex Petrov',
   password: 'StrongPass123',
@@ -94,5 +95,26 @@ export const swaggerRequestExamples = {
   },
   imports: {
     create: importPgn,
+  },
+} as const;
+
+export const swaggerResponseExamples = {
+  auth: {
+    coach: {
+      id: coach.id,
+      email: coach.email,
+      displayName: coach.displayName,
+    },
+    session: {
+      accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.access-token',
+      coach: {
+        id: coach.id,
+        email: coach.email,
+        displayName: coach.displayName,
+      },
+    },
+    refresh: {
+      accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.access-token',
+    },
   },
 } as const;

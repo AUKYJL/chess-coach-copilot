@@ -15,14 +15,20 @@ import type { ConfigType } from '@nestjs/config';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiCreatedResponse,
   ApiExtraModels,
+  ApiNoContentResponse,
+  ApiOkResponse,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { APP_ENVIRONMENT, appConfig, jwtConfig } from '../config/index.js';
 import { CurrentCoach } from '../shared/decorators/current-coach.decorator.js';
-import { swaggerRequestExamples } from '../shared/swagger/swagger-examples.js';
+import {
+  swaggerRequestExamples,
+  swaggerResponseExamples,
+} from '../shared/swagger/swagger-examples.js';
 import type { AuthenticatedCoach } from '../shared/types/authenticated-coach.type.js';
 import { AuthService } from './auth.service.js';
 import {
@@ -39,7 +45,13 @@ import {
 } from './refresh-cookie.util.js';
 
 @ApiTags('Auth')
-@ApiExtraModels(RegisterDto, LoginDto)
+@ApiExtraModels(
+  RegisterDto,
+  LoginDto,
+  AuthResponse,
+  CoachProfileResponse,
+  RefreshAccessTokenResponse,
+)
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -54,6 +66,12 @@ export class AuthController {
     schema: {
       allOf: [{ $ref: getSchemaPath(RegisterDto) }],
       example: swaggerRequestExamples.auth.register,
+    },
+  })
+  @ApiCreatedResponse({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(AuthResponse) }],
+      example: swaggerResponseExamples.auth.session,
     },
   })
   @Post('register')
@@ -79,6 +97,12 @@ export class AuthController {
       example: swaggerRequestExamples.auth.login,
     },
   })
+  @ApiOkResponse({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(AuthResponse) }],
+      example: swaggerResponseExamples.auth.session,
+    },
+  })
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(
@@ -97,6 +121,12 @@ export class AuthController {
     return result.body;
   }
 
+  @ApiOkResponse({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(RefreshAccessTokenResponse) }],
+      example: swaggerResponseExamples.auth.refresh,
+    },
+  })
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
   async refresh(
@@ -114,6 +144,7 @@ export class AuthController {
     return result.body;
   }
 
+  @ApiNoContentResponse({ description: 'Refresh session revoked.' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('logout')
   async logout(
@@ -129,6 +160,12 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
+  @ApiOkResponse({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(CoachProfileResponse) }],
+      example: swaggerResponseExamples.auth.coach,
+    },
+  })
   @UseGuards(JwtAccessGuard)
   @Get('me')
   me(@CurrentCoach() coach: AuthenticatedCoach): Promise<CoachProfileResponse> {

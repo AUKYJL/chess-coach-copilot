@@ -34,3 +34,5 @@ Acceptance pass:
 3. Check `390px`: mobile navigation replaces the sidebar, no horizontal overflow appears, dialogs fit the viewport, cards and tabs remain usable.
 4. Verify palette fidelity for `#F5F5F3`, `#FFFFFF`, `#EEEEEC`, `#F8F9FA`, `#F4F5F7`, `#202124`, `#66686D`, `#92949A`, `#586A8A`, `#485A79`, `#667386`, `#27303C`, and `#DEDEDB`.
 5. Verify there are no live `/api/*` requests in any scenario.
+
+Frontend automated tests have been removed from this workspace. Use `npm run typecheck:fe`, `npm run lint:fe`, and `npm run build:fe` from the repository root for active frontend verification.

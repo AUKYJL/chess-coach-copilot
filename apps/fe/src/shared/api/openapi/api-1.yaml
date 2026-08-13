@@ -1,0 +1,995 @@
+openapi: 3.0.0
+paths:
+  /api/auth/register:
+    post:
+      operationId: AuthController_register
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/RegisterDto"
+              example:
+                email: coach.alex.petrov@example.com
+                password: StrongPass123
+                displayName: Alex Petrov
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/AuthResponse"
+                example:
+                  accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.access-token
+                  coach:
+                    id: 3d7f7e9a-6e2e-4db7-9ee4-f66cc5967e42
+                    email: coach.alex.petrov@example.com
+                    displayName: Alex Petrov
+      tags: &a1
+        - Auth
+  /api/auth/login:
+    post:
+      operationId: AuthController_login
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/LoginDto"
+              example:
+                email: coach.alex.petrov@example.com
+                password: StrongPass123
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/AuthResponse"
+                example:
+                  accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.access-token
+                  coach:
+                    id: 3d7f7e9a-6e2e-4db7-9ee4-f66cc5967e42
+                    email: coach.alex.petrov@example.com
+                    displayName: Alex Petrov
+      tags: *a1
+  /api/auth/refresh:
+    post:
+      operationId: AuthController_refresh
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RefreshAccessTokenResponse"
+                example:
+                  accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.access-token
+      tags: *a1
+  /api/auth/logout:
+    post:
+      operationId: AuthController_logout
+      parameters: []
+      responses:
+        "204":
+          description: Refresh session revoked.
+      tags: *a1
+  /api/auth/me:
+    get:
+      operationId: AuthController_me
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/CoachProfileResponse"
+                example:
+                  id: 3d7f7e9a-6e2e-4db7-9ee4-f66cc5967e42
+                  email: coach.alex.petrov@example.com
+                  displayName: Alex Petrov
+      security:
+        - bearer: []
+      tags: *a1
+  /api/students:
+    get:
+      operationId: StudentsController_list
+      parameters:
+        - name: archived
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - active
+              - archived
+              - all
+      responses:
+        "200":
+          description: ""
+      security: &a2
+        - bearer: []
+      tags: &a3
+        - Students
+    post:
+      operationId: StudentsController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/CreateStudentDto"
+              example:
+                displayName: Maksim Sokolov
+                birthYear: 2012
+                rating: 1460
+                notes: Focuses on tactics and rook endgames.
+      responses:
+        "201":
+          description: ""
+      security: *a2
+      tags: *a3
+  /api/students/{studentId}:
+    get:
+      operationId: StudentsController_getOne
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            format: uuid
+            example: 7f4a8c2d-1b7e-4a7f-9d3b-2c6f4e8a9b10
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: *a2
+      tags: *a3
+    patch:
+      operationId: StudentsController_update
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            format: uuid
+            example: 7f4a8c2d-1b7e-4a7f-9d3b-2c6f4e8a9b10
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/UpdateStudentDto"
+              example:
+                displayName: Maksim Sokolov
+                birthYear: 2012
+                rating: 1460
+                notes: Focuses on tactics and rook endgames.
+      responses:
+        "200":
+          description: ""
+      security: *a2
+      tags: *a3
+  /api/students/{studentId}/overview:
+    get:
+      operationId: StudentsController_getOverview
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: *a2
+      tags: *a3
+  /api/students/{studentId}/analysis-profile:
+    get:
+      operationId: StudentsController_getAnalysisProfile
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: *a2
+      tags: *a3
+  /api/students/{studentId}/archive:
+    post:
+      operationId: StudentsController_setArchiveState
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            format: uuid
+            example: 7f4a8c2d-1b7e-4a7f-9d3b-2c6f4e8a9b10
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/SetStudentArchiveDto"
+              example:
+                archived: true
+      responses:
+        "200":
+          description: ""
+      security: *a2
+      tags: *a3
+  /api/students/{studentId}/external-accounts:
+    get:
+      operationId: ExternalAccountsController_list
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            format: uuid
+            example: 7f4a8c2d-1b7e-4a7f-9d3b-2c6f4e8a9b10
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: &a4
+        - bearer: []
+      tags: &a5
+        - External Accounts
+    post:
+      operationId: ExternalAccountsController_create
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            format: uuid
+            example: 7f4a8c2d-1b7e-4a7f-9d3b-2c6f4e8a9b10
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/CreateExternalAccountDto"
+              example:
+                platform: LICHESS
+                username: maksim_sokolov_2012
+      responses:
+        "201":
+          description: ""
+      security: *a4
+      tags: *a5
+  /api/students/{studentId}/external-accounts/{externalAccountId}:
+    patch:
+      operationId: ExternalAccountsController_update
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            format: uuid
+            example: 7f4a8c2d-1b7e-4a7f-9d3b-2c6f4e8a9b10
+            type: string
+        - name: externalAccountId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExternalAccountDto"
+      responses:
+        "200":
+          description: ""
+      security: *a4
+      tags: *a5
+    delete:
+      operationId: ExternalAccountsController_remove
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            format: uuid
+            example: 7f4a8c2d-1b7e-4a7f-9d3b-2c6f4e8a9b10
+            type: string
+        - name: externalAccountId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "204":
+          description: ""
+      security: *a4
+      tags: *a5
+  /api/students/{studentId}/games:
+    get:
+      operationId: GamesController_listStudentGames
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 20
+            type: number
+        - name: cursor
+          required: false
+          in: query
+          schema:
+            format: uuid
+            type: string
+        - name: analysisStatus
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - PENDING
+              - PARSING
+              - EXTRACTING_ANNOTATIONS
+              - CLASSIFICATION
+              - GENERATING_OUTPUT
+              - COMPLETED
+              - FAILED
+      responses:
+        "200":
+          description: ""
+      security: &a6
+        - bearer: []
+      tags: &a7
+        - Games
+  /api/games/{gameId}:
+    get:
+      operationId: GamesController_getOne
+      parameters:
+        - name: gameId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: *a6
+      tags: *a7
+  /api/games/{gameId}/pgn:
+    get:
+      operationId: GamesController_getPgn
+      parameters:
+        - name: gameId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: download
+          required: false
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: ""
+      security: *a6
+      tags: *a7
+  /api/analysis/jobs:
+    get:
+      operationId: AnalysisJobsController_list
+      parameters:
+        - name: studentId
+          required: false
+          in: query
+          schema:
+            format: uuid
+            type: string
+        - name: gameId
+          required: false
+          in: query
+          schema:
+            format: uuid
+            type: string
+        - name: jobType
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - ANALYSIS
+              - REPORT_GENERATION
+              - HOMEWORK_GENERATION
+              - PROGRESS_GENERATION
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - PENDING
+              - PARSING
+              - EXTRACTING_ANNOTATIONS
+              - CLASSIFICATION
+              - GENERATING_OUTPUT
+              - COMPLETED
+              - FAILED
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 50
+            default: 20
+            type: number
+        - name: cursor
+          required: false
+          in: query
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: &a8
+        - bearer: []
+      tags: &a9
+        - Analysis Jobs
+  /api/analysis/jobs/{jobId}:
+    get:
+      operationId: AnalysisJobsController_getStatus
+      parameters:
+        - name: jobId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: *a8
+      tags: *a9
+  /api/analysis/jobs/{jobId}/retry:
+    post:
+      operationId: AnalysisJobsController_retry
+      parameters:
+        - name: jobId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: *a8
+      tags: *a9
+  /api/analysis:
+    get:
+      operationId: AnalysisController_list
+      parameters:
+        - name: studentId
+          required: false
+          in: query
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: &a10
+        - bearer: []
+      tags: &a11
+        - Analysis
+  /api/analysis/{analysisId}:
+    get:
+      operationId: AnalysisController_getOne
+      parameters:
+        - name: analysisId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: *a10
+      tags: *a11
+  /api/students/{studentId}/imports/pgn:
+    post:
+      operationId: ImportsController_importPgn
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            format: uuid
+            example: 7f4a8c2d-1b7e-4a7f-9d3b-2c6f4e8a9b10
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ImportPgnDto"
+              example:
+                studentColor: WHITE
+                sourceLabel: Lichess Study export
+                rawPgn: >-
+                  [Event "Training Game"]
+
+                  [Site "Lichess"]
+
+                  [Date "2026.07.25"]
+
+                  [Round "?"]
+
+                  [White "Student"]
+
+                  [Black "Opponent"]
+
+                  [Result "1-0"]
+
+
+                  1. e4 { [%eval 0.3] Good central control. } e5 { [%eval 0.1] }
+                  2. Nf3 { [%eval 0.5] } Nc6 { [%eval 0.2] } 3. Bb5 { [%eval
+                  0.9] } a6 { [%eval 0.4] } 1-0
+      responses:
+        "201":
+          description: ""
+      security:
+        - bearer: []
+      tags:
+        - Imports
+  /api/analysis/{analysisId}/reports/generate:
+    post:
+      operationId: ReportsController_requestGeneration
+      parameters:
+        - name: analysisId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportGenerationRequestDto"
+      responses:
+        "201":
+          description: ""
+      security: &a12
+        - bearer: []
+      tags: &a13
+        - Reports
+  /api/reports:
+    get:
+      operationId: ReportsController_list
+      parameters:
+        - name: studentId
+          required: true
+          in: query
+          schema:
+            type: string
+        - name: analysisId
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: *a12
+      tags: *a13
+  /api/reports/{reportId}:
+    get:
+      operationId: ReportsController_getOne
+      parameters:
+        - name: reportId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: *a12
+      tags: *a13
+    patch:
+      operationId: ReportsController_update
+      parameters:
+        - name: reportId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportUpdateDto"
+      responses:
+        "200":
+          description: ""
+      security: *a12
+      tags: *a13
+    delete:
+      operationId: ReportsController_remove
+      parameters:
+        - name: reportId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "204":
+          description: ""
+      security: *a12
+      tags: *a13
+  /api/analysis/{analysisId}/homework/generate:
+    post:
+      operationId: HomeworkController_requestGeneration
+      parameters:
+        - name: analysisId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      security: &a14
+        - bearer: []
+      tags: &a15
+        - Homework
+  /api/homework:
+    get:
+      operationId: HomeworkController_list
+      parameters:
+        - name: studentId
+          required: true
+          in: query
+          schema:
+            type: string
+        - name: analysisId
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: *a14
+      tags: *a15
+  /api/homework/{homeworkId}:
+    get:
+      operationId: HomeworkController_getOne
+      parameters:
+        - name: homeworkId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: *a14
+      tags: *a15
+    patch:
+      operationId: HomeworkController_update
+      parameters:
+        - name: homeworkId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HomeworkUpdateDto"
+      responses:
+        "200":
+          description: ""
+      security: *a14
+      tags: *a15
+    delete:
+      operationId: HomeworkController_remove
+      parameters:
+        - name: homeworkId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "204":
+          description: ""
+      security: *a14
+      tags: *a15
+  /api/students/{studentId}/progress:
+    get:
+      operationId: ProgressController_getLatest
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      security: &a16
+        - bearer: []
+      tags: &a17
+        - Progress
+  /api/students/{studentId}/progress/generate:
+    post:
+      operationId: ProgressController_requestGeneration
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      security: *a16
+      tags: *a17
+info:
+  title: Chess Coach Copilot
+  description: ""
+  version: 0.1.0
+  contact: {}
+tags: []
+servers: []
+components:
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
+  schemas:
+    RegisterDto:
+      type: object
+      properties:
+        email:
+          type: string
+          example: coach.alex.petrov@example.com
+        password:
+          type: string
+          example: StrongPass123
+        displayName:
+          type: string
+          example: Alex Petrov
+      required:
+        - email
+        - password
+        - displayName
+    LoginDto:
+      type: object
+      properties:
+        email:
+          type: string
+          example: coach.alex.petrov@example.com
+        password:
+          type: string
+          example: StrongPass123
+      required:
+        - email
+        - password
+    CoachProfileResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+      required:
+        - id
+        - email
+        - displayName
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        coach:
+          $ref: "#/components/schemas/CoachProfileResponse"
+      required:
+        - accessToken
+        - coach
+    RefreshAccessTokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+      required:
+        - accessToken
+    CreateStudentDto:
+      type: object
+      properties:
+        displayName:
+          type: string
+          example: Maksim Sokolov
+        birthYear:
+          type: number
+          example: 2012
+        rating:
+          type: number
+          example: 1460
+        notes:
+          type: string
+          example: Focuses on tactics and rook endgames.
+      required:
+        - displayName
+    UpdateStudentDto:
+      type: object
+      properties:
+        displayName:
+          type: string
+          example: Maksim Sokolov
+        birthYear:
+          type: number
+          example: 2012
+        rating:
+          type: number
+          example: 1460
+        notes:
+          type: string
+          example: Focuses on tactics and rook endgames.
+    SetStudentArchiveDto:
+      type: object
+      properties:
+        archived:
+          type: boolean
+          example: true
+      required:
+        - archived
+    CreateExternalAccountDto:
+      type: object
+      properties:
+        platform:
+          type: string
+          enum:
+            - LICHESS
+            - CHESS_COM
+          example: LICHESS
+        username:
+          type: string
+          example: maksim_sokolov_2012
+      required:
+        - platform
+        - username
+    UpdateExternalAccountDto:
+      type: object
+      properties:
+        platform:
+          type: string
+          enum:
+            - LICHESS
+            - CHESS_COM
+          example: LICHESS
+        username:
+          type: string
+          example: maksim_sokolov_2012
+      required:
+        - platform
+        - username
+    ImportPgnDto:
+      type: object
+      properties:
+        studentColor:
+          type: string
+          enum:
+            - WHITE
+            - BLACK
+          example: WHITE
+        sourceLabel:
+          type: string
+          example: Lichess Study export
+        rawPgn:
+          type: string
+          example: >-
+            [Event "Training Game"]
+
+            [Site "Lichess"]
+
+            [Date "2026.07.25"]
+
+            [Round "?"]
+
+            [White "Student"]
+
+            [Black "Opponent"]
+
+            [Result "1-0"]
+
+
+            1. e4 { [%eval 0.3] Good central control. } e5 { [%eval 0.1] } 2.
+            Nf3 { [%eval 0.5] } Nc6 { [%eval 0.2] } 3. Bb5 { [%eval 0.9] } a6 {
+            [%eval 0.4] } 1-0
+      required:
+        - studentColor
+        - rawPgn
+    ReportGenerationRequestDto:
+      type: object
+      properties:
+        audience:
+          type: string
+          enum:
+            - COACH
+            - PARENT
+          example: COACH
+      required:
+        - audience
+    ReportUpdateDto:
+      type: object
+      properties:
+        title:
+          type: string
+          example: "Coach report: Italian Game review"
+        content:
+          type: object
+          example:
+            summary: Middlegame planning improved, but tactical checks were rushed.
+            highlights:
+              - Better opening recall
+              - Missed forcing continuation on move 18
+            lessonFocus:
+              - Candidate move discipline
+            nextSteps:
+              - Review forcing-move checklist
+    HomeworkUpdateDto:
+      type: object
+      properties:
+        title:
+          type: string
+          example: "Homework: candidate move discipline"
+        content:
+          type: object
+          example:
+            overview: Review the forcing-move checklist before every capture.
+            exercises:
+              - Annotate move 18 alternatives
+              - Solve 5 fork puzzles
+            focusPoints:
+              - Checks, captures, threats
+            notes:
+              - Discuss move-order discipline in next lesson

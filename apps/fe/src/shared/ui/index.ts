@@ -6,6 +6,8 @@ export * from "./dialog";
 export * from "./dropdown-menu";
 export * from "./form";
 export * from "./input";
+export * from "./inline-alert";
+export * from "./password-field";
 export * from "./radio-group";
 export * from "./select";
 export * from "./separator";

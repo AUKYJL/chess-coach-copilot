@@ -40,6 +40,8 @@ type ChartContainerProps = React.ComponentProps<"div"> & {
   children: React.ReactNode;
 };
 
+type ChartStyle = React.CSSProperties & Record<`--color-${string}`, string>;
+
 function getColorToken(item: ChartConfig[string]): string | undefined {
   if ("color" in item) {
     return item.color;
@@ -53,7 +55,7 @@ function getColorToken(item: ChartConfig[string]): string | undefined {
 }
 
 function getChartStyle(config: ChartConfig) {
-  const style: Record<string, string> = {};
+  const style: ChartStyle = {};
 
   for (const [key, item] of Object.entries(config)) {
     const color = getColorToken(item);
@@ -63,12 +65,22 @@ function getChartStyle(config: ChartConfig) {
     }
   }
 
-  return style as React.CSSProperties;
+  return style;
 }
 
 const ChartContainer = React.forwardRef<HTMLDivElement, ChartContainerProps>(
-  ({ children, className, config, style, ...props }, ref) => (
-    <ChartContext.Provider value={{ config }}>
+  ({ children, className, config, style, ...props }, ref) => {
+    const contextValue = React.useMemo(() => ({ config }), [config]);
+    const mergedStyle = React.useMemo(
+      () => ({
+        ...getChartStyle(config),
+        ...style,
+      }),
+      [config, style],
+    );
+
+    return (
+      <ChartContext.Provider value={contextValue}>
       <div
         ref={ref}
         data-slot="chart"
@@ -85,13 +97,14 @@ const ChartContainer = React.forwardRef<HTMLDivElement, ChartContainerProps>(
           "[&_.recharts-responsive-container]:!w-full",
           className,
         )}
-        style={{ ...getChartStyle(config), ...style }}
+        style={mergedStyle}
         {...props}
       >
         {children}
       </div>
-    </ChartContext.Provider>
-  ),
+      </ChartContext.Provider>
+    );
+  },
 );
 
 ChartContainer.displayName = "ChartContainer";
