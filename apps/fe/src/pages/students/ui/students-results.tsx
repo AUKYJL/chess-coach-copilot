@@ -1,14 +1,19 @@
 import {
+  type PaginationState,
+  type SortingState,
   createColumnHelper,
   flexRender,
   rowPaginationFeature,
   rowSortingFeature,
   tableFeatures,
   useTable,
-  type PaginationState,
-  type SortingState,
 } from "@tanstack/react-table";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+} from "lucide-react";
 import type { MouseEventHandler } from "react";
 
 import {
@@ -34,7 +39,12 @@ import {
   formatRating,
   formatWeaknessTag,
 } from "../model/formatters";
-import { StudentIdentityLink, StudentMobileCard, StudentStatusBadge } from "./student-list-item";
+
+import {
+  StudentIdentityLink,
+  StudentMobileCard,
+  StudentStatusBadge,
+} from "./student-list-item";
 
 const pageSizeOptions = ["10", "20", "50"];
 const studentsTableFeatures = tableFeatures({
@@ -47,7 +57,7 @@ const studentColumnHelper = createColumnHelper<
 >();
 const studentColumns = studentColumnHelper.columns([
   studentColumnHelper.accessor("displayName", {
-    header: "Student",
+    header: "Ученик",
     cell: ({ row }) => <StudentIdentityLink student={row.original} />,
   }),
   studentColumnHelper.accessor("rating", {
@@ -55,7 +65,7 @@ const studentColumns = studentColumnHelper.columns([
       <SortableHeader
         canSort={column.getCanSort()}
         isSorted={column.getIsSorted()}
-        label="Rating"
+        label="Рейтинг"
         onClick={column.getToggleSortingHandler()}
       />
     ),
@@ -66,14 +76,14 @@ const studentColumns = studentColumnHelper.columns([
       <SortableHeader
         canSort={column.getCanSort()}
         isSorted={column.getIsSorted()}
-        label="Analyzed games"
+        label="Партии с анализом"
         onClick={column.getToggleSortingHandler()}
       />
     ),
     cell: ({ row }) => formatAnalyzedGames(row.original.completedAnalysisCount),
   }),
   studentColumnHelper.accessor("mainWeaknessTag", {
-    header: "Main weakness",
+    header: "Главная слабость",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
         {formatWeaknessTag(row.original.mainWeaknessTag)}
@@ -85,14 +95,14 @@ const studentColumns = studentColumnHelper.columns([
       <SortableHeader
         canSort={column.getCanSort()}
         isSorted={column.getIsSorted()}
-        label="Last analysis"
+        label="Последний анализ"
         onClick={column.getToggleSortingHandler()}
       />
     ),
     cell: ({ row }) => formatLastAnalysis(row.original.lastAnalysisAt),
   }),
   studentColumnHelper.accessor("archivedAt", {
-    header: "Status",
+    header: "Статус",
     cell: ({ row }) => (
       <StudentStatusBadge
         archivedAt={row.original.archivedAt}
@@ -188,10 +198,11 @@ export function StudentsResults({
   });
   const page = pagination.pageIndex + 1;
   const rangeStart = total === 0 ? 0 : (page - 1) * limit + 1;
-  const rangeEnd = total === 0 ? 0 : Math.min((page - 1) * limit + students.length, total);
+  const rangeEnd =
+    total === 0 ? 0 : Math.min((page - 1) * limit + students.length, total);
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-border bg-surface shadow-[0_24px_60px_-42px_rgba(32,33,36,0.32)]">
+    <div className="border-border bg-surface overflow-hidden rounded-[28px] border shadow-[0_24px_60px_-42px_rgba(32,33,36,0.32)]">
       <div className="hidden md:block">
         <Table>
           <TableHeader>
@@ -232,12 +243,12 @@ export function StudentsResults({
 
       <div className="border-divider flex flex-col gap-3 border-t px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="text-muted-foreground">
-          {total} {total === 1 ? "student" : "students"}
+          {total} {total === 1 ? "ученик" : "учеников"}
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Rows per page:</span>
+            <span className="text-muted-foreground">Строк на странице:</span>
             <Select
               onValueChange={(value) => {
                 onPageSizeChange(Number(value));
@@ -259,7 +270,7 @@ export function StudentsResults({
 
           <div className="flex items-center gap-4">
             <span className="text-muted-foreground">
-              {rangeStart}–{rangeEnd} of {total}
+              {rangeStart}–{rangeEnd} из {total}
             </span>
             <div className="flex items-center gap-1">
               <Button
@@ -285,7 +296,7 @@ export function StudentsResults({
 
       {isFetching ? (
         <div className="text-muted-foreground border-divider border-t px-4 py-2 text-xs">
-          Updating students…
+          Обновляем список учеников...
         </div>
       ) : null}
     </div>

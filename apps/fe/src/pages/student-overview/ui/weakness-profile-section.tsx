@@ -26,19 +26,20 @@ export function WeaknessProfileSection({
         <CardHeader className="gap-3">
           <div className="flex items-center gap-2">
             <ShieldAlert className="text-accent size-4" />
-            <CardTitle>Weakness profile</CardTitle>
+            <CardTitle>Профиль слабых сторон</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-foreground text-sm leading-7">
-            There is not enough reviewed analysis yet to describe a reliable
-            weakness pattern.
+            Пока недостаточно разобранных партий, чтобы уверенно определить
+            слабые стороны.
           </p>
           <Typography
             color={TYPOGRAPHY_COLOR.SECONDARY}
             variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
           >
-            Add more annotated games or retry the local review state.
+            Добавьте больше аннотированных партий или повторите локальное
+            состояние просмотра.
           </Typography>
         </CardContent>
       </Card>
@@ -54,13 +55,13 @@ export function WeaknessProfileSection({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <ShieldAlert className="text-accent size-4" />
-              <CardTitle>Weakness profile</CardTitle>
+              <CardTitle>Профиль слабых сторон</CardTitle>
             </div>
             <Typography
               color={TYPOGRAPHY_COLOR.SECONDARY}
               variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
             >
-              Main pattern: {profile.mainWeakness}
+              Главный паттерн: {profile.mainWeakness}
             </Typography>
           </div>
           <Button
@@ -69,7 +70,7 @@ export function WeaknessProfileSection({
             className="shrink-0"
             disabled
           >
-            Full analysis
+            Полный анализ
             <ArrowRight className="size-4" />
           </Button>
         </div>

@@ -39,7 +39,7 @@ export function StudentContextPanel({
         <CardHeader className="gap-2">
           <div className="flex items-center gap-2">
             <UserRound className="text-accent size-4" />
-            <CardTitle>Student information</CardTitle>
+            <CardTitle>Информация об ученике</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -60,13 +60,13 @@ export function StudentContextPanel({
       <Card>
         <CardHeader className="gap-2">
           <div className="flex items-center justify-between gap-4">
-            <CardTitle>Chess accounts</CardTitle>
+            <CardTitle>Шахматные аккаунты</CardTitle>
             <Button
               variant={BUTTON_VARIANT.GHOST}
               size={BUTTON_SIZE.SM}
               onClick={onOpenChessAccounts}
             >
-              Manage
+              Изменить
             </Button>
           </div>
         </CardHeader>
@@ -90,7 +90,7 @@ export function StudentContextPanel({
               color={TYPOGRAPHY_COLOR.SECONDARY}
               variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
             >
-              No linked chess accounts yet.
+              Пока нет привязанных шахматных аккаунтов.
             </Typography>
           )}
         </CardContent>
@@ -101,14 +101,14 @@ export function StudentContextPanel({
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <NotebookPen className="text-accent size-4" />
-              <CardTitle>Coach notes</CardTitle>
+              <CardTitle>Заметки тренера</CardTitle>
             </div>
             <Button
               variant={BUTTON_VARIANT.GHOST}
               size={BUTTON_SIZE.SM}
               onClick={onOpenCoachNotes}
             >
-              Edit
+              Изменить
             </Button>
           </div>
         </CardHeader>

@@ -24,9 +24,9 @@ export function RecentMaterialsSection({
     <Card>
       <CardHeader className="gap-3">
         <div className="flex items-center justify-between gap-4">
-          <CardTitle>Recent materials</CardTitle>
+          <CardTitle>Последние материалы</CardTitle>
           <Button variant={BUTTON_VARIANT.GHOST} size={BUTTON_SIZE.SM} disabled>
-            View all
+            Все материалы
             <ArrowRight className="size-4" />
           </Button>
         </div>
@@ -56,11 +56,11 @@ export function RecentMaterialsSection({
         ) : (
           <div className="border-border bg-surface-card rounded-[22px] border px-4 py-4 md:col-span-2 xl:col-span-3">
             <p className="text-foreground text-sm font-semibold">
-              No recent materials yet
+              Пока нет последних материалов
             </p>
             <p className="text-muted-foreground mt-2 text-sm leading-6">
-              Reports and homework will appear here once the first reviewed
-              lesson is prepared.
+              Отчёты и домашние задания появятся здесь после подготовки первого
+              разобранного урока.
             </p>
           </div>
         )}

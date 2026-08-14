@@ -1,6 +1,12 @@
 import type { StudentListItem } from "./api-types";
 
-const shortDateFormatter = new Intl.DateTimeFormat("en-US", {
+const weaknessLabels: Record<string, string> = {
+  MISSED_OPPONENT_THREAT: "Пропущенные угрозы соперника",
+  CALCULATION_DEPTH: "Поверхностный расчёт",
+  KING_SAFETY: "Безопасность короля",
+};
+
+const shortDateFormatter = new Intl.DateTimeFormat("ru-RU", {
   month: "short",
   day: "numeric",
 });
@@ -32,30 +38,33 @@ export function formatAnalyzedGames(value: number) {
 
 export function formatWeaknessTag(value: StudentListItem["mainWeaknessTag"]) {
   if (!value) {
-    return "Not enough data";
+    return "Недостаточно данных";
   }
 
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+  return (
+    weaknessLabels[value] ??
+    value
+      .toLowerCase()
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ")
+  );
 }
 
 export function formatLastAnalysis(value: string | null) {
   if (!value) {
-    return "Not analyzed";
+    return "Не анализировалась";
   }
 
   const date = new Date(value);
 
   if (isSameLocalDay(date, new Date())) {
-    return "Today";
+    return "Сегодня";
   }
 
   return shortDateFormatter.format(date);
 }
 
 export function formatStatusLabel(archivedAt: string | null) {
-  return archivedAt ? "Archived" : "Active";
+  return archivedAt ? "В архиве" : "Активный";
 }

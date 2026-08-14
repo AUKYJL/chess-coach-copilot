@@ -24,7 +24,7 @@ export function NextLessonSection({ lesson }: NextLessonSectionProps) {
         <div className="flex items-center gap-2">
           <GraduationCap className="text-accent size-4" />
           <p className="text-muted-foreground text-xs font-semibold tracking-[0.22em] uppercase">
-            Next lesson
+            Следующий урок
           </p>
         </div>
         <CardTitle className="text-2xl leading-tight">{lesson.title}</CardTitle>
@@ -48,8 +48,8 @@ export function NextLessonSection({ lesson }: NextLessonSectionProps) {
             color={TYPOGRAPHY_COLOR.SECONDARY}
             variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
           >
-            A concrete lesson checklist will appear here when a stable pattern
-            is available.
+            Конкретный план урока появится здесь, когда сформируется устойчивый
+            паттерн.
           </Typography>
         )}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--divider)] pt-4">
@@ -60,7 +60,7 @@ export function NextLessonSection({ lesson }: NextLessonSectionProps) {
             {lesson.supportingText}
           </Typography>
           <Button variant={BUTTON_VARIANT.GHOST} size={BUTTON_SIZE.SM} disabled>
-            View analysis
+            Открыть анализ
             <ArrowRight className="size-4" />
           </Button>
         </div>

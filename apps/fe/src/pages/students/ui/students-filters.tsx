@@ -43,11 +43,11 @@ export function StudentsFilters({
         <div className="relative min-w-0 flex-1">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
-            className="pl-9 pr-10"
+            className="pr-10 pl-9"
             onChange={(event) => {
               onSearchInputChange(event.target.value);
             }}
-            placeholder="Search students..."
+            placeholder="Поиск учеников..."
             value={searchInput}
           />
           {searchInput ? (
@@ -68,13 +68,15 @@ export function StudentsFilters({
             <PopoverTrigger asChild>
               <Button size={BUTTON_SIZE.SM} variant={BUTTON_VARIANT.OUTLINE}>
                 <SlidersHorizontal className="size-4" />
-                Filter
+                Фильтр
               </Button>
             </PopoverTrigger>
             <PopoverContent>
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <p className="text-foreground text-sm font-semibold">Status</p>
+                  <p className="text-foreground text-sm font-semibold">
+                    Статус
+                  </p>
                 </div>
 
                 <label className="flex items-center justify-between gap-3 text-sm">
@@ -82,17 +84,22 @@ export function StudentsFilters({
                     <Checkbox
                       checked={selectedStatuses.includes(STUDENT_STATUS.ACTIVE)}
                       onCheckedChange={(checked) => {
-                        onStatusCheckedChange(STUDENT_STATUS.ACTIVE, checked === true);
+                        onStatusCheckedChange(
+                          STUDENT_STATUS.ACTIVE,
+                          checked === true,
+                        );
                       }}
                     />
-                    <span>Active</span>
+                    <span>Активные</span>
                   </span>
                 </label>
 
                 <label className="flex items-center justify-between gap-3 text-sm">
                   <span className="flex items-center gap-3">
                     <Checkbox
-                      checked={selectedStatuses.includes(STUDENT_STATUS.ARCHIVED)}
+                      checked={selectedStatuses.includes(
+                        STUDENT_STATUS.ARCHIVED,
+                      )}
                       onCheckedChange={(checked) => {
                         onStatusCheckedChange(
                           STUDENT_STATUS.ARCHIVED,
@@ -100,7 +107,7 @@ export function StudentsFilters({
                         );
                       }}
                     />
-                    <span>Archived</span>
+                    <span>В архиве</span>
                   </span>
                 </label>
               </div>
@@ -113,7 +120,7 @@ export function StudentsFilters({
               onClick={onClearStatusFilter}
               type="button"
             >
-              <span>Status: {statusLabel}</span>
+              <span>Статус: {statusLabel}</span>
               <X className="size-3.5" />
             </button>
           ) : null}
@@ -124,7 +131,7 @@ export function StudentsFilters({
               onClick={onClearFilters}
               type="button"
             >
-              Clear filters
+              Сбросить фильтры
             </button>
           ) : null}
         </div>

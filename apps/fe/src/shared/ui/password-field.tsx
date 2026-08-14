@@ -27,7 +27,7 @@ const PasswordField = React.forwardRef<
         variant={BUTTON_VARIANT.GHOST}
         size={BUTTON_SIZE.ICON}
         className="absolute top-1 right-1 size-9 rounded-xl"
-        aria-label={visible ? "Hide password" : "Show password"}
+        aria-label={visible ? "Скрыть пароль" : "Показать пароль"}
         aria-pressed={visible}
         disabled={disabled}
         onClick={() => setVisible((current) => !current)}

@@ -3,20 +3,25 @@ export const STUDENT_STATUS = {
   ARCHIVED: "archived",
 } as const;
 
-export type StudentStatus = (typeof STUDENT_STATUS)[keyof typeof STUDENT_STATUS];
+export type StudentStatus =
+  (typeof STUDENT_STATUS)[keyof typeof STUDENT_STATUS];
 
 export const DEFAULT_STUDENT_STATUSES: StudentStatus[] = [
   STUDENT_STATUS.ACTIVE,
   STUDENT_STATUS.ARCHIVED,
 ];
 
-export function areAllStudentStatusesSelected(selectedStatuses: StudentStatus[]) {
+export function areAllStudentStatusesSelected(
+  selectedStatuses: StudentStatus[],
+) {
   return DEFAULT_STUDENT_STATUSES.every((status) =>
     selectedStatuses.includes(status),
   );
 }
 
-export function getStudentStatusesQueryValue(selectedStatuses: StudentStatus[]) {
+export function getStudentStatusesQueryValue(
+  selectedStatuses: StudentStatus[],
+) {
   if (
     selectedStatuses.length === 0 ||
     areAllStudentStatusesSelected(selectedStatuses)
@@ -33,17 +38,21 @@ export function getStudentStatusFilterLabel(selectedStatuses: StudentStatus[]) {
   }
 
   if (selectedStatuses.length === 0) {
-    return "None";
+    return "Нет";
   }
 
   if (selectedStatuses.length === 1) {
-    return selectedStatuses[0] === STUDENT_STATUS.ACTIVE ? "Active" : "Archived";
+    return selectedStatuses[0] === STUDENT_STATUS.ACTIVE
+      ? "Активные"
+      : "В архиве";
   }
 
-  return "Custom";
+  return "Выбрано";
 }
 
-export function isStudentStatusSelectionFiltered(selectedStatuses: StudentStatus[]) {
+export function isStudentStatusSelectionFiltered(
+  selectedStatuses: StudentStatus[],
+) {
   return !areAllStudentStatusesSelected(selectedStatuses);
 }
 

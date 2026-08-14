@@ -57,12 +57,13 @@ export const analyzeGameSchema = z.object({
   rawPgn: z
     .string()
     .trim()
-    .min(1, "Annotated PGN is required.")
+    .min(1, "Вставьте аннотированный PGN.")
     .superRefine((value, context) => {
       if (!looksLikePgn(value)) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Enter a valid PGN with headers, move text, and a result.",
+          message:
+            "Введите корректный PGN с заголовками, ходами и результатом.",
         });
         return;
       }
@@ -71,7 +72,7 @@ export const analyzeGameSchema = z.object({
         context.addIssue({
           code: z.ZodIssueCode.custom,
           message:
-            "Only annotated PGN with engine evaluation or a mistake marker plus best-line variation is supported in this prototype.",
+            "В этом прототипе поддерживается только аннотированный PGN с оценкой движка или пометкой ошибки и вариантом лучшего продолжения.",
         });
       }
     }),
@@ -79,5 +80,5 @@ export const analyzeGameSchema = z.object({
   sourceLabel: z
     .string()
     .trim()
-    .max(80, "Keep the source label under 80 characters."),
+    .max(80, "Подпись источника должна быть не длиннее 80 символов."),
 });

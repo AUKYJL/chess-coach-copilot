@@ -31,31 +31,31 @@ export function StudentActions({
         onClick={onAnalyzeGame}
       >
         <Sparkles className="size-4" />
-        Analyze game
+        Проанализировать партию
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant={BUTTON_VARIANT.OUTLINE}
             size={BUTTON_SIZE.ICON}
-            aria-label="More actions"
+            aria-label="Ещё действия"
           >
             <MoreHorizontal className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={onEditStudent}>
-            Edit student
+            Редактировать ученика
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onOpenChessAccounts}>
-            Chess accounts
+            Шахматные аккаунты
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={async () => {
               await onToggleArchived();
             }}
           >
-            {isArchived ? "Restore student" : "Archive student"}
+            {isArchived ? "Восстановить ученика" : "Отправить в архив"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

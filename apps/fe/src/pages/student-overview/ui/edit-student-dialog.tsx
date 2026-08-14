@@ -24,7 +24,7 @@ import { BUTTON_VARIANT, Button } from "@/shared/ui/button";
 import type { EditStudentDraft } from "../model";
 
 const editStudentSchema = z.object({
-  displayName: z.string().trim().min(1, "Student name is required."),
+  displayName: z.string().trim().min(1, "Введите имя ученика."),
   birthYear: z
     .string()
     .trim()
@@ -32,7 +32,7 @@ const editStudentSchema = z.object({
       (value) =>
         value === "" ||
         (/^\d+$/.test(value) && Number(value) >= 1900 && Number(value) <= 2100),
-      "Birth year must be between 1900 and 2100.",
+      "Год рождения должен быть в диапазоне от 1900 до 2100.",
     ),
   rating: z
     .string()
@@ -41,9 +41,12 @@ const editStudentSchema = z.object({
       (value) =>
         value === "" ||
         (/^\d+$/.test(value) && Number(value) >= 100 && Number(value) <= 4000),
-      "Rating must be between 100 and 4000.",
+      "Рейтинг должен быть в диапазоне от 100 до 4000.",
     ),
-  notes: z.string().trim().max(600, "Keep notes under 600 characters."),
+  notes: z
+    .string()
+    .trim()
+    .max(600, "Заметки должны быть не длиннее 600 символов."),
 });
 
 type EditStudentFormValues = {
@@ -95,9 +98,9 @@ export function EditStudentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit student</DialogTitle>
+          <DialogTitle>Редактировать ученика</DialogTitle>
           <DialogDescription>
-            Update the student profile and saved coach notes.
+            Обновите профиль ученика и сохранённые заметки тренера.
           </DialogDescription>
         </DialogHeader>
 
@@ -121,9 +124,9 @@ export function EditStudentDialog({
               name="displayName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Student name</FormLabel>
+                  <FormLabel>Имя ученика</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Alexander Ivanov" />
+                    <Input {...field} placeholder="Александр Иванов" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -136,7 +139,7 @@ export function EditStudentDialog({
                 name="birthYear"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Birth year</FormLabel>
+                    <FormLabel>Год рождения</FormLabel>
                     <FormControl>
                       <Input {...field} type="number" placeholder="2012" />
                     </FormControl>
@@ -150,7 +153,7 @@ export function EditStudentDialog({
                 name="rating"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Rating</FormLabel>
+                    <FormLabel>Рейтинг</FormLabel>
                     <FormControl>
                       <Input {...field} type="number" placeholder="1620" />
                     </FormControl>
@@ -165,7 +168,7 @@ export function EditStudentDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Coach notes</FormLabel>
+                  <FormLabel>Заметки тренера</FormLabel>
                   <FormControl>
                     <Textarea {...field} rows={6} />
                   </FormControl>
@@ -180,9 +183,9 @@ export function EditStudentDialog({
                 variant={BUTTON_VARIANT.OUTLINE}
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                Отмена
               </Button>
-              <Button type="submit">Save changes</Button>
+              <Button type="submit">Сохранить изменения</Button>
             </DialogFooter>
           </form>
         </Form>

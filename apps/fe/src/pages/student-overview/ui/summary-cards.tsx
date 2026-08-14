@@ -13,7 +13,7 @@ export function SummaryCards({ cards }: SummaryCardsProps) {
   return (
     <section
       className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"
-      aria-label="Summary cards"
+      aria-label="Сводные карточки"
     >
       {cards.map((card) => (
         <Card

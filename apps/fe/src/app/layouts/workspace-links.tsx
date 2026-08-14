@@ -6,12 +6,12 @@ import { cn } from "@/shared/lib/cn";
 const workspaceLinks = [
   {
     to: "/students",
-    label: "Students",
+    label: "Ученики",
     exact: false,
   },
   {
     to: "/activity",
-    label: "Activity",
+    label: "Активность",
     exact: true,
   },
 ] as const;
@@ -26,7 +26,7 @@ export function WorkspaceLinks({
   linkClassName,
 }: WorkspaceLinksProps) {
   return (
-    <nav className={cn("space-y-2", className)} aria-label="Primary">
+    <nav className={cn("space-y-2", className)} aria-label="Основная навигация">
       {workspaceLinks.map((link) => {
         const Icon = link.to === "/students" ? ChessPawn : Activity;
 

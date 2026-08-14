@@ -23,9 +23,9 @@ export function RecentGamesSection({ games }: RecentGamesSectionProps) {
     <Card>
       <CardHeader className="gap-3">
         <div className="flex items-center justify-between gap-4">
-          <CardTitle>Recent games</CardTitle>
+          <CardTitle>Последние партии</CardTitle>
           <Button variant={BUTTON_VARIANT.GHOST} size={BUTTON_SIZE.SM} disabled>
-            View all
+            Все партии
             <ArrowRight className="size-4" />
           </Button>
         </div>
@@ -61,11 +61,11 @@ export function RecentGamesSection({ games }: RecentGamesSectionProps) {
         ) : (
           <div className="border-border bg-surface-card rounded-[22px] border px-4 py-4">
             <p className="text-foreground text-sm font-semibold">
-              No recent games yet
+              Пока нет последних партий
             </p>
             <p className="text-muted-foreground mt-2 text-sm leading-6">
-              Import the first annotated game to start building the analysis
-              trail.
+              Импортируйте первую аннотированную партию, чтобы начать историю
+              анализа.
             </p>
           </div>
         )}

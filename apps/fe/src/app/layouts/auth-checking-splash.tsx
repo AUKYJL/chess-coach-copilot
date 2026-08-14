@@ -39,8 +39,8 @@ export function AuthCheckingSplash({
                   variant={TYPOGRAPHY_VARIANT.H4}
                 >
                   {error
-                    ? "Unable to restore your session"
-                    : "Checking your session..."}
+                    ? "Не удалось восстановить сессию"
+                    : "Проверяем сессию..."}
                 </Typography>
                 <Typography
                   as={TYPOGRAPHY_AS.P}
@@ -48,15 +48,16 @@ export function AuthCheckingSplash({
                   variant={TYPOGRAPHY_VARIANT.BODY}
                 >
                   {error
-                    ? "We could not verify your workspace access. Try again."
-                    : "Restoring your workspace access."}
+                    ? "Не удалось подтвердить доступ к рабочему пространству. Попробуйте ещё раз."
+                    : "Восстанавливаем доступ к рабочему пространству."}
                 </Typography>
               </div>
             </div>
 
             {error ? (
               <InlineAlert>
-                A temporary network or server issue interrupted session restore.
+                Восстановление сессии прервалось из-за временной ошибки сети или
+                сервера.
               </InlineAlert>
             ) : (
               <div
@@ -73,7 +74,7 @@ export function AuthCheckingSplash({
                   color={TYPOGRAPHY_COLOR.SECONDARY}
                   variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
                 >
-                  Restoring access...
+                  Восстанавливаем доступ...
                 </Typography>
               </div>
             )}
@@ -85,7 +86,7 @@ export function AuthCheckingSplash({
               type="button"
               variant={error ? BUTTON_VARIANT.DEFAULT : BUTTON_VARIANT.OUTLINE}
             >
-              Retry session check
+              Повторить проверку сессии
             </Button>
           </div>
         </div>

@@ -22,19 +22,19 @@ import {
   Typography,
 } from "@/shared/ui";
 
-import { toneChipClasses, type PerformanceTrendViewModel } from "../model";
+import { type PerformanceTrendViewModel, toneChipClasses } from "../model";
 
 type PerformanceTrendSectionProps = {
   trend: PerformanceTrendViewModel;
 };
 
-const axisDateFormatter = new Intl.DateTimeFormat("en-US", {
+const axisDateFormatter = new Intl.DateTimeFormat("ru-RU", {
   day: "numeric",
   month: "short",
   timeZone: "UTC",
 });
 
-const tooltipDateFormatter = new Intl.DateTimeFormat("en-US", {
+const tooltipDateFormatter = new Intl.DateTimeFormat("ru-RU", {
   day: "numeric",
   month: "short",
   timeZone: "UTC",
@@ -64,12 +64,12 @@ export function PerformanceTrendSection({
         <CardHeader className="gap-3">
           <div className="flex items-center gap-2">
             <LineChart className="text-accent size-4" />
-            <CardTitle>Performance trend</CardTitle>
+            <CardTitle>Динамика результатов</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-foreground text-sm leading-7">
-            Trend data is not available yet for this student.
+            Для этого ученика данные о динамике пока недоступны.
           </p>
           <Typography
             color={TYPOGRAPHY_COLOR.SECONDARY}
@@ -105,7 +105,7 @@ export function PerformanceTrendSection({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <LineChart className="text-accent size-4" />
-              <CardTitle>Performance trend</CardTitle>
+              <CardTitle>Динамика результатов</CardTitle>
             </div>
             <Typography
               color={TYPOGRAPHY_COLOR.SECONDARY}

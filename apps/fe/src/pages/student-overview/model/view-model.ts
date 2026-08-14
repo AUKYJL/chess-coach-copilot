@@ -68,7 +68,7 @@ export type RecentGameRowViewModel = {
 
 export type MaterialRowViewModel = {
   id: string;
-  kind: "Report" | "Homework";
+  kind: "Отчёт" | "Домашнее задание";
   title: string;
   supportingText: string;
 };

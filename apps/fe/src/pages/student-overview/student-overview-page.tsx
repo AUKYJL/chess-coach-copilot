@@ -15,9 +15,9 @@ import {
   RecentMaterialsSection,
   SectionErrorState,
   SectionSkeletonCard,
+  StudentContextPanel,
   StudentHeader,
   StudentOverviewSkeleton,
-  StudentContextPanel,
   SummaryCards,
   WeaknessProfileSection,
 } from "./ui";
@@ -36,9 +36,7 @@ type StudentOverviewPageProps = {
   studentId: string;
 };
 
-export function StudentOverviewPage({
-  studentId,
-}: StudentOverviewPageProps) {
+export function StudentOverviewPage({ studentId }: StudentOverviewPageProps) {
   const query = useStudentOverviewData({ studentId });
   const overview = query.resources.overview.data;
   const editingAccount = useMemo(
@@ -82,7 +80,7 @@ export function StudentOverviewPage({
   if (!studentId) {
     return (
       <OverviewErrorState
-        description="Student ID is missing from the route."
+        description="В маршруте отсутствует идентификатор ученика."
         onRetry={async () => {}}
       />
     );
@@ -117,19 +115,15 @@ export function StudentOverviewPage({
         <div className="min-w-0 space-y-4 md:space-y-5">
           {query.resources.performanceTrend.status === "error" ? (
             <SectionErrorState
-              title="Performance trend unavailable"
+              title="Динамика недоступна"
               description={
                 query.resources.performanceTrend.errorMessage ??
-                "The trend section failed to load."
+                "Не удалось загрузить блок с динамикой."
               }
               onRetry={query.retryPerformanceTrend}
             />
           ) : query.resources.performanceTrend.status === "loading" ? (
-            <SectionSkeletonCard
-              title="Performance trend loading"
-              lines={5}
-              tall
-            />
+            <SectionSkeletonCard title="Загрузка динамики" lines={5} tall />
           ) : (
             <PerformanceTrendSection trend={query.data.performanceTrend} />
           )}
@@ -139,30 +133,33 @@ export function StudentOverviewPage({
           <div className="grid gap-4 md:gap-5 lg:grid-cols-2">
             {query.resources.analysisProfile.status === "error" ? (
               <SectionErrorState
-                title="Weakness profile unavailable"
+                title="Профиль слабых сторон недоступен"
                 description={
                   query.resources.analysisProfile.errorMessage ??
-                  "The weakness profile section failed to load."
+                  "Не удалось загрузить профиль слабых сторон."
                 }
                 onRetry={query.retryAnalysisProfile}
               />
             ) : query.resources.analysisProfile.status === "loading" ? (
-              <SectionSkeletonCard title="Weakness profile loading" lines={6} />
+              <SectionSkeletonCard title="Загрузка слабых сторон" lines={6} />
             ) : (
               <WeaknessProfileSection profile={query.data.weaknessProfile} />
             )}
 
             {query.resources.lessonPreview.status === "error" ? (
               <SectionErrorState
-                title="Next lesson unavailable"
+                title="Следующий урок недоступен"
                 description={
                   query.resources.lessonPreview.errorMessage ??
-                  "The next lesson section failed to load."
+                  "Не удалось загрузить блок следующего урока."
                 }
                 onRetry={query.retryLessonPreview}
               />
             ) : query.resources.lessonPreview.status === "loading" ? (
-              <SectionSkeletonCard title="Next lesson loading" lines={6} />
+              <SectionSkeletonCard
+                title="Загрузка следующего урока"
+                lines={6}
+              />
             ) : (
               <NextLessonSection lesson={query.data.nextLesson} />
             )}

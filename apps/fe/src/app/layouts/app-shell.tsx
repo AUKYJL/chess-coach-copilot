@@ -16,7 +16,7 @@ function getCoachInitials(displayName: string): string {
   const parts = displayName.trim().split(/\s+/).filter(Boolean);
 
   if (parts.length === 0) {
-    return "C";
+    return "Т";
   }
 
   return parts
@@ -29,8 +29,8 @@ export function AppShell() {
   const location = useLocation();
   const coach = useSessionStore((state) => state.coach);
   const status = useSessionStore((state) => state.status);
-  const displayName = coach?.displayName ?? "Coach";
-  const coachSecondaryLabel = coach?.email ?? "Coach account";
+  const displayName = coach?.displayName ?? "Тренер";
+  const coachSecondaryLabel = coach?.email ?? "Аккаунт тренера";
   const coachInitials = getCoachInitials(displayName);
   const showLogoutButton = status === SESSION_STATUS.AUTHENTICATED;
   const isStudentsRoute =
@@ -47,7 +47,7 @@ export function AppShell() {
                 Chess Coach Copilot
               </p>
               <h2 className="text-foreground text-lg font-semibold tracking-tight">
-                Workspace
+                Рабочее пространство
               </h2>
             </div>
 
@@ -60,7 +60,7 @@ export function AppShell() {
                 color={TYPOGRAPHY_COLOR.SECONDARY}
                 variant={TYPOGRAPHY_VARIANT.CAPTION}
               >
-                Coach account
+                Аккаунт тренера
               </Typography>
               {showLogoutButton ? (
                 <div className="mt-2">
@@ -85,7 +85,7 @@ export function AppShell() {
                 Chess Coach Copilot
               </p>
               <h2 className="text-foreground text-xl font-semibold tracking-tight">
-                Workspace
+                Рабочее пространство
               </h2>
             </div>
 

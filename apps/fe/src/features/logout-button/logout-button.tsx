@@ -19,13 +19,13 @@ function getLogoutErrorMessage(status?: number, error?: unknown): string {
 
   switch (failureKind) {
     case REQUEST_FAILURE_KIND.NETWORK:
-      return "Unable to reach the server. Sign out was not completed.";
+      return "Не удалось связаться с сервером. Выход не был завершён.";
     case REQUEST_FAILURE_KIND.SERVER:
-      return "The server could not complete sign out. Try again.";
+      return "Сервер не смог завершить выход. Попробуйте ещё раз.";
     case REQUEST_FAILURE_KIND.AUTH:
     case REQUEST_FAILURE_KIND.CONFLICT:
     case REQUEST_FAILURE_KIND.UNKNOWN:
-      return "Sign out did not complete. Try again.";
+      return "Не удалось завершить выход. Попробуйте ещё раз.";
   }
 
   const exhaustiveCheck: never = failureKind;
@@ -84,10 +84,10 @@ export function LogoutButton({
         {isSubmitting ? (
           <>
             <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-            Signing out…
+            Выходим...
           </>
         ) : (
-          "Sign out"
+          "Выйти"
         )}
       </Button>
     </div>

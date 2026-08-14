@@ -40,7 +40,7 @@ export function StudentIdentityLink({
   return (
     <Link
       className={cn(
-        "group flex items-center gap-3 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "group focus-visible:ring-accent/40 focus-visible:ring-offset-background flex items-center gap-3 rounded-2xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
         className,
       )}
       to="/students/$studentId"
@@ -52,7 +52,7 @@ export function StudentIdentityLink({
         {formatStudentInitials(student.displayName)}
       </div>
       <div className="min-w-0">
-        <p className="truncate font-medium transition-colors group-hover:text-accent">
+        <p className="group-hover:text-accent truncate font-medium transition-colors">
           {student.displayName}
         </p>
       </div>
@@ -63,7 +63,7 @@ export function StudentIdentityLink({
 export function StudentMobileCard({ student }: { student: StudentListItem }) {
   return (
     <Link
-      className="border-border bg-surface hover:bg-surface-subtle/45 focus-visible:ring-accent/40 flex w-full flex-col gap-3 rounded-[24px] border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="border-border bg-surface hover:bg-surface-subtle/45 focus-visible:ring-accent/40 focus-visible:ring-offset-background flex w-full flex-col gap-3 rounded-[24px] border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
       to="/students/$studentId"
       params={{
         studentId: student.id,
@@ -75,10 +75,13 @@ export function StudentMobileCard({ student }: { student: StudentListItem }) {
             {formatStudentInitials(student.displayName)}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{student.displayName}</p>
+            <p className="truncate text-sm font-semibold">
+              {student.displayName}
+            </p>
             <p className="text-muted-foreground text-xs">
-              Rating {formatRating(student.rating)} •{" "}
-              {formatAnalyzedGames(student.completedAnalysisCount)} analyzed
+              Рейтинг {formatRating(student.rating)} •{" "}
+              {formatAnalyzedGames(student.completedAnalysisCount)} партий
+              проанализировано
             </p>
           </div>
         </div>

@@ -27,8 +27,8 @@ const createStudentSchema = z.object({
   displayName: z
     .string()
     .trim()
-    .min(1, "Display name is required.")
-    .max(120, "Display name must be 120 characters or fewer."),
+    .min(1, "Введите имя ученика.")
+    .max(120, "Имя должно содержать не больше 120 символов."),
   birthYear: z
     .string()
     .trim()
@@ -36,7 +36,7 @@ const createStudentSchema = z.object({
       (value) =>
         value === "" ||
         (/^\d+$/.test(value) && Number(value) >= 1900 && Number(value) <= 2100),
-      "Birth year must be between 1900 and 2100.",
+      "Год рождения должен быть в диапазоне от 1900 до 2100.",
     ),
   rating: z
     .string()
@@ -45,7 +45,7 @@ const createStudentSchema = z.object({
       (value) =>
         value === "" ||
         (/^\d+$/.test(value) && Number(value) >= 100 && Number(value) <= 4000),
-      "Enter a valid rating.",
+      "Введите корректный рейтинг.",
     ),
 });
 
@@ -91,9 +91,9 @@ export function AddStudentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add student</DialogTitle>
+          <DialogTitle>Добавить ученика</DialogTitle>
           <DialogDescription>
-            Add a student to your coaching workspace.
+            Добавьте ученика в рабочее пространство тренера.
           </DialogDescription>
         </DialogHeader>
 
@@ -107,7 +107,9 @@ export function AddStudentDialog({
                   birthYear: values.birthYear.trim()
                     ? Number(values.birthYear)
                     : undefined,
-                  rating: values.rating.trim() ? Number(values.rating) : undefined,
+                  rating: values.rating.trim()
+                    ? Number(values.rating)
+                    : undefined,
                 });
               } catch {
                 return;
@@ -121,9 +123,9 @@ export function AddStudentDialog({
               name="displayName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Display name</FormLabel>
+                  <FormLabel>Имя ученика</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Alexander Ivanov" />
+                    <Input {...field} placeholder="Александр Иванов" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -135,7 +137,7 @@ export function AddStudentDialog({
               name="birthYear"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Birth year</FormLabel>
+                  <FormLabel>Год рождения</FormLabel>
                   <FormControl>
                     <Input {...field} inputMode="numeric" placeholder="2012" />
                   </FormControl>
@@ -149,7 +151,7 @@ export function AddStudentDialog({
               name="rating"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Rating</FormLabel>
+                  <FormLabel>Рейтинг</FormLabel>
                   <FormControl>
                     <Input {...field} inputMode="numeric" placeholder="1450" />
                   </FormControl>
@@ -164,10 +166,10 @@ export function AddStudentDialog({
                 variant={BUTTON_VARIANT.OUTLINE}
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                Отмена
               </Button>
               <Button disabled={isPending} type="submit">
-                {isPending ? "Adding student…" : "Add student"}
+                {isPending ? "Добавляем ученика..." : "Добавить ученика"}
               </Button>
             </DialogFooter>
           </form>

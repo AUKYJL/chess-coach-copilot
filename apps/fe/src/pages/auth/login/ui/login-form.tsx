@@ -1,5 +1,5 @@
-import { useNavigate, useRouter } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -35,14 +35,14 @@ function getLoginErrorMessage(status?: number, error?: unknown): string {
 
   switch (failureKind) {
     case REQUEST_FAILURE_KIND.AUTH:
-      return "Incorrect email or password.";
+      return "Неверный email или пароль.";
     case REQUEST_FAILURE_KIND.NETWORK:
-      return "Unable to reach the server. Check your connection and try again.";
+      return "Не удалось связаться с сервером. Проверьте подключение и попробуйте ещё раз.";
     case REQUEST_FAILURE_KIND.SERVER:
-      return "The server could not complete sign-in. Try again.";
+      return "Сервер не смог выполнить вход. Попробуйте ещё раз.";
     case REQUEST_FAILURE_KIND.CONFLICT:
     case REQUEST_FAILURE_KIND.UNKNOWN:
-      return "Unable to sign in right now. Try again.";
+      return "Сейчас не удалось войти. Попробуйте ещё раз.";
   }
 
   const exhaustiveCheck: never = failureKind;
@@ -136,13 +136,13 @@ export function LoginForm({ redirectPath }: LoginFormProps) {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Пароль</FormLabel>
               <FormControl>
                 <PasswordField
                   {...field}
                   autoComplete="current-password"
                   disabled={isSubmitting}
-                  placeholder="Enter your password"
+                  placeholder="Введите пароль"
                 />
               </FormControl>
               <FormMessage />
@@ -164,10 +164,10 @@ export function LoginForm({ redirectPath }: LoginFormProps) {
                 aria-hidden="true"
                 className="size-4 animate-spin"
               />
-              Signing in…
+              Входим...
             </>
           ) : (
-            "Sign in"
+            "Войти"
           )}
         </Button>
       </form>

@@ -35,7 +35,7 @@ export function StudentsPage({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4 rounded-[32px] border border-border bg-surface px-5 py-5 shadow-[0_24px_60px_-42px_rgba(32,33,36,0.32)] sm:px-6">
+      <div className="border-border bg-surface flex flex-col gap-4 rounded-[32px] border px-5 py-5 shadow-[0_24px_60px_-42px_rgba(32,33,36,0.32)] sm:px-6">
         <StudentsPageHeader
           onAddStudent={() => {
             query.setIsAddStudentOpen(true);
@@ -68,11 +68,11 @@ export function StudentsPage({
               }}
               size={BUTTON_SIZE.SM}
             >
-              Add student
+              Добавить ученика
             </Button>
           }
-          description="Add your first student to start importing games and tracking their progress."
-          title="No students yet"
+          description="Добавьте первого ученика, чтобы импортировать партии и отслеживать прогресс."
+          title="Пока нет учеников"
         />
       ) : query.isNoResults ? (
         <StudentsEmptyState
@@ -83,12 +83,12 @@ export function StudentsPage({
                 size={BUTTON_SIZE.SM}
                 variant={BUTTON_VARIANT.OUTLINE}
               >
-                Clear filters
+                Сбросить фильтры
               </Button>
             ) : null
           }
-          description="Try a different search or clear your filters."
-          title="No students found"
+          description="Попробуйте другой запрос или сбросьте фильтры."
+          title="Ученики не найдены"
         />
       ) : (
         <StudentsResults

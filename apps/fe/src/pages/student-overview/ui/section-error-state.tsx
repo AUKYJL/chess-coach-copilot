@@ -30,7 +30,7 @@ export function SectionErrorState({
             await onRetry();
           }}
         >
-          Retry
+          Повторить
         </Button>
       </CardContent>
     </Card>

@@ -1,5 +1,5 @@
-import { useNavigate, useRouter } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -35,15 +35,15 @@ function getRegisterErrorMessage(status?: number, error?: unknown): string {
 
   switch (failureKind) {
     case REQUEST_FAILURE_KIND.CONFLICT:
-      return "An account with this email already exists.";
+      return "Аккаунт с таким email уже существует.";
     case REQUEST_FAILURE_KIND.NETWORK:
-      return "Unable to reach the server. Check your connection and try again.";
+      return "Не удалось связаться с сервером. Проверьте подключение и попробуйте ещё раз.";
     case REQUEST_FAILURE_KIND.SERVER:
-      return "The server could not create your account. Try again.";
+      return "Сервер не смог создать аккаунт. Попробуйте ещё раз.";
     case REQUEST_FAILURE_KIND.AUTH:
-      return "Your registration request could not be authorized.";
+      return "Не удалось авторизовать запрос на регистрацию.";
     case REQUEST_FAILURE_KIND.UNKNOWN:
-      return "Unable to create account right now. Try again.";
+      return "Сейчас не удалось создать аккаунт. Попробуйте ещё раз.";
   }
 
   const exhaustiveCheck: never = failureKind;
@@ -120,13 +120,13 @@ export function RegisterForm({ redirectPath }: RegisterFormProps) {
           name="displayName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Display name</FormLabel>
+              <FormLabel>Имя</FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   autoComplete="name"
                   disabled={isSubmitting}
-                  placeholder="Coach Alex"
+                  placeholder="Тренер Алекс"
                 />
               </FormControl>
               <FormMessage />
@@ -159,13 +159,13 @@ export function RegisterForm({ redirectPath }: RegisterFormProps) {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Пароль</FormLabel>
               <FormControl>
                 <PasswordField
                   {...field}
                   autoComplete="new-password"
                   disabled={isSubmitting}
-                  placeholder="Create a password"
+                  placeholder="Придумайте пароль"
                 />
               </FormControl>
               <FormMessage />
@@ -187,10 +187,10 @@ export function RegisterForm({ redirectPath }: RegisterFormProps) {
                 aria-hidden="true"
                 className="size-4 animate-spin"
               />
-              Creating account…
+              Создаём аккаунт...
             </>
           ) : (
-            "Create account"
+            "Создать аккаунт"
           )}
         </Button>
       </form>

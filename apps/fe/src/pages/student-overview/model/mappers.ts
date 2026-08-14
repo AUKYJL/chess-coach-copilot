@@ -3,8 +3,6 @@ import type {
   RecentGameRecord,
   StudentOverviewResponse,
 } from "./api-types";
-
-import { getPerformanceDirectionTone, getSeverityTone } from "./semantic-tones";
 import type {
   ChessAccountItem,
   MaterialRowViewModel,
@@ -12,25 +10,33 @@ import type {
   PerformanceTrendViewModel,
   ProgressInsightViewModel,
   RecentGameRowViewModel,
-  StudentOverviewResources,
   StudentOverviewQueryStatus,
+  StudentOverviewResources,
   StudentOverviewViewModel,
 } from "./index";
+import { getPerformanceDirectionTone, getSeverityTone } from "./semantic-tones";
 
 const weaknessLabels: Record<string, string> = {
-  MISSED_OPPONENT_THREAT: "Missed opponent threats",
-  CALCULATION_DEPTH: "Shallow calculation",
-  KING_SAFETY: "King safety",
+  MISSED_OPPONENT_THREAT: "Пропущенные угрозы соперника",
+  CALCULATION_DEPTH: "Поверхностный расчёт",
+  KING_SAFETY: "Безопасность короля",
 };
 
 const jobStatusLabels: Record<string, string> = {
-  PENDING: "Waiting",
-  PARSING: "Reading game",
-  EXTRACTING_ANNOTATIONS: "Finding key positions",
-  CLASSIFICATION: "Identifying patterns",
-  GENERATING_OUTPUT: "Preparing recommendations",
-  COMPLETED: "Ready",
-  FAILED: "Analysis failed",
+  PENDING: "Ожидание",
+  PARSING: "Читаем партию",
+  EXTRACTING_ANNOTATIONS: "Ищем ключевые позиции",
+  CLASSIFICATION: "Определяем паттерны",
+  GENERATING_OUTPUT: "Готовим рекомендации",
+  COMPLETED: "Готово",
+  FAILED: "Анализ не выполнен",
+};
+
+const severityLabels: Record<string, string> = {
+  INACCURACY: "Неточность",
+  MISTAKE: "Ошибка",
+  BLUNDER: "Грубая ошибка",
+  MATE: "Мат",
 };
 
 function titleCase(value: string) {
@@ -43,58 +49,95 @@ function titleCase(value: string) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("ru-RU", {
     month: "short",
     day: "numeric",
   }).format(new Date(value));
 }
 
-function formatCount(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`;
+function formatRussianCount(
+  count: number,
+  one: string,
+  few: string,
+  many: string,
+) {
+  const normalizedCount = Math.abs(count) % 100;
+  const lastDigit = normalizedCount % 10;
+
+  if (normalizedCount >= 11 && normalizedCount <= 19) {
+    return `${count} ${many}`;
+  }
+
+  if (lastDigit === 1) {
+    return `${count} ${one}`;
+  }
+
+  if (lastDigit >= 2 && lastDigit <= 4) {
+    return `${count} ${few}`;
+  }
+
+  return `${count} ${many}`;
+}
+
+function formatAnalysisCount(count: number) {
+  return formatRussianCount(count, "анализ", "анализа", "анализов");
+}
+
+function formatAnalyzedGameCount(count: number) {
+  return formatRussianCount(
+    count,
+    "разобранной партии",
+    "разобранных партий",
+    "разобранных партий",
+  );
 }
 
 function getProgressSummaryText(summary: Record<string, unknown>) {
   return typeof summary.summary === "string" && summary.summary.length > 0
     ? summary.summary
-    : "A narrative progress summary is not available yet.";
+    : "Подробное описание прогресса пока недоступно.";
 }
 
 function directionToLabel(direction: PerformanceDirection) {
   switch (direction) {
     case "IMPROVING":
-      return "Improving";
+      return "Растёт";
     case "DECLINING":
-      return "Declining";
+      return "Снижается";
     case "STABLE":
-      return "Stable";
+      return "Стабильно";
     default:
-      return "Unknown";
+      return "Нет данных";
   }
 }
 
 function humanizeWeaknessTag(value: string | null) {
   if (!value) {
-    return "Not enough data";
+    return "Недостаточно данных";
   }
 
   return weaknessLabels[value] ?? titleCase(value);
 }
 
+function humanizeSeverity(value: string) {
+  return severityLabels[value] ?? titleCase(value);
+}
+
 function jobStatusToLabel(status: string | null) {
   if (!status) {
-    return "Awaiting review";
+    return "Ожидает разбора";
   }
 
   return jobStatusLabels[status] ?? titleCase(status);
 }
 
 function getPlayersLabel(game: RecentGameRecord) {
-  return `${game.whitePlayerName ?? "White"} vs ${game.blackPlayerName ?? "Black"}`;
+  return `${game.whitePlayerName ?? "Белые"} - ${game.blackPlayerName ?? "Чёрные"}`;
 }
 
 function getGameMetaLabel(game: RecentGameRecord) {
   const segments = [
-    game.studentColor === "WHITE" ? "White" : "Black",
+    game.studentColor === "WHITE" ? "Белыми" : "Чёрными",
     game.rawResult ?? null,
     game.site,
   ].filter(Boolean);
@@ -107,7 +150,7 @@ function getOpeningLabel(game: RecentGameRecord) {
     return `${game.openingHeader} · ${game.ecoCode}`;
   }
 
-  return game.openingHeader ?? game.ecoCode ?? "Opening pending";
+  return game.openingHeader ?? game.ecoCode ?? "Дебют не указан";
 }
 
 export function getAnalyzedGamesCount(resources: StudentOverviewResources) {
@@ -155,20 +198,21 @@ export function mapProgressInsightToViewModel(
 
   if (progressResource?.status === "loading") {
     return {
-      title: "Progress insight",
+      title: "Прогресс",
       summary:
-        "The latest annotated game is still being processed, so the narrative summary is not ready yet.",
-      supportingText: "Progress insight will appear after analysis finishes.",
+        "Последняя аннотированная партия ещё обрабатывается, поэтому описание прогресса пока не готово.",
+      supportingText: "Описание прогресса появится после завершения анализа.",
     };
   }
 
   if (progressResource?.status === "error") {
     return {
-      title: "Progress insight",
+      title: "Прогресс",
       summary:
         progressResource.errorMessage ??
-        "The narrative progress summary is unavailable right now.",
-      supportingText: "Use Retry to request the latest progress summary again.",
+        "Сейчас описание прогресса недоступно.",
+      supportingText:
+        "Нажмите «Повторить», чтобы запросить свежую сводку ещё раз.",
     };
   }
 
@@ -177,37 +221,37 @@ export function mapProgressInsightToViewModel(
     (!latestProgress || progressSnapshot.id === latestProgress.id)
   ) {
     return {
-      title: "Progress insight",
+      title: "Прогресс",
       summary: getProgressSummaryText(progressSnapshot.summary),
-      supportingText: `Based on ${formatCount(progressSnapshot.analysisCount, "analysis")} · Updated ${formatDate(progressSnapshot.updatedAt)}`,
+      supportingText: `На основе ${formatAnalysisCount(progressSnapshot.analysisCount)} · Обновлено ${formatDate(progressSnapshot.updatedAt)}`,
     };
   }
 
   if (progressDetails?.status === "not-enough-data") {
     return {
-      title: "Progress insight",
+      title: "Прогресс",
       summary:
-        "Not enough annotated games are available yet to describe a reliable student trend.",
-      supportingText: `${progressDetails.availableAnalysisCount}/${progressDetails.requiredAnalysisCount} analyzed games available`,
+        "Пока недостаточно аннотированных партий, чтобы надёжно описать динамику ученика.",
+      supportingText: `${progressDetails.availableAnalysisCount}/${progressDetails.requiredAnalysisCount} партий с анализом доступно`,
     };
   }
 
   if (latestProgress) {
     return {
-      title: "Progress insight",
+      title: "Прогресс",
       summary:
-        "Recent analysis snapshots are available, but the richer narrative summary is not required for this transport yet.",
-      supportingText: `Latest snapshot captured ${formatDate(latestProgress.createdAt)}`,
+        "Свежие срезы анализа уже есть, но расширенное текстовое описание для этого ответа пока не требуется.",
+      supportingText: `Последний срез получен ${formatDate(latestProgress.createdAt)}`,
     };
   }
 
   if (!latestProgress) {
     return {
-      title: "Progress insight",
+      title: "Прогресс",
       summary:
-        "A narrative progress summary will appear here once a recent analysis snapshot is available.",
+        "Описание прогресса появится здесь, когда станет доступен свежий срез анализа.",
       supportingText:
-        "Narrative progress copy stays separate from chart data.",
+        "Текстовый прогресс отображается отдельно от данных графика.",
     };
   }
 
@@ -236,14 +280,14 @@ export function mapRecentMaterialsToViewModel(
     ...overview.recentReports.map((report) => ({
       createdAt: report.createdAt,
       id: report.id,
-      kind: "Report" as const,
+      kind: "Отчёт" as const,
       title: report.title,
-      supportingText: `${report.audience === "COACH" ? "Coach" : "Parent"} · ${formatDate(report.createdAt)}`,
+      supportingText: `${report.audience === "COACH" ? "Тренер" : "Родитель"} · ${formatDate(report.createdAt)}`,
     })),
     ...overview.recentHomework.map((homework) => ({
       createdAt: homework.createdAt,
       id: homework.id,
-      kind: "Homework" as const,
+      kind: "Домашнее задание" as const,
       title: homework.title,
       supportingText: formatDate(homework.createdAt),
     })),
@@ -262,7 +306,8 @@ export function mapPerformanceTrendToViewModel(
   return {
     directionLabel: directionToLabel(direction),
     tone: getPerformanceDirectionTone(direction),
-    metricLabel: performanceTrend?.primaryMetric ?? "Trend unavailable",
+    metricLabel:
+      performanceTrend?.primaryMetric ?? "Данные динамики недоступны",
     rangeLabel: performanceTrend?.range ?? "90D",
     points: performanceTrend?.points ?? [],
   };
@@ -282,7 +327,7 @@ function mapStudentInformation(resources: StudentOverviewResources) {
       ? [
           {
             id: "rating",
-            label: "Rating",
+            label: "Рейтинг",
             value: String(overview.student.rating),
           },
         ]
@@ -291,23 +336,23 @@ function mapStudentInformation(resources: StudentOverviewResources) {
       ? [
           {
             id: "born",
-            label: "Born",
+            label: "Год рождения",
             value: String(overview.student.birthYear),
           },
         ]
       : []),
     {
       id: "analyzed-games",
-      label: "Analyzed games",
+      label: "Партии с анализом",
       value:
-        analyzedGamesCount !== null ? String(analyzedGamesCount) : "No data",
+        analyzedGamesCount !== null ? String(analyzedGamesCount) : "Нет данных",
     },
     {
       id: "last-analysis",
-      label: "Last analysis",
+      label: "Последний анализ",
       value: overview.latestProgress
         ? formatDate(overview.latestProgress.createdAt)
-        : "Not yet available",
+        : "Пока нет",
     },
   ];
 }
@@ -336,37 +381,38 @@ function mapNextLesson(
 
   if (lessonResource.status === "loading") {
     return {
-      title: "Analysis is still processing",
+      title: "Анализ ещё обрабатывается",
       rationale:
-        "The latest imported game is still being parsed, so a focused recommendation is not ready yet.",
+        "Последняя импортированная партия ещё разбирается, поэтому точная рекомендация пока не готова.",
       focusPoints: [],
-      supportingText: "Waiting for the latest analysis result",
+      supportingText: "Ждём результат последнего анализа",
     };
   }
 
   if (lessonResource.status === "error") {
     return {
-      title: "Lesson focus unavailable",
+      title: "Фокус урока недоступен",
       rationale:
         lessonResource.errorMessage ??
-        "The lesson recommendation failed to load in this review state.",
+        "В этом состоянии просмотра не удалось загрузить рекомендацию для урока.",
       focusPoints: [],
-      supportingText: "Retry when the lesson recommendation is available again",
+      supportingText:
+        "Повторите, когда рекомендация для урока снова станет доступна",
     };
   }
 
   return {
-    title: recommendedLessonTitle ?? "Lesson focus available after analysis",
+    title: recommendedLessonTitle ?? "Тема урока появится после анализа",
     rationale:
       lessonResource.data?.recommendedLessonWhy ??
       (recommendedLessonTitle
-        ? "The current lightweight recommendation data includes the lesson title, but the fuller rationale is not exposed yet."
-        : "Recent games still need a clearer pattern before a focused lesson recommendation becomes reliable."),
+        ? "В текущих данных уже есть тема урока, но подробное объяснение пока не передаётся."
+        : "По последним партиям пока не хватает устойчивого паттерна для надёжной рекомендации по уроку."),
     focusPoints: lessonResource.data?.recommendedFocusPoints ?? [],
     supportingText:
       analyzedGamesCount !== null
-        ? `Based on ${formatCount(analyzedGamesCount, "analyzed game")}`
-        : "Based on limited available analysis",
+        ? `На основе ${formatAnalyzedGameCount(analyzedGamesCount)}`
+        : "На основе ограниченного числа анализов",
   };
 }
 
@@ -393,7 +439,7 @@ export function mapStudentOverviewViewModel(
   const sampleMistake = analysisProfile?.sampleMistakes.at(0);
 
   if (!overview) {
-    throw new Error("Student Overview foundation data is incomplete.");
+    throw new Error("Не удалось собрать данные карточки ученика.");
   }
 
   const analyzedGamesCount = getAnalyzedGamesCount(resources);
@@ -408,58 +454,60 @@ export function mapStudentOverviewViewModel(
       id: overview.student.id,
       displayName: overview.student.displayName,
       initials: getStudentInitials(overview.student.displayName),
-      breadcrumbLabel: `Students / ${overview.student.displayName}`,
+      breadcrumbLabel: `Ученики / ${overview.student.displayName}`,
       ratingLabel:
         overview.student.rating !== null
-          ? `${overview.student.rating} rating`
+          ? `Рейтинг ${overview.student.rating}`
           : null,
       birthYearLabel:
         overview.student.birthYear !== null
-          ? `Born ${overview.student.birthYear}`
+          ? `Год рождения ${overview.student.birthYear}`
           : null,
       statusLabel: overview.student.archivedAt
-        ? "Archived student"
-        : "Active student",
+        ? "Ученик в архиве"
+        : "Активный ученик",
       isArchived: Boolean(overview.student.archivedAt),
     },
     summaryCards: [
       {
         id: "rating",
-        label: "Current rating",
+        label: "Текущий рейтинг",
         value:
           overview.student.rating !== null
             ? String(overview.student.rating)
-            : "Not set",
-        supportingText: "Current student rating",
+            : "Не указан",
+        supportingText: "Текущий рейтинг ученика",
         tone: "neutral",
       },
       {
         id: "analyzed-games",
-        label: "Analyzed games",
+        label: "Партии с анализом",
         value:
-          analyzedGamesCount !== null ? String(analyzedGamesCount) : "No data",
+          analyzedGamesCount !== null
+            ? String(analyzedGamesCount)
+            : "Нет данных",
         supportingText: overview.latestProgress
-          ? `Last analysis ${formatDate(overview.latestProgress.createdAt)}`
-          : "No latest progress snapshot yet",
+          ? `Последний анализ ${formatDate(overview.latestProgress.createdAt)}`
+          : "Пока нет свежего среза прогресса",
         tone: "neutral",
       },
       {
         id: "main-weakness",
-        label: "Main weakness",
+        label: "Главная слабость",
         value: mainWeaknessLabel,
         supportingText:
           analyzedGamesCount !== null
-            ? `Seen across ${formatCount(analyzedGamesCount, "analyzed game")}`
-            : "Waiting for enough reviewed games",
+            ? `Замечено в ${formatAnalyzedGameCount(analyzedGamesCount)}`
+            : "Ждём, пока накопится достаточно разобранных партий",
         tone: "neutral",
       },
       {
         id: "progress",
-        label: "Progress",
+        label: "Прогресс",
         value: progressLabel,
         supportingText: performanceTrendTransport
           ? `${performanceTrendTransport.primaryMetric} · ${performanceTrendTransport.range}`
-          : "Trend data is not available for this state",
+          : "Для этого состояния данные динамики недоступны",
         tone: getPerformanceDirectionTone(
           performanceTrendTransport?.direction ?? "UNKNOWN",
         ),
@@ -474,7 +522,7 @@ export function mapStudentOverviewViewModel(
         count: item.count,
       })),
       severitySummary: (analysisProfile?.severityCounts ?? []).map((item) => ({
-        label: titleCase(item.severity),
+        label: humanizeSeverity(item.severity),
         count: item.count,
         tone: getSeverityTone(item.severity),
       })),
@@ -487,8 +535,7 @@ export function mapStudentOverviewViewModel(
     chessAccounts: mapChessAccounts(resources),
     coachNotes: {
       body:
-        overview.student.notes ??
-        "No coach notes have been captured for this student yet.",
+        overview.student.notes ?? "Заметок тренера по этому ученику пока нет.",
       isEmpty: overview.student.notes === null,
     },
   };

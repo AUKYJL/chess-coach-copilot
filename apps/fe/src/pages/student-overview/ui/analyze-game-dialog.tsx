@@ -66,10 +66,10 @@ export function AnalyzeGameDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Analyze game</DialogTitle>
+          <DialogTitle>Проанализировать партию</DialogTitle>
           <DialogDescription>
-            Submit an already annotated PGN for backend analysis. Only annotated
-            PGN is accepted here.
+            Отправьте уже аннотированный PGN на анализ. Здесь принимается только
+            аннотированный PGN.
           </DialogDescription>
         </DialogHeader>
 
@@ -93,11 +93,11 @@ export function AnalyzeGameDialog({
               name="rawPgn"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Annotated PGN</FormLabel>
+                  <FormLabel>Аннотированный PGN</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
-                      placeholder='[Event "Training Game"] ... 12. Qxh2+? {Missed threat}'
+                      placeholder='[Event "Тренировочная партия"] ... 12. Qxh2+? {Пропущена угроза}'
                       rows={10}
                     />
                   </FormControl>
@@ -111,7 +111,7 @@ export function AnalyzeGameDialog({
               name="studentColor"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Student color</FormLabel>
+                  <FormLabel>Цвет ученика</FormLabel>
                   <FormControl>
                     <RadioGroup
                       className="grid grid-cols-2 gap-3"
@@ -120,11 +120,11 @@ export function AnalyzeGameDialog({
                     >
                       <label className="border-border bg-surface flex items-center gap-3 rounded-2xl border px-4 py-3">
                         <RadioGroupItem value="WHITE" />
-                        <span className="text-sm">White</span>
+                        <span className="text-sm">Белые</span>
                       </label>
                       <label className="border-border bg-surface flex items-center gap-3 rounded-2xl border px-4 py-3">
                         <RadioGroupItem value="BLACK" />
-                        <span className="text-sm">Black</span>
+                        <span className="text-sm">Чёрные</span>
                       </label>
                     </RadioGroup>
                   </FormControl>
@@ -138,9 +138,9 @@ export function AnalyzeGameDialog({
               name="sourceLabel"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Source label</FormLabel>
+                  <FormLabel>Подпись источника</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Annotated export" />
+                    <Input {...field} placeholder="Аннотированный экспорт" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -153,9 +153,9 @@ export function AnalyzeGameDialog({
                 variant={BUTTON_VARIANT.OUTLINE}
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                Отмена
               </Button>
-              <Button type="submit">Analyze game</Button>
+              <Button type="submit">Проанализировать партию</Button>
             </DialogFooter>
           </form>
         </Form>

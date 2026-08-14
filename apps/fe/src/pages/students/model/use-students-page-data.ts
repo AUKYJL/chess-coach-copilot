@@ -1,17 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  type PaginationState,
-  type SortingState,
-} from "@tanstack/react-table";
+import { type PaginationState, type SortingState } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
 
 import { $api } from "@/shared/api";
 
 import type { CreateStudentRequest } from "./api-types";
-import {
-  DEFAULT_STUDENTS_PAGE_SIZE,
-  type StudentsRouteSearch,
-} from "./students-route-search";
 import {
   DEFAULT_STUDENT_STATUSES,
   type StudentStatus,
@@ -19,6 +12,10 @@ import {
   isStudentStatusSelectionFiltered,
   setStudentStatusChecked,
 } from "./student-status-filter";
+import {
+  DEFAULT_STUDENTS_PAGE_SIZE,
+  type StudentsRouteSearch,
+} from "./students-route-search";
 import { getStudentsSortField } from "./students-sort";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -135,11 +132,19 @@ export function useStudentsPageData({
     }),
     [order, pagination.pageSize, routeSearch.page, search, sort, statuses],
   );
-  const studentsListQueryKey = $api.queryOptions("get", "/api/students").queryKey;
-  const studentsQuery = $api.useQuery("get", "/api/students", studentsQueryParams, {
-    enabled: hasSelectedStatuses,
-    placeholderData: (previousData) => previousData,
-  });
+  const studentsListQueryKey = $api.queryOptions(
+    "get",
+    "/api/students",
+  ).queryKey;
+  const studentsQuery = $api.useQuery(
+    "get",
+    "/api/students",
+    studentsQueryParams,
+    {
+      enabled: hasSelectedStatuses,
+      placeholderData: (previousData) => previousData,
+    },
+  );
   const createStudentMutation = $api.useMutation("post", "/api/students");
 
   async function invalidateStudentsQueries() {
@@ -151,7 +156,8 @@ export function useStudentsPageData({
   function setSorting(
     updater: SortingState | ((old: SortingState) => SortingState),
   ) {
-    const nextSorting = typeof updater === "function" ? updater(sorting) : updater;
+    const nextSorting =
+      typeof updater === "function" ? updater(sorting) : updater;
     const nextSort = getStudentsSortField(nextSorting[0]?.id);
 
     updateSearch((currentSearch) => ({
@@ -207,23 +213,25 @@ export function useStudentsPageData({
     clearCreateErrorMessage: () => {
       setCreateErrorMessage(null);
     },
-    students: hasSelectedStatuses ? studentsQuery.data?.items ?? [] : [],
-    total: hasSelectedStatuses ? studentsQuery.data?.total ?? 0 : 0,
+    students: hasSelectedStatuses ? (studentsQuery.data?.items ?? []) : [],
+    total: hasSelectedStatuses ? (studentsQuery.data?.total ?? 0) : 0,
     page: hasSelectedStatuses
-      ? studentsQuery.data?.page ?? routeSearch.page
+      ? (studentsQuery.data?.page ?? routeSearch.page)
       : routeSearch.page,
     limit: hasSelectedStatuses
-      ? studentsQuery.data?.limit ?? pagination.pageSize
+      ? (studentsQuery.data?.limit ?? pagination.pageSize)
       : pagination.pageSize,
-    totalPages: hasSelectedStatuses ? studentsQuery.data?.totalPages ?? 0 : 0,
-    isInitialLoading: hasSelectedStatuses && studentsQuery.isPending && !studentsQuery.data,
+    totalPages: hasSelectedStatuses ? (studentsQuery.data?.totalPages ?? 0) : 0,
+    isInitialLoading:
+      hasSelectedStatuses && studentsQuery.isPending && !studentsQuery.data,
     isFetching: hasSelectedStatuses && studentsQuery.isFetching,
-    isError: hasSelectedStatuses && studentsQuery.isError && !studentsQuery.data,
+    isError:
+      hasSelectedStatuses && studentsQuery.isError && !studentsQuery.data,
     errorMessage:
       hasSelectedStatuses && studentsQuery.isError && !studentsQuery.data
         ? getErrorMessage(
             studentsQuery.error,
-            "Could not load students right now.",
+            "Сейчас не удалось загрузить учеников.",
           )
         : null,
     retry: async () => {
@@ -296,7 +304,9 @@ export function useStudentsPageData({
         console.error("Students status filter update failed.", normalizedError);
       });
     },
-    onSortingChange: (updater: SortingState | ((old: SortingState) => SortingState)) => {
+    onSortingChange: (
+      updater: SortingState | ((old: SortingState) => SortingState),
+    ) => {
       setSorting(updater);
     },
     onPageSizeChange: (pageSize: number) => {
@@ -362,7 +372,7 @@ export function useStudentsPageData({
         return student;
       } catch (error) {
         setCreateErrorMessage(
-          getErrorMessage(error, "Could not add the student right now."),
+          getErrorMessage(error, "Сейчас не удалось добавить ученика."),
         );
         throw error;
       }

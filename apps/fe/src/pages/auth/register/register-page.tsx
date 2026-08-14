@@ -1,15 +1,10 @@
 import { Link, Navigate } from "@tanstack/react-router";
 
-import {
-  SESSION_STATUS,
-  useSessionStore,
-} from "@/entities/session";
-import { AuthShell } from "@/features/auth-shell";
-import {
-  getAuthRedirectPath,
-} from "@/shared/lib/auth-redirect";
+import { getAuthRedirectPath } from "@/shared/lib/auth-redirect";
 
 import { RegisterForm } from "./ui/register-form";
+import { SESSION_STATUS, useSessionStore } from "@/entities/session";
+import { AuthShell } from "@/features/auth-shell";
 
 type RegisterPageProps = {
   redirectPath?: string;
@@ -26,9 +21,9 @@ export function RegisterPage({ redirectPath }: RegisterPageProps) {
     <AuthShell
       footer={
         <>
-          Already have an account?{" "}
+          Уже есть аккаунт?{" "}
           <Link
-            className="font-medium text-accent underline-offset-4 transition-colors hover:text-accent-hover hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="text-accent hover:text-accent-hover focus-visible:ring-accent/40 focus-visible:ring-offset-background font-medium underline-offset-4 transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             to="/login"
             search={
               redirectPath
@@ -38,12 +33,12 @@ export function RegisterPage({ redirectPath }: RegisterPageProps) {
                 : {}
             }
           >
-            Sign in
+            Войти
           </Link>
         </>
       }
-      subtitle="Set up your coaching workspace."
-      title="Create your account"
+      subtitle="Создайте рабочее пространство для тренера."
+      title="Создать аккаунт"
     >
       <RegisterForm redirectPath={redirectPath} />
     </AuthShell>

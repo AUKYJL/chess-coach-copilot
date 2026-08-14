@@ -1,12 +1,7 @@
 import { UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 
-import {
-  Button,
-  Skeleton,
-  TYPOGRAPHY_COLOR,
-  Typography,
-} from "@/shared/ui";
+import { Button, Skeleton, TYPOGRAPHY_COLOR, Typography } from "@/shared/ui";
 import { BUTTON_SIZE, BUTTON_VARIANT } from "@/shared/ui/button";
 
 const tableHeaderSkeletonKeys = [
@@ -29,9 +24,9 @@ const mobileSkeletonKeys = ["mobile-1", "mobile-2", "mobile-3", "mobile-4"];
 
 export function StudentsLoadingState() {
   return (
-    <div className="overflow-hidden rounded-[28px] border border-border bg-surface shadow-[0_24px_60px_-42px_rgba(32,33,36,0.32)]">
+    <div className="border-border bg-surface overflow-hidden rounded-[28px] border shadow-[0_24px_60px_-42px_rgba(32,33,36,0.32)]">
       <div className="hidden md:block">
-        <div className="grid grid-cols-[minmax(0,2fr)_110px_140px_180px_140px_110px] gap-0 border-b border-divider px-4 py-3">
+        <div className="border-divider grid grid-cols-[minmax(0,2fr)_110px_140px_180px_140px_110px] gap-0 border-b px-4 py-3">
           {tableHeaderSkeletonKeys.map((key) => (
             <Skeleton key={key} className="h-4 rounded-full" />
           ))}
@@ -61,7 +56,7 @@ export function StudentsEmptyState({
   title: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-[28px] border border-border bg-surface px-6 py-14 text-center shadow-[0_24px_60px_-42px_rgba(32,33,36,0.32)]">
+    <div className="border-border bg-surface flex flex-col items-center justify-center gap-4 rounded-[28px] border px-6 py-14 text-center shadow-[0_24px_60px_-42px_rgba(32,33,36,0.32)]">
       <div className="bg-surface-subtle text-muted-foreground flex size-12 items-center justify-center rounded-full">
         <UserRound className="size-5" />
       </div>
@@ -89,12 +84,14 @@ export function StudentsErrorState({
   onRetry: () => Promise<void>;
 }) {
   return (
-    <div className="rounded-[28px] border border-border bg-surface px-6 py-10 shadow-[0_24px_60px_-42px_rgba(32,33,36,0.32)]">
+    <div className="border-border bg-surface rounded-[28px] border px-6 py-10 shadow-[0_24px_60px_-42px_rgba(32,33,36,0.32)]">
       <div className="space-y-3">
         <h2 className="text-foreground text-xl font-semibold tracking-tight">
-          Could not load students
+          Не удалось загрузить учеников
         </h2>
-        <Typography color={TYPOGRAPHY_COLOR.SECONDARY}>{errorMessage}</Typography>
+        <Typography color={TYPOGRAPHY_COLOR.SECONDARY}>
+          {errorMessage}
+        </Typography>
         <Button
           onClick={async () => {
             await onRetry();
@@ -102,7 +99,7 @@ export function StudentsErrorState({
           size={BUTTON_SIZE.SM}
           variant={BUTTON_VARIANT.OUTLINE}
         >
-          Retry
+          Повторить
         </Button>
       </div>
     </div>

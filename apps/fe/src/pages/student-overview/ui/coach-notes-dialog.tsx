@@ -23,7 +23,10 @@ import { BUTTON_VARIANT, Button } from "@/shared/ui/button";
 import type { CoachNotesDraft } from "../model";
 
 const coachNotesSchema = z.object({
-  notes: z.string().trim().max(1000, "Keep notes under 1000 characters."),
+  notes: z
+    .string()
+    .trim()
+    .max(1000, "Заметки должны быть не длиннее 1000 символов."),
 });
 
 type CoachNotesDialogProps = {
@@ -62,9 +65,9 @@ export function CoachNotesDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Coach notes</DialogTitle>
+          <DialogTitle>Заметки тренера</DialogTitle>
           <DialogDescription>
-            Save coach notes for the student context rail.
+            Сохраните заметки тренера для боковой панели ученика.
           </DialogDescription>
         </DialogHeader>
 
@@ -80,7 +83,7 @@ export function CoachNotesDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes</FormLabel>
+                  <FormLabel>Заметки</FormLabel>
                   <FormControl>
                     <Textarea {...field} rows={8} />
                   </FormControl>
@@ -95,9 +98,9 @@ export function CoachNotesDialog({
                 variant={BUTTON_VARIANT.OUTLINE}
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                Отмена
               </Button>
-              <Button type="submit">Save notes</Button>
+              <Button type="submit">Сохранить заметки</Button>
             </DialogFooter>
           </form>
         </Form>

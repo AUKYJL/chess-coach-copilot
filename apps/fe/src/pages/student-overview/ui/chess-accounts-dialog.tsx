@@ -31,7 +31,7 @@ import type { ChessAccountDraft, ChessAccountItem } from "../model";
 
 const chessAccountSchema = z.object({
   platform: z.enum(["LICHESS", "CHESS_COM"]),
-  username: z.string().trim().min(1, "Username is required."),
+  username: z.string().trim().min(1, "Введите имя пользователя."),
 });
 
 type ChessAccountsDialogProps = {
@@ -82,9 +82,10 @@ export function ChessAccountsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(90vh,48rem)] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Chess accounts</DialogTitle>
+          <DialogTitle>Шахматные аккаунты</DialogTitle>
           <DialogDescription>
-            Add, edit, or remove linked chess accounts for this student.
+            Добавляйте, редактируйте и удаляйте привязанные шахматные аккаунты
+            ученика.
           </DialogDescription>
         </DialogHeader>
 
@@ -109,7 +110,7 @@ export function ChessAccountsDialog({
                         onClick={() => onEditAccount(account.id)}
                       >
                         <PencilLine className="size-4" />
-                        Edit
+                        Изменить
                       </Button>
                       <Button
                         variant={BUTTON_VARIANT.GHOST}
@@ -119,7 +120,7 @@ export function ChessAccountsDialog({
                         }}
                       >
                         <Trash2 className="size-4" />
-                        Remove
+                        Удалить
                       </Button>
                     </div>
                   </div>
@@ -128,7 +129,7 @@ export function ChessAccountsDialog({
               ))
             ) : (
               <p className="text-muted-foreground text-sm">
-                No linked chess accounts yet.
+                Пока нет привязанных шахматных аккаунтов.
               </p>
             )}
           </div>
@@ -136,7 +137,7 @@ export function ChessAccountsDialog({
           <div className="border-border rounded-[24px] border p-4">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-foreground text-sm font-semibold">
-                {editingAccountId ? "Edit account" : "Add account"}
+                {editingAccountId ? "Изменить аккаунт" : "Добавить аккаунт"}
               </h3>
               {editingAccountId ? (
                 <Button
@@ -144,7 +145,7 @@ export function ChessAccountsDialog({
                   size={BUTTON_SIZE.SM}
                   onClick={() => onEditAccount("")}
                 >
-                  Add another account
+                  Добавить ещё аккаунт
                 </Button>
               ) : null}
             </div>
@@ -168,14 +169,14 @@ export function ChessAccountsDialog({
                   name="platform"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Platform</FormLabel>
+                      <FormLabel>Платформа</FormLabel>
                       <Select
                         value={field.value}
                         onValueChange={field.onChange}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Choose a platform" />
+                            <SelectValue placeholder="Выберите платформу" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -193,7 +194,7 @@ export function ChessAccountsDialog({
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel>Имя пользователя</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="alexander_ivanov_2012" />
                       </FormControl>
@@ -208,10 +209,12 @@ export function ChessAccountsDialog({
                     variant={BUTTON_VARIANT.OUTLINE}
                     onClick={() => onOpenChange(false)}
                   >
-                    Done
+                    Готово
                   </Button>
                   <Button type="submit">
-                    {editingAccountId ? "Update account" : "Add account"}
+                    {editingAccountId
+                      ? "Сохранить аккаунт"
+                      : "Добавить аккаунт"}
                   </Button>
                 </DialogFooter>
               </form>

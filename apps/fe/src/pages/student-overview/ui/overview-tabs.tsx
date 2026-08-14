@@ -1,14 +1,14 @@
 const workspaceTabs = [
-  { label: "Overview", isActive: true },
-  { label: "Games", isActive: false },
-  { label: "Analysis", isActive: false },
-  { label: "Materials", isActive: false },
-  { label: "Progress", isActive: false },
+  { label: "Обзор", isActive: true },
+  { label: "Партии", isActive: false },
+  { label: "Анализ", isActive: false },
+  { label: "Материалы", isActive: false },
+  { label: "Прогресс", isActive: false },
 ] as const;
 
 export function OverviewTabs() {
   return (
-    <nav aria-label="Student workspace sections">
+    <nav aria-label="Разделы рабочего пространства ученика">
       <div className="-mx-1 overflow-x-auto px-1 pb-1">
         <ol className="flex min-w-max justify-start gap-6 rounded-none border-0 bg-transparent p-0 pr-4">
           {workspaceTabs.map((tab) => (

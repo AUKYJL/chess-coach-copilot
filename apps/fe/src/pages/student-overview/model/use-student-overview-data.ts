@@ -3,15 +3,15 @@ import { useEffect, useMemo, useState } from "react";
 
 import { $api } from "@/shared/api";
 
-import {
-  getStudentOverviewStatus,
-  mapStudentOverviewViewModel,
-} from "./mappers";
 import type {
   StudentOverviewDialogState,
   StudentOverviewQueryResult,
   StudentOverviewResources,
 } from "./index";
+import {
+  getStudentOverviewStatus,
+  mapStudentOverviewViewModel,
+} from "./mappers";
 
 const EMPTY_UUID = "00000000-0000-0000-0000-000000000000";
 
@@ -196,28 +196,28 @@ export function useStudentOverviewData({
     const overview = toSectionResource({
       data: overviewQuery.data,
       error: overviewQuery.error,
-      fallbackMessage: "The student overview foundation failed to load.",
+      fallbackMessage: "Не удалось загрузить данные ученика.",
       isError: overviewQuery.isError,
       isPending: overviewQuery.isPending,
     });
     const analysisProfile = toSectionResource({
       data: analysisProfileQuery.data,
       error: analysisProfileQuery.error,
-      fallbackMessage: "The weakness profile section failed to load.",
+      fallbackMessage: "Не удалось загрузить профиль слабых сторон.",
       isError: analysisProfileQuery.isError,
       isPending: analysisProfileQuery.isPending,
     });
     const performanceTrend = toSectionResource({
       data: performanceTrendQuery.data,
       error: performanceTrendQuery.error,
-      fallbackMessage: "The trend section failed to load.",
+      fallbackMessage: "Не удалось загрузить динамику результатов.",
       isError: performanceTrendQuery.isError,
       isPending: performanceTrendQuery.isPending,
     });
     const progressDetails = toSectionResource({
       data: progressQuery.data,
       error: progressQuery.error,
-      fallbackMessage: "The narrative progress summary is unavailable.",
+      fallbackMessage: "Сейчас недоступно описание прогресса.",
       isError: progressQuery.isError,
       isPending: progressQuery.isPending,
     });
@@ -231,7 +231,7 @@ export function useStudentOverviewData({
         : toSectionResource({
             data: lessonPreviewQuery.data,
             error: lessonPreviewQuery.error,
-            fallbackMessage: "The next lesson section failed to load.",
+            fallbackMessage: "Не удалось загрузить следующий урок.",
             isError: lessonPreviewQuery.isError,
             isPending: lessonPreviewQuery.isPending,
           });
@@ -306,7 +306,7 @@ export function useStudentOverviewData({
     error:
       status === "error"
         ? (resources.overview.errorMessage ??
-          "The student overview foundation failed to load.")
+          "Не удалось загрузить данные ученика.")
         : null,
     openDialog: (kind, options) => {
       setDialogState({

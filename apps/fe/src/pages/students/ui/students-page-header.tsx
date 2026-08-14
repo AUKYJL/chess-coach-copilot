@@ -20,15 +20,18 @@ export function StudentsPageHeader({
           color={TYPOGRAPHY_COLOR.PRIMARY}
           variant={TYPOGRAPHY_VARIANT.H2}
         >
-          Students
+          Ученики
         </Typography>
-        <Typography className="text-sm leading-6" color={TYPOGRAPHY_COLOR.SECONDARY}>
-          Manage your students and review their progress.
+        <Typography
+          className="text-sm leading-6"
+          color={TYPOGRAPHY_COLOR.SECONDARY}
+        >
+          Управляйте учениками и следите за их прогрессом.
         </Typography>
       </div>
 
       <Button onClick={onAddStudent} size={BUTTON_SIZE.SM}>
-        Add student
+        Добавить ученика
       </Button>
     </div>
   );

@@ -64,20 +64,20 @@ export function StudentOverviewSkeleton() {
       <section className="grid gap-4 md:gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(360px,0.96fr)] xl:items-start">
         <div className="space-y-4 md:space-y-5">
           <SectionSkeletonCard
-            title="Performance trend loading"
+            title="Загрузка динамики результатов"
             lines={5}
             tall
           />
-          <SectionSkeletonCard title="Progress insight loading" lines={4} />
+          <SectionSkeletonCard title="Загрузка прогресса" lines={4} />
           <div className="grid gap-4 md:gap-5 lg:grid-cols-2">
-            <SectionSkeletonCard title="Weakness profile loading" lines={6} />
-            <SectionSkeletonCard title="Next lesson loading" lines={6} />
+            <SectionSkeletonCard title="Загрузка слабых сторон" lines={6} />
+            <SectionSkeletonCard title="Загрузка следующего урока" lines={6} />
           </div>
-          <SectionSkeletonCard title="Recent materials loading" lines={4} />
+          <SectionSkeletonCard title="Загрузка материалов" lines={4} />
         </div>
         <div className="space-y-4 md:space-y-5">
-          <SectionSkeletonCard title="Recent games loading" lines={9} />
-          <SectionSkeletonCard title="Student context loading" lines={7} />
+          <SectionSkeletonCard title="Загрузка последних партий" lines={9} />
+          <SectionSkeletonCard title="Загрузка данных ученика" lines={7} />
         </div>
       </section>
     </div>

@@ -16,7 +16,7 @@ export function OverviewErrorState({
       <CardHeader className="gap-3">
         <div className="flex items-center gap-2">
           <AlertTriangle className="text-danger size-4" />
-          <CardTitle>Student overview failed to load</CardTitle>
+          <CardTitle>Не удалось загрузить карточку ученика</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -26,7 +26,7 @@ export function OverviewErrorState({
             await onRetry();
           }}
         >
-          Retry
+          Повторить
         </Button>
       </CardContent>
     </Card>
