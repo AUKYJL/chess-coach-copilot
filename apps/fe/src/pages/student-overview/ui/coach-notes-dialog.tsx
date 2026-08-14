@@ -11,12 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Textarea,
+  FormTextareaField,
 } from "@/shared/ui";
 import { BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
@@ -78,18 +73,11 @@ export function CoachNotesDialog({
               async (values) => await onSubmit({ notes: values.notes.trim() }),
             )}
           >
-            <FormField
+            <FormTextareaField
               control={form.control}
               name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Заметки</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} rows={8} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Заметки"
+              rows={8}
             />
 
             <DialogFooter>

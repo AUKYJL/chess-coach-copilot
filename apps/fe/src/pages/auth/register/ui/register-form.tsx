@@ -18,10 +18,10 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormInputField,
   FormLabel,
   FormMessage,
   InlineAlert,
-  Input,
   PasswordField,
 } from "@/shared/ui";
 import { BUTTON_SIZE, Button } from "@/shared/ui/button";
@@ -115,43 +115,23 @@ export function RegisterForm({ redirectPath }: RegisterFormProps) {
           }
         })}
       >
-        <FormField
+        <FormInputField
           control={form.control}
           name="displayName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Имя</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  autoComplete="name"
-                  disabled={isSubmitting}
-                  placeholder="Тренер Алекс"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          label="Имя"
+          autoComplete="name"
+          disabled={isSubmitting}
+          placeholder="Тренер Алекс"
         />
 
-        <FormField
+        <FormInputField
           control={form.control}
           name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  autoComplete="email"
-                  disabled={isSubmitting}
-                  placeholder="coach@example.com"
-                  type="email"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          label="Email"
+          autoComplete="email"
+          disabled={isSubmitting}
+          placeholder="coach@example.com"
+          type="email"
         />
 
         <FormField

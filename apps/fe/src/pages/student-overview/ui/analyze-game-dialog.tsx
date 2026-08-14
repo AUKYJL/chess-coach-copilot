@@ -10,15 +10,15 @@ import {
   DialogHeader,
   DialogTitle,
   Form,
+  FormInputField,
+  FormTextareaField,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  Input,
   RadioGroup,
   RadioGroupItem,
-  Textarea,
 } from "@/shared/ui";
 import { BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
@@ -88,22 +88,12 @@ export function AnalyzeGameDialog({
               });
             })}
           >
-            <FormField
+            <FormTextareaField
               control={form.control}
               name="rawPgn"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Аннотированный PGN</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder='[Event "Тренировочная партия"] ... 12. Qxh2+? {Пропущена угроза}'
-                      rows={10}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Аннотированный PGN"
+              placeholder='[Event "Тренировочная партия"] ... 12. Qxh2+? {Пропущена угроза}'
+              rows={10}
             />
 
             <FormField
@@ -133,18 +123,11 @@ export function AnalyzeGameDialog({
               )}
             />
 
-            <FormField
+            <FormInputField
               control={form.control}
               name="sourceLabel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Подпись источника</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Аннотированный экспорт" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Подпись источника"
+              placeholder="Аннотированный экспорт"
             />
 
             <DialogFooter>

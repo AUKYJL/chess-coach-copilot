@@ -11,13 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
   Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  FormInputField,
   InlineAlert,
-  Input,
 } from "@/shared/ui";
 import { BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
@@ -118,46 +113,27 @@ export function AddStudentDialog({
           >
             {errorMessage ? <InlineAlert>{errorMessage}</InlineAlert> : null}
 
-            <FormField
+            <FormInputField
               control={form.control}
               name="displayName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Имя ученика</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Александр Иванов" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Имя ученика"
+              placeholder="Александр Иванов"
             />
 
-            <FormField
+            <FormInputField
               control={form.control}
               name="birthYear"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Год рождения</FormLabel>
-                  <FormControl>
-                    <Input {...field} inputMode="numeric" placeholder="2012" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Год рождения"
+              inputMode="numeric"
+              placeholder="2012"
             />
 
-            <FormField
+            <FormInputField
               control={form.control}
               name="rating"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Рейтинг</FormLabel>
-                  <FormControl>
-                    <Input {...field} inputMode="numeric" placeholder="1450" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Рейтинг"
+              inputMode="numeric"
+              placeholder="1450"
             />
 
             <DialogFooter>

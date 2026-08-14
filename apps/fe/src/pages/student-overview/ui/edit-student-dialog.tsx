@@ -11,13 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
   Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Input,
-  Textarea,
+  FormInputField,
+  FormTextareaField,
 } from "@/shared/ui";
 import { BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
@@ -119,62 +114,36 @@ export function EditStudentDialog({
                 }),
             )}
           >
-            <FormField
+            <FormInputField
               control={form.control}
               name="displayName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Имя ученика</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Александр Иванов" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Имя ученика"
+              placeholder="Александр Иванов"
             />
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
+              <FormInputField
                 control={form.control}
                 name="birthYear"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Год рождения</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="number" placeholder="2012" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                label="Год рождения"
+                type="number"
+                placeholder="2012"
               />
 
-              <FormField
+              <FormInputField
                 control={form.control}
                 name="rating"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Рейтинг</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="number" placeholder="1620" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                label="Рейтинг"
+                type="number"
+                placeholder="1620"
               />
             </div>
 
-            <FormField
+            <FormTextareaField
               control={form.control}
               name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Заметки тренера</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} rows={6} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Заметки тренера"
+              rows={6}
             />
 
             <DialogFooter>

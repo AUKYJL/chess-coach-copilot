@@ -7,6 +7,7 @@ export * from "./chart";
 export * from "./dialog";
 export * from "./dropdown-menu";
 export * from "./form";
+export * from "./form-fields";
 export * from "./input";
 export * from "./inline-alert";
 export * from "./password-field";

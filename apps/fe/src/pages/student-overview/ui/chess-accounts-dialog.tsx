@@ -12,12 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
   Form,
+  FormInputField,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -189,18 +189,11 @@ export function ChessAccountsDialog({
                   )}
                 />
 
-                <FormField
+                <FormInputField
                   control={form.control}
                   name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Имя пользователя</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="alexander_ivanov_2012" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  label="Имя пользователя"
+                  placeholder="alexander_ivanov_2012"
                 />
 
                 <DialogFooter>
