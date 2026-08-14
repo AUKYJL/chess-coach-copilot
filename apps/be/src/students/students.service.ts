@@ -15,13 +15,22 @@ import {
 import { CreateStudentDto } from './dto/create-student.dto.js';
 import {
   ListStudentsQueryDto,
-  StudentsArchivedFilter,
+  StudentStatus,
+  StudentsSortField,
+  StudentsSortOrder,
 } from './dto/list-students.query.js';
 import { SetStudentArchiveDto } from './dto/set-student-archive.dto.js';
 import { UpdateStudentDto } from './dto/update-student.dto.js';
 
 const RECENT_ITEMS_LIMIT = 5;
 const ANALYSIS_PROFILE_LIMIT = 10;
+const DEFAULT_STUDENTS_PAGE = 1;
+const DEFAULT_STUDENTS_LIMIT = 20;
+const MAX_STUDENTS_LIMIT = 100;
+const DEFAULT_STUDENT_STATUSES = [
+  StudentStatus.ACTIVE,
+  StudentStatus.ARCHIVED,
+] as const;
 const PERFORMANCE_TREND_RANGE_DAYS = 90;
 const PERFORMANCE_TREND_PRIMARY_METRIC = 'Severe mistakes per game';
 const PERFORMANCE_TREND_RANGE = '90D';
@@ -30,57 +39,80 @@ const severeMistakeSeverities = new Set<MomentSeverity>([
   MomentSeverity.MATE,
 ]);
 
+type StudentsListItem = {
+  id: string;
+  displayName: string;
+  birthYear: number | null;
+  rating: number | null;
+  archivedAt: Date | null;
+  completedAnalysisCount: number;
+  lastAnalysisAt: Date | null;
+  latestAnalysisJobStatus: AnalysisJobStatus | null;
+  mainWeaknessTag: WeaknessTag | null;
+  createdAt: Date;
+};
+
+type StudentsListResult = {
+  items: StudentsListItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
 @Injectable()
 export class StudentsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(coachAccountId: string, query: ListStudentsQueryDto) {
-    const students = await this.prisma.student.findMany({
-      where: {
-        coachAccountId,
-        ...this.buildArchivedFilter(query.archived),
-      },
-      select: {
-        id: true,
-        displayName: true,
-        birthYear: true,
-        rating: true,
-        archivedAt: true,
-        _count: {
-          select: {
-            analyses: true,
-          },
-        },
-        analyses: {
-          take: 1,
-          orderBy: LATEST_ANALYSIS_JOB_ORDER_BY,
-          select: {
-            createdAt: true,
-            mainWeaknessTag: true,
-          },
-        },
-        analysisJobs: {
-          take: 1,
-          orderBy: LATEST_ANALYSIS_JOB_ORDER_BY,
-          select: {
-            status: true,
-          },
-        },
-      },
-      orderBy: { createdAt: Prisma.SortOrder.desc },
-    });
+    const search = query.search?.trim() || undefined;
+    const statuses = this.normalizeStudentStatuses(query.statuses);
+    const sort = query.sort;
+    const order = query.order ?? StudentsSortOrder.DESC;
+    const page = query.page ?? DEFAULT_STUDENTS_PAGE;
+    const limit = Math.min(
+      query.limit ?? DEFAULT_STUDENTS_LIMIT,
+      MAX_STUDENTS_LIMIT,
+    );
+    const skip = (page - 1) * limit;
 
-    return students.map((student) => ({
-      id: student.id,
-      displayName: student.displayName,
-      birthYear: student.birthYear,
-      rating: student.rating,
-      archivedAt: student.archivedAt,
-      completedAnalysisCount: student._count.analyses,
-      lastAnalysisAt: student.analyses[0]?.createdAt ?? null,
-      latestAnalysisJobStatus: student.analysisJobs[0]?.status ?? null,
-      mainWeaknessTag: student.analyses[0]?.mainWeaknessTag ?? null,
-    }));
+    const result =
+      typeof this.prisma.$queryRaw === 'function'
+        ? await this.listWithDatabaseReadModel({
+            coachAccountId,
+            search,
+            statuses,
+            sort,
+            order,
+            page,
+            limit,
+            skip,
+          })
+        : await this.listWithInMemoryFallback({
+            coachAccountId,
+            search,
+            statuses,
+            sort,
+            order,
+            page,
+            limit,
+            skip,
+          });
+
+    return {
+      ...result,
+      items: result.items.map((item) => ({
+        id: item.id,
+        displayName: item.displayName,
+        birthYear: item.birthYear,
+        rating: item.rating,
+        archivedAt: item.archivedAt,
+        completedAnalysisCount: item.completedAnalysisCount,
+        lastAnalysisAt: item.lastAnalysisAt,
+        latestAnalysisJobStatus: item.latestAnalysisJobStatus,
+        mainWeaknessTag: item.mainWeaknessTag,
+      })),
+    };
   }
 
   create(coachAccountId: string, dto: CreateStudentDto) {
@@ -402,12 +434,14 @@ export class StudentsService {
           analysis.createdAt >= startDate &&
           completedAnalysisJobIds.has(analysis.analysisJobId),
       )
-      .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
+      .sort(
+        (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
+      )
       .map((analysis) => ({
-      date: analysis.createdAt.toISOString().slice(0, 10),
-      value: analysis.mistakes.filter((mistake) =>
-        severeMistakeSeverities.has(mistake.severity),
-      ).length,
+        date: analysis.createdAt.toISOString().slice(0, 10),
+        value: analysis.mistakes.filter((mistake) =>
+          severeMistakeSeverities.has(mistake.severity),
+        ).length,
       }));
 
     return {
@@ -451,16 +485,343 @@ export class StudentsService {
     });
   }
 
-  private buildArchivedFilter(filter?: StudentsArchivedFilter) {
-    switch (filter ?? StudentsArchivedFilter.ACTIVE) {
-      case StudentsArchivedFilter.ARCHIVED:
-        return { archivedAt: { not: null } };
-      case StudentsArchivedFilter.ALL:
-        return {};
-      case StudentsArchivedFilter.ACTIVE:
-      default:
-        return { archivedAt: null };
+  private normalizeStudentStatuses(statuses?: StudentStatus[]) {
+    if (!statuses?.length) {
+      return [...DEFAULT_STUDENT_STATUSES];
     }
+
+    return Array.from(new Set(statuses));
+  }
+
+  private buildArchivedFilter(statuses: StudentStatus[]) {
+    const includesActive = statuses.includes(StudentStatus.ACTIVE);
+    const includesArchived = statuses.includes(StudentStatus.ARCHIVED);
+
+    if (includesActive && includesArchived) {
+      return {};
+    }
+
+    if (includesArchived) {
+      return { archivedAt: { not: null } };
+    }
+
+    return { archivedAt: null };
+  }
+
+  private async listWithDatabaseReadModel(args: {
+    coachAccountId: string;
+    search?: string;
+    statuses: StudentStatus[];
+    sort?: StudentsSortField;
+    order: StudentsSortOrder;
+    page: number;
+    limit: number;
+    skip: number;
+  }): Promise<StudentsListResult> {
+    const whereClause = this.buildStudentsListWhereClause({
+      coachAccountId: args.coachAccountId,
+      statuses: args.statuses,
+      search: args.search,
+    });
+    const orderByClause = this.buildStudentsListOrderByClause(
+      args.sort,
+      args.order,
+    );
+
+    const [rows, totals] = await Promise.all([
+      this.prisma.$queryRaw<StudentsListItem[]>(Prisma.sql`
+        SELECT
+          s.id,
+          s."displayName",
+          s."birthYear",
+          s.rating,
+          s."archivedAt",
+          s."createdAt",
+          COALESCE(analysis_counts."completedAnalysisCount", 0) AS "completedAnalysisCount",
+          latest_analysis."lastAnalysisAt" AS "lastAnalysisAt",
+          latest_analysis."mainWeaknessTag" AS "mainWeaknessTag",
+          latest_job."latestAnalysisJobStatus" AS "latestAnalysisJobStatus"
+        FROM "Student" s
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)::int AS "completedAnalysisCount"
+          FROM "GameAnalysis" ga_count
+          WHERE ga_count."studentId" = s.id
+            AND ga_count."coachAccountId" = s."coachAccountId"
+        ) analysis_counts ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT
+            ga."createdAt" AS "lastAnalysisAt",
+            ga."mainWeaknessTag" AS "mainWeaknessTag"
+          FROM "GameAnalysis" ga
+          WHERE ga."studentId" = s.id
+            AND ga."coachAccountId" = s."coachAccountId"
+          ORDER BY ga."createdAt" DESC, ga.id DESC
+          LIMIT 1
+        ) latest_analysis ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT
+            aj.status AS "latestAnalysisJobStatus"
+          FROM "AnalysisJob" aj
+          WHERE aj."studentId" = s.id
+            AND aj."coachAccountId" = s."coachAccountId"
+          ORDER BY aj."createdAt" DESC, aj.id DESC
+          LIMIT 1
+        ) latest_job ON TRUE
+        ${whereClause}
+        ${orderByClause}
+        OFFSET ${args.skip}
+        LIMIT ${args.limit}
+      `),
+      this.prisma.$queryRaw<Array<{ total: number }>>(Prisma.sql`
+        SELECT COUNT(*)::int AS total
+        FROM "Student" s
+        ${whereClause}
+      `),
+    ]);
+    const total = totals[0]?.total ?? 0;
+
+    return {
+      items: rows,
+      total,
+      page: args.page,
+      limit: args.limit,
+      totalPages: total === 0 ? 0 : Math.ceil(total / args.limit),
+    };
+  }
+
+  private async listWithInMemoryFallback(args: {
+    coachAccountId: string;
+    search?: string;
+    statuses: StudentStatus[];
+    sort?: StudentsSortField;
+    order: StudentsSortOrder;
+    page: number;
+    limit: number;
+    skip: number;
+  }): Promise<StudentsListResult> {
+    const students = (await this.prisma.student.findMany({
+      where: {
+        coachAccountId: args.coachAccountId,
+        ...this.buildArchivedFilter(args.statuses),
+      },
+      select: {
+        id: true,
+        displayName: true,
+        birthYear: true,
+        rating: true,
+        archivedAt: true,
+        createdAt: true,
+        _count: {
+          select: {
+            analyses: true,
+          },
+        },
+        analyses: {
+          take: 1,
+          orderBy: LATEST_ANALYSIS_JOB_ORDER_BY,
+          select: {
+            createdAt: true,
+            mainWeaknessTag: true,
+          },
+        },
+        analysisJobs: {
+          take: 1,
+          orderBy: LATEST_ANALYSIS_JOB_ORDER_BY,
+          select: {
+            status: true,
+          },
+        },
+      },
+      orderBy: { createdAt: Prisma.SortOrder.desc },
+    })) as Array<{
+      id: string;
+      displayName: string;
+      birthYear: number | null;
+      rating: number | null;
+      archivedAt: Date | null;
+      createdAt: Date;
+      _count: { analyses: number };
+      analyses: Array<{ createdAt: Date; mainWeaknessTag: WeaknessTag | null }>;
+      analysisJobs: Array<{ status: AnalysisJobStatus }>;
+    }>;
+    const normalizedSearch = args.search?.toLocaleLowerCase();
+    const items = students
+      .map<StudentsListItem>((student) => ({
+        id: student.id,
+        displayName: student.displayName,
+        birthYear: student.birthYear,
+        rating: student.rating,
+        archivedAt: student.archivedAt,
+        createdAt: student.createdAt,
+        completedAnalysisCount: student._count.analyses,
+        lastAnalysisAt: student.analyses[0]?.createdAt ?? null,
+        latestAnalysisJobStatus: student.analysisJobs[0]?.status ?? null,
+        mainWeaknessTag: student.analyses[0]?.mainWeaknessTag ?? null,
+      }))
+      .filter((student) => {
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        return student.displayName
+          .toLocaleLowerCase()
+          .includes(normalizedSearch);
+      });
+    const orderedItems = items.sort((left, right) =>
+      this.compareStudentListItems(left, right, args.sort, args.order),
+    );
+    const total = orderedItems.length;
+
+    return {
+      items: orderedItems.slice(args.skip, args.skip + args.limit),
+      total,
+      page: args.page,
+      limit: args.limit,
+      totalPages: total === 0 ? 0 : Math.ceil(total / args.limit),
+    };
+  }
+
+  private buildStudentsListWhereClause(args: {
+    coachAccountId: string;
+    statuses: StudentStatus[];
+    search?: string;
+  }) {
+    const conditions: Prisma.Sql[] = [
+      Prisma.sql`s."coachAccountId" = ${args.coachAccountId}`,
+    ];
+
+    const includesActive = args.statuses.includes(StudentStatus.ACTIVE);
+    const includesArchived = args.statuses.includes(StudentStatus.ARCHIVED);
+
+    if (includesActive && !includesArchived) {
+      conditions.push(Prisma.sql`s."archivedAt" IS NULL`);
+    }
+
+    if (!includesActive && includesArchived) {
+      conditions.push(Prisma.sql`s."archivedAt" IS NOT NULL`);
+    }
+
+    if (args.search) {
+      conditions.push(Prisma.sql`s."displayName" ILIKE ${`%${args.search}%`}`);
+    }
+
+    return Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`;
+  }
+
+  private buildStudentsListOrderByClause(
+    sort: StudentsSortField | undefined,
+    order: StudentsSortOrder,
+  ) {
+    const direction =
+      order === StudentsSortOrder.ASC ? Prisma.raw('ASC') : Prisma.raw('DESC');
+
+    switch (sort) {
+      case StudentsSortField.RATING:
+        return Prisma.sql`
+          ORDER BY s.rating ${direction} NULLS LAST, s."createdAt" DESC, s.id DESC
+        `;
+      case StudentsSortField.COMPLETED_ANALYSIS_COUNT:
+        return Prisma.sql`
+          ORDER BY "completedAnalysisCount" ${direction} NULLS LAST, s."createdAt" DESC, s.id DESC
+        `;
+      case StudentsSortField.LAST_ANALYSIS_AT:
+        return Prisma.sql`
+          ORDER BY "lastAnalysisAt" ${direction} NULLS LAST, s."createdAt" DESC, s.id DESC
+        `;
+      default:
+        return Prisma.sql`
+          ORDER BY s."createdAt" ${direction}, s.id ${direction}
+        `;
+    }
+  }
+
+  private compareStudentListItems(
+    left: StudentsListItem,
+    right: StudentsListItem,
+    sort: StudentsSortField | undefined,
+    order: StudentsSortOrder,
+  ) {
+    const direction = order === StudentsSortOrder.ASC ? 1 : -1;
+
+    switch (sort) {
+      case StudentsSortField.RATING:
+        return this.compareNullableNumbers(
+          left.rating,
+          right.rating,
+          direction,
+        );
+      case StudentsSortField.COMPLETED_ANALYSIS_COUNT:
+        return (
+          this.compareNumbers(
+            left.completedAnalysisCount,
+            right.completedAnalysisCount,
+            direction,
+          ) || this.compareDates(left.createdAt, right.createdAt, -1)
+        );
+      case StudentsSortField.LAST_ANALYSIS_AT:
+        return (
+          this.compareNullableDates(
+            left.lastAnalysisAt,
+            right.lastAnalysisAt,
+            direction,
+          ) || this.compareDates(left.createdAt, right.createdAt, -1)
+        );
+      default:
+        return this.compareDates(left.createdAt, right.createdAt, direction);
+    }
+  }
+
+  private compareNumbers(left: number, right: number, direction: 1 | -1) {
+    if (left === right) {
+      return 0;
+    }
+
+    return left < right ? -1 * direction : 1 * direction;
+  }
+
+  private compareDates(left: Date, right: Date, direction: 1 | -1) {
+    return this.compareNumbers(left.getTime(), right.getTime(), direction);
+  }
+
+  private compareNullableNumbers(
+    left: number | null,
+    right: number | null,
+    direction: 1 | -1,
+  ) {
+    if (left === null && right === null) {
+      return 0;
+    }
+
+    if (left === null) {
+      return 1;
+    }
+
+    if (right === null) {
+      return -1;
+    }
+
+    return this.compareNumbers(left, right, direction);
+  }
+
+  private compareNullableDates(
+    left: Date | null,
+    right: Date | null,
+    direction: 1 | -1,
+  ) {
+    if (left === null && right === null) {
+      return 0;
+    }
+
+    if (left === null) {
+      return 1;
+    }
+
+    if (right === null) {
+      return -1;
+    }
+
+    return this.compareDates(left, right, direction);
   }
 
   private getPerformanceTrendStartDate() {

@@ -13,6 +13,7 @@ import {
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
   ApiParam,
@@ -31,6 +32,10 @@ import { CreateStudentDto } from './dto/create-student.dto.js';
 import { ListStudentsQueryDto } from './dto/list-students.query.js';
 import { SetStudentArchiveDto } from './dto/set-student-archive.dto.js';
 import {
+  StudentListResponse,
+  StudentReadResponse,
+} from './dto/student.response.js';
+import {
   StudentAnalysisProfileResponse,
   StudentOverviewResponse,
   StudentPerformanceTrendResponse,
@@ -44,6 +49,8 @@ import { StudentsService } from './students.service.js';
   CreateStudentDto,
   UpdateStudentDto,
   SetStudentArchiveDto,
+  StudentReadResponse,
+  StudentListResponse,
   StudentOverviewResponse,
   StudentAnalysisProfileResponse,
   StudentPerformanceTrendResponse,
@@ -53,19 +60,28 @@ import { StudentsService } from './students.service.js';
 export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
 
+  @ApiOkResponse({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(StudentListResponse) }],
+    },
+  })
   @Get()
   async list(
     @CurrentCoach() coach: AuthenticatedCoach,
     @Query() query: ListStudentsQueryDto,
   ) {
-    const items = await this.studentsService.list(coach.coachAccountId, query);
-    return { items };
+    return this.studentsService.list(coach.coachAccountId, query);
   }
 
   @ApiBody({
     schema: {
       allOf: [{ $ref: getSchemaPath(CreateStudentDto) }],
       example: swaggerRequestExamples.students.create,
+    },
+  })
+  @ApiCreatedResponse({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(StudentReadResponse) }],
     },
   })
   @Post()
@@ -81,6 +97,11 @@ export class StudentsController {
     name: 'studentId',
     example: swaggerParamExamples.studentId,
     format: 'uuid',
+  })
+  @ApiOkResponse({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(StudentReadResponse) }],
+    },
   })
   @Get(':studentId')
   getOne(
@@ -165,6 +186,11 @@ export class StudentsController {
       example: swaggerRequestExamples.students.update,
     },
   })
+  @ApiOkResponse({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(StudentReadResponse) }],
+    },
+  })
   @Patch(':studentId')
   update(
     @CurrentCoach() coach: AuthenticatedCoach,
@@ -184,6 +210,11 @@ export class StudentsController {
     schema: {
       allOf: [{ $ref: getSchemaPath(SetStudentArchiveDto) }],
       example: swaggerRequestExamples.students.setArchive,
+    },
+  })
+  @ApiOkResponse({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(StudentReadResponse) }],
     },
   })
   @HttpCode(HttpStatus.OK)

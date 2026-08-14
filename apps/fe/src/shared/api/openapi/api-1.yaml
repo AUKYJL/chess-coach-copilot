@@ -106,18 +106,67 @@ paths:
     get:
       operationId: StudentsController_list
       parameters:
-        - name: archived
+        - name: search
+          required: false
+          in: query
+          description: Case-insensitive search by student display name.
+          schema:
+            example: alex
+            type: string
+        - name: statuses
+          required: false
+          in: query
+          schema:
+            default:
+              - active
+              - archived
+            type: array
+            items:
+              type: string
+              enum:
+                - active
+                - archived
+        - name: sort
           required: false
           in: query
           schema:
             type: string
             enum:
-              - active
-              - archived
-              - all
+              - rating
+              - completedAnalysisCount
+              - lastAnalysisAt
+        - name: order
+          required: false
+          in: query
+          schema:
+            default: desc
+            type: string
+            enum:
+              - asc
+              - desc
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            default: 1
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            maximum: 100
+            default: 20
+            type: number
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StudentListResponse"
       security: &a2
         - bearer: []
       tags: &a3
@@ -140,6 +189,11 @@ paths:
       responses:
         "201":
           description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StudentReadResponse"
       security: *a2
       tags: *a3
   /api/students/{studentId}:
@@ -156,6 +210,11 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StudentReadResponse"
       security: *a2
       tags: *a3
     patch:
@@ -183,6 +242,11 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StudentReadResponse"
       security: *a2
       tags: *a3
   /api/students/{studentId}/overview:
@@ -271,6 +335,11 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StudentReadResponse"
       security: *a2
       tags: *a3
   /api/students/{studentId}/external-accounts:
@@ -927,6 +996,145 @@ components:
           example: true
       required:
         - archived
+    StudentReadResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        coachAccountId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        birthYear:
+          type: number
+          nullable: true
+        rating:
+          type: number
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - coachAccountId
+        - displayName
+        - birthYear
+        - rating
+        - notes
+        - archivedAt
+        - createdAt
+        - updatedAt
+    StudentListItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        birthYear:
+          type: number
+          nullable: true
+        rating:
+          type: number
+          nullable: true
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAnalysisCount:
+          type: number
+        lastAnalysisAt:
+          type: string
+          format: date-time
+          nullable: true
+        latestAnalysisJobStatus:
+          type: string
+          enum:
+            - PENDING
+            - PARSING
+            - EXTRACTING_ANNOTATIONS
+            - CLASSIFICATION
+            - GENERATING_OUTPUT
+            - COMPLETED
+            - FAILED
+          nullable: true
+        mainWeaknessTag:
+          type: string
+          enum:
+            - MISSED_FORK
+            - MISSED_PIN
+            - MISSED_DOUBLE_ATTACK
+            - MISSED_DISCOVERED_ATTACK
+            - MISSED_MATE
+            - ALLOWED_MATE
+            - HANGING_PIECE
+            - MISSED_CAPTURE
+            - BAD_CAPTURE
+            - MISSED_OPPONENT_THREAT
+            - OPENED_LINE
+            - UNKNOWN_TACTICAL_ERROR
+            - KING_SAFETY
+            - DELAYED_CASTLING
+            - POOR_DEVELOPMENT
+            - EARLY_QUEEN
+            - BAD_TRADE
+            - POOR_CONVERSION
+            - OPENING_STRATEGY
+            - PAWN_STRUCTURE
+            - ENDGAME_TECHNIQUE
+            - UNKNOWN_STRATEGIC_ERROR
+            - TIME_MANAGEMENT
+            - CALCULATION_DEPTH
+            - TUNNEL_VISION
+            - MATERIAL_GREED
+            - LOW_BOARD_AWARENESS
+            - INSUFFICIENT_ANNOTATION_DATA
+            - REDUCED_CONFIDENCE
+          nullable: true
+      required:
+        - id
+        - displayName
+        - birthYear
+        - rating
+        - archivedAt
+        - completedAnalysisCount
+        - lastAnalysisAt
+        - latestAnalysisJobStatus
+        - mainWeaknessTag
+    StudentListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StudentListItemResponse"
+        total:
+          type: number
+        page:
+          type: number
+        limit:
+          type: number
+        totalPages:
+          type: number
+      required:
+        - items
+        - total
+        - page
+        - limit
+        - totalPages
     StudentOverviewStudentResponse:
       type: object
       properties:

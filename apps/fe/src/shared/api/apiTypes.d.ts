@@ -540,6 +540,45 @@ export interface components {
             /** @example true */
             archived: boolean;
         };
+        StudentReadResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            coachAccountId: string;
+            displayName: string;
+            birthYear: number | null;
+            rating: number | null;
+            notes: string | null;
+            /** Format: date-time */
+            archivedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        StudentListItemResponse: {
+            /** Format: uuid */
+            id: string;
+            displayName: string;
+            birthYear: number | null;
+            rating: number | null;
+            /** Format: date-time */
+            archivedAt: string | null;
+            completedAnalysisCount: number;
+            /** Format: date-time */
+            lastAnalysisAt: string | null;
+            /** @enum {string|null} */
+            latestAnalysisJobStatus: "PENDING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED" | null;
+            /** @enum {string|null} */
+            mainWeaknessTag: "MISSED_FORK" | "MISSED_PIN" | "MISSED_DOUBLE_ATTACK" | "MISSED_DISCOVERED_ATTACK" | "MISSED_MATE" | "ALLOWED_MATE" | "HANGING_PIECE" | "MISSED_CAPTURE" | "BAD_CAPTURE" | "MISSED_OPPONENT_THREAT" | "OPENED_LINE" | "UNKNOWN_TACTICAL_ERROR" | "KING_SAFETY" | "DELAYED_CASTLING" | "POOR_DEVELOPMENT" | "EARLY_QUEEN" | "BAD_TRADE" | "POOR_CONVERSION" | "OPENING_STRATEGY" | "PAWN_STRUCTURE" | "ENDGAME_TECHNIQUE" | "UNKNOWN_STRATEGIC_ERROR" | "TIME_MANAGEMENT" | "CALCULATION_DEPTH" | "TUNNEL_VISION" | "MATERIAL_GREED" | "LOW_BOARD_AWARENESS" | "INSUFFICIENT_ANNOTATION_DATA" | "REDUCED_CONFIDENCE" | null;
+        };
+        StudentListResponse: {
+            items: components["schemas"]["StudentListItemResponse"][];
+            total: number;
+            page: number;
+            limit: number;
+            totalPages: number;
+        };
         StudentOverviewStudentResponse: {
             /** Format: uuid */
             id: string;
@@ -1010,7 +1049,13 @@ export interface operations {
     StudentsController_list: {
         parameters: {
             query?: {
-                archived?: "active" | "archived" | "all";
+                /** @description Case-insensitive search by student display name. */
+                search?: string;
+                statuses?: ("active" | "archived")[];
+                sort?: "rating" | "completedAnalysisCount" | "lastAnalysisAt";
+                order?: "asc" | "desc";
+                page?: number;
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -1022,7 +1067,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["StudentListResponse"];
+                };
             };
         };
     };
@@ -1043,7 +1090,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["StudentReadResponse"];
+                };
             };
         };
     };
@@ -1062,7 +1111,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["StudentReadResponse"];
+                };
             };
         };
     };
@@ -1085,7 +1136,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["StudentReadResponse"];
+                };
             };
         };
     };
@@ -1171,7 +1224,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["StudentReadResponse"];
+                };
             };
         };
     };

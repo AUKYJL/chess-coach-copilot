@@ -4,6 +4,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { LoginPage } from "@/pages/auth/login";
 import { RegisterPage } from "@/pages/auth/register";
 import { ActivityPage } from "@/pages/activity";
+import { StudentsPage } from "@/pages/students";
 import { StudentOverviewPage } from "@/pages/student-overview";
 
 import { AppShell, ProtectedLayout } from "./layouts";
@@ -32,6 +33,10 @@ export function createAppRoutes(): RouteObject[] {
             {
               path: "activity",
               element: <ActivityPage />,
+            },
+            {
+              path: "students",
+              element: <StudentsPage />,
             },
             {
               path: "students/:studentId",

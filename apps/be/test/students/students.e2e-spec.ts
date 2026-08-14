@@ -19,10 +19,15 @@ interface StudentListBody {
   items: Array<
     StudentBody & {
       completedAnalysisCount: number;
+      lastAnalysisAt: string | null;
       latestAnalysisJobStatus: AnalysisJobStatus | null;
       mainWeaknessTag: WeaknessTag | null;
     }
   >;
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 type TestServer = Parameters<typeof request>[0];
@@ -83,30 +88,44 @@ describe('StudentsController (e2e)', () => {
 
     expect(archivedStudent.archivedAt).toEqual(expect.any(String));
 
+    const defaultStatusesResponse = await request(getServer(app))
+      .get('/students')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    expect(
+      (defaultStatusesResponse.body as StudentListBody).items,
+    ).toHaveLength(1);
+
     const listResponse = await request(getServer(app))
-      .get('/students?archived=all')
+      .get('/students?statuses=active&statuses=archived')
       .set('Authorization', `Bearer ${coach.accessToken}`)
       .expect(200);
     const listBody = listResponse.body as StudentListBody;
 
     expect(listBody.items).toHaveLength(1);
+    expect(listBody.total).toBe(1);
+    expect(listBody.page).toBe(1);
+    expect(listBody.limit).toBe(20);
+    expect(listBody.totalPages).toBe(1);
     expect(listBody.items[0]).toMatchObject({
       id: studentId,
       displayName: 'Student A',
       completedAnalysisCount: 0,
+      lastAnalysisAt: null,
       latestAnalysisJobStatus: null,
       mainWeaknessTag: null,
     });
 
     const archivedOnlyResponse = await request(getServer(app))
-      .get('/students?archived=archived')
+      .get('/students?statuses=archived')
       .set('Authorization', `Bearer ${coach.accessToken}`)
       .expect(200);
 
     expect(archivedOnlyResponse.body.items).toHaveLength(1);
 
     const activeOnlyResponse = await request(getServer(app))
-      .get('/students?archived=active')
+      .get('/students?statuses=active')
       .set('Authorization', `Bearer ${coach.accessToken}`)
       .expect(200);
 
@@ -472,7 +491,7 @@ describe('StudentsController (e2e)', () => {
     }
 
     const listResponse = await request(getServer(app))
-      .get('/students?archived=all')
+      .get('/students?statuses=active&statuses=archived')
       .set('Authorization', `Bearer ${coach.accessToken}`)
       .expect(200);
 
@@ -480,10 +499,12 @@ describe('StudentsController (e2e)', () => {
       expect.objectContaining({
         id: studentId,
         completedAnalysisCount: 11,
+        lastAnalysisAt: '2026-07-11T12:30:00.000Z',
         latestAnalysisJobStatus: 'FAILED',
         mainWeaknessTag: 'CALCULATION_DEPTH',
       }),
     ]);
+    expect(listResponse.body.total).toBe(1);
 
     const overviewResponse = await request(getServer(app))
       .get(`/students/${studentId}/overview`)
@@ -512,6 +533,172 @@ describe('StudentsController (e2e)', () => {
       recommendedLessonTitle: 'Latest recommendation',
     });
     expect(profileResponse.body.sampleMistakes[0].severity).toBe('BLUNDER');
+  });
+
+  it('supports students list search, sorting, pagination, and query validation', async () => {
+    const coach = await registerCoach(app, 'coach-list-query@example.com');
+    const coachAccountId = await getCoachAccountId(
+      prisma,
+      'coach-list-query@example.com',
+    );
+    const alexResponse = await request(getServer(app))
+      .post('/students')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({
+        displayName: 'Alexander Ivanov',
+        rating: 1620,
+      })
+      .expect(201);
+    const borisResponse = await request(getServer(app))
+      .post('/students')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({
+        displayName: 'Boris Petrov',
+        rating: 980,
+      })
+      .expect(201);
+    const claraResponse = await request(getServer(app))
+      .post('/students')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({
+        displayName: 'Clara Martin',
+        rating: 1510,
+      })
+      .expect(201);
+    const alexStudentId = (alexResponse.body as { id: string }).id;
+    const borisStudentId = (borisResponse.body as { id: string }).id;
+    const claraStudentId = (claraResponse.body as { id: string }).id;
+
+    await request(getServer(app))
+      .post(`/students/${borisStudentId}/archive`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ archived: true })
+      .expect(200);
+
+    await createAnalysisFixture({
+      prisma,
+      coachAccountId,
+      studentId: alexStudentId,
+      analysisCreatedAt: new Date('2026-08-03T12:00:00.000Z'),
+      jobStatus: 'COMPLETED',
+      mistakeSeverities: [MomentSeverity.BLUNDER],
+    });
+    await createAnalysisFixture({
+      prisma,
+      coachAccountId,
+      studentId: alexStudentId,
+      analysisCreatedAt: new Date('2026-08-05T12:00:00.000Z'),
+      jobStatus: 'FAILED',
+      mistakeSeverities: [MomentSeverity.MISTAKE],
+    });
+    await createAnalysisFixture({
+      prisma,
+      coachAccountId,
+      studentId: claraStudentId,
+      analysisCreatedAt: new Date('2026-08-06T12:00:00.000Z'),
+      jobStatus: 'COMPLETED',
+      mistakeSeverities: [MomentSeverity.BLUNDER, MomentSeverity.MATE],
+    });
+
+    const searchResponse = await request(getServer(app))
+      .get('/students?search=  alex  &statuses=active&statuses=archived')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    expect(searchResponse.body).toMatchObject({
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+      items: [
+        {
+          id: alexStudentId,
+          displayName: 'Alexander Ivanov',
+        },
+      ],
+    });
+
+    const archivedResponse = await request(getServer(app))
+      .get('/students?statuses=archived')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    expect(archivedResponse.body.items).toEqual([
+      expect.objectContaining({
+        id: borisStudentId,
+        displayName: 'Boris Petrov',
+      }),
+    ]);
+
+    const ratingResponse = await request(getServer(app))
+      .get('/students?statuses=active&statuses=archived&sort=rating&order=asc')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    expect(
+      (ratingResponse.body as StudentListBody).items.map((item) => item.id),
+    ).toEqual([borisStudentId, claraStudentId, alexStudentId]);
+
+    const analysisCountResponse = await request(getServer(app))
+      .get(
+        '/students?statuses=active&statuses=archived&sort=completedAnalysisCount&order=desc',
+      )
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    expect(
+      (analysisCountResponse.body as StudentListBody).items.map(
+        (item) => item.id,
+      ),
+    ).toEqual([alexStudentId, claraStudentId, borisStudentId]);
+
+    const lastAnalysisResponse = await request(getServer(app))
+      .get(
+        '/students?statuses=active&statuses=archived&sort=lastAnalysisAt&order=desc',
+      )
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    expect(
+      (lastAnalysisResponse.body as StudentListBody).items.map(
+        (item) => item.id,
+      ),
+    ).toEqual([claraStudentId, alexStudentId, borisStudentId]);
+
+    const paginationResponse = await request(getServer(app))
+      .get(
+        '/students?statuses=active&statuses=archived&sort=rating&order=desc&page=2&limit=1',
+      )
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    expect(paginationResponse.body).toMatchObject({
+      total: 3,
+      page: 2,
+      limit: 1,
+      totalPages: 3,
+      items: [{ id: claraStudentId }],
+    });
+
+    await request(getServer(app))
+      .get('/students?sort=unknown')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(400);
+
+    await request(getServer(app))
+      .get('/students?order=sideways')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(400);
+
+    await request(getServer(app))
+      .get('/students?statuses=something-else')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(400);
+
+    await request(getServer(app))
+      .get('/students?limit=101')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(400);
   });
 
   it('returns UNKNOWN when performance trend has no completed analyses', async () => {

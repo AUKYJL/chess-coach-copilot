@@ -4,7 +4,7 @@ import { NavLink } from "react-router-dom";
 import { cn } from "@/shared/lib/cn";
 
 const workspaceLinks = [
-  { to: "/students/demo-student", label: "Students", icon: ChessPawn },
+  { to: "/students", label: "Students", icon: ChessPawn },
   { to: "/activity", label: "Activity", icon: Activity },
 ] as const;
 

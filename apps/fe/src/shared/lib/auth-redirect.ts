@@ -1,4 +1,4 @@
-export const AUTHENTICATED_LANDING_PATH = "/students/demo-student";
+export const AUTHENTICATED_LANDING_PATH = "/students";
 
 export type AuthRedirectState = {
   from?: {

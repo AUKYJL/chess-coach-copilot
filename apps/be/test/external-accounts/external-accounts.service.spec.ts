@@ -5,16 +5,28 @@ import { ExternalAccountsService } from '../../src/external-accounts/external-ac
 
 describe('ExternalAccountsService', () => {
   it('maps create unique races to conflict', async () => {
+    const prismaUniqueConstraintError = Object.assign(
+      new Error('Unique constraint failed'),
+      { code: 'P2002' },
+    );
+    const findStudent = jest.fn(() =>
+      Promise.resolve({
+        id: 'student-1',
+        archivedAt: null,
+      }),
+    );
+    const findExternalAccount = jest.fn(() => Promise.resolve(null));
+    const createExternalAccount = jest.fn(() =>
+      Promise.reject(prismaUniqueConstraintError),
+    );
+
     const service = new ExternalAccountsService({
       student: {
-        findFirst: jest.fn().mockResolvedValue({
-          id: 'student-1',
-          archivedAt: null,
-        }),
+        findFirst: findStudent,
       },
       externalAccount: {
-        findFirst: jest.fn().mockResolvedValue(null),
-        create: jest.fn().mockRejectedValue({ code: 'P2002' }),
+        findFirst: findExternalAccount,
+        create: createExternalAccount,
       },
     } as never);
 
@@ -27,19 +39,40 @@ describe('ExternalAccountsService', () => {
   });
 
   it('maps update unique races to conflict', async () => {
+    const prismaUniqueConstraintError = Object.assign(
+      new Error('Unique constraint failed'),
+      { code: 'P2002' },
+    );
+    let findExternalAccountCallCount = 0;
+    const findStudent = jest.fn(() =>
+      Promise.resolve({
+        id: 'student-1',
+        archivedAt: null,
+      }),
+    );
+    const findExternalAccount = jest.fn(() => {
+      findExternalAccountCallCount += 1;
+
+      if (findExternalAccountCallCount === 1) {
+        return Promise.resolve({
+          id: 'account-1',
+          studentId: 'student-1',
+        });
+      }
+
+      return Promise.resolve(null);
+    });
+    const updateExternalAccount = jest.fn(() =>
+      Promise.reject(prismaUniqueConstraintError),
+    );
+
     const service = new ExternalAccountsService({
       student: {
-        findFirst: jest.fn().mockResolvedValue({
-          id: 'student-1',
-          archivedAt: null,
-        }),
+        findFirst: findStudent,
       },
       externalAccount: {
-        findFirst: jest
-          .fn()
-          .mockResolvedValueOnce({ id: 'account-1', studentId: 'student-1' })
-          .mockResolvedValueOnce(null),
-        update: jest.fn().mockRejectedValue({ code: 'P2002' }),
+        findFirst: findExternalAccount,
+        update: updateExternalAccount,
       },
     } as never);
 
