@@ -1,8 +1,7 @@
-import { useNavigate } from "react-router-dom";
-
 import { Button } from "@/shared/ui";
 import { BUTTON_SIZE, BUTTON_VARIANT } from "@/shared/ui/button";
 
+import type { StudentsRouteSearch } from "./model/students-route-search";
 import { useStudentsPageData } from "./model/use-students-page-data";
 import { AddStudentDialog } from "./ui/add-student-dialog";
 import { StudentsFilters } from "./ui/students-filters";
@@ -14,9 +13,25 @@ import {
   StudentsLoadingState,
 } from "./ui/students-states";
 
-export function StudentsPage() {
-  const navigate = useNavigate();
-  const query = useStudentsPageData();
+type StudentsPageProps = {
+  navigateToStudent: (studentId: string) => Promise<void>;
+  search: StudentsRouteSearch;
+  setSearch: (
+    updater:
+      | StudentsRouteSearch
+      | ((currentSearch: StudentsRouteSearch) => StudentsRouteSearch),
+  ) => Promise<void>;
+};
+
+export function StudentsPage({
+  navigateToStudent,
+  search,
+  setSearch,
+}: StudentsPageProps) {
+  const query = useStudentsPageData({
+    search,
+    setSearch,
+  });
 
   return (
     <div className="space-y-5">
@@ -105,7 +120,7 @@ export function StudentsPage() {
         onSubmit={async (values) => {
           const student = await query.submitCreateStudent(values);
 
-          await navigate(`/students/${student.id}`);
+          await navigateToStudent(student.id);
         }}
         open={query.isAddStudentOpen}
       />

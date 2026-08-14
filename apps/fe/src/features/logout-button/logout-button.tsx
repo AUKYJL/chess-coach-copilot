@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import {
   REQUEST_FAILURE_KIND,
@@ -64,7 +64,10 @@ export function LogoutButton({
             if (result.response.ok || result.response.status === 401) {
               terminateSession();
               queryClient.clear();
-              await navigate("/login", { replace: true });
+              await navigate({
+                to: "/login",
+                replace: true,
+              });
               return;
             }
 

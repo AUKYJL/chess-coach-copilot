@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 
 import { cn } from "@/shared/lib/cn";
 import { Badge } from "@/shared/ui";
@@ -43,7 +43,10 @@ export function StudentIdentityLink({
         "group flex items-center gap-3 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}
-      to={`/students/${student.id}`}
+      to="/students/$studentId"
+      params={{
+        studentId: student.id,
+      }}
     >
       <div className="bg-surface-subtle text-foreground flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
         {formatStudentInitials(student.displayName)}
@@ -61,7 +64,10 @@ export function StudentMobileCard({ student }: { student: StudentListItem }) {
   return (
     <Link
       className="border-border bg-surface hover:bg-surface-subtle/45 focus-visible:ring-accent/40 flex w-full flex-col gap-3 rounded-[24px] border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      to={`/students/${student.id}`}
+      to="/students/$studentId"
+      params={{
+        studentId: student.id,
+      }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">

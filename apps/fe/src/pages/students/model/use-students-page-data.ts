@@ -9,6 +9,10 @@ import { $api } from "@/shared/api";
 
 import type { CreateStudentRequest } from "./api-types";
 import {
+  DEFAULT_STUDENTS_PAGE_SIZE,
+  type StudentsRouteSearch,
+} from "./students-route-search";
+import {
   DEFAULT_STUDENT_STATUSES,
   type StudentStatus,
   getStudentStatusesQueryValue,
@@ -17,7 +21,6 @@ import {
 } from "./student-status-filter";
 import { getStudentsSortField } from "./students-sort";
 
-const DEFAULT_PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
 type StudentsSortOrder = "asc" | "desc";
 
@@ -35,45 +38,78 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-export function useStudentsPageData() {
+type UseStudentsPageDataOptions = {
+  search: StudentsRouteSearch;
+  setSearch: (
+    updater:
+      | StudentsRouteSearch
+      | ((currentSearch: StudentsRouteSearch) => StudentsRouteSearch),
+  ) => Promise<void>;
+};
+
+export function useStudentsPageData({
+  search: routeSearch,
+  setSearch,
+}: UseStudentsPageDataOptions) {
   const queryClient = useQueryClient();
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [selectedStatuses, setSelectedStatuses] = useState<StudentStatus[]>(
-    DEFAULT_STUDENT_STATUSES,
-  );
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: DEFAULT_PAGE_SIZE,
-  });
+  const [searchInput, setSearchInput] = useState(routeSearch.search);
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [createErrorMessage, setCreateErrorMessage] = useState<string | null>(
     null,
   );
+  const search = routeSearch.search.trim();
+  const selectedStatuses = routeSearch.statuses;
+  const sorting: SortingState = routeSearch.sort
+    ? [
+        {
+          id: routeSearch.sort,
+          desc: routeSearch.order === "desc",
+        },
+      ]
+    : [];
+  const pagination = {
+    pageIndex: routeSearch.page - 1,
+    pageSize: routeSearch.limit,
+  } satisfies PaginationState;
+
+  function updateSearch(
+    updater:
+      | StudentsRouteSearch
+      | ((currentSearch: StudentsRouteSearch) => StudentsRouteSearch),
+  ) {
+    return setSearch(updater);
+  }
+
+  useEffect(() => {
+    setSearchInput(routeSearch.search);
+  }, [routeSearch.search]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       const trimmedValue = searchInput.trim();
 
-      setSearch((previousValue) => {
-        if (previousValue === trimmedValue) {
-          return previousValue;
-        }
+      if (trimmedValue === search) {
+        return;
+      }
 
-        setPagination((currentPagination) => ({
-          ...currentPagination,
-          pageIndex: 0,
-        }));
+      setSearch((currentSearch) => ({
+        ...currentSearch,
+        search: trimmedValue,
+        page: 1,
+      })).catch((error) => {
+        const normalizedError =
+          error instanceof Error
+            ? error
+            : new Error("Students search update failed.");
 
-        return trimmedValue;
+        console.error("Students search update failed.", normalizedError);
       });
     }, SEARCH_DEBOUNCE_MS);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [searchInput]);
+  }, [search, searchInput, setSearch]);
 
   const statuses = getStudentStatusesQueryValue(selectedStatuses);
   const sort = getStudentsSortField(sorting[0]?.id);
@@ -92,12 +128,12 @@ export function useStudentsPageData() {
           statuses,
           sort,
           order: sort ? order : undefined,
-          page: pagination.pageIndex + 1,
+          page: routeSearch.page,
           limit: pagination.pageSize,
         },
       },
     }),
-    [order, pagination.pageIndex, pagination.pageSize, search, sort, statuses],
+    [order, pagination.pageSize, routeSearch.page, search, sort, statuses],
   );
   const studentsListQueryKey = $api.queryOptions("get", "/api/students").queryKey;
   const studentsQuery = $api.useQuery("get", "/api/students", studentsQueryParams, {
@@ -112,11 +148,49 @@ export function useStudentsPageData() {
     });
   }
 
-  function resetToFirstPage() {
-    setPagination((currentPagination) => ({
-      ...currentPagination,
-      pageIndex: 0,
-    }));
+  function setSorting(
+    updater: SortingState | ((old: SortingState) => SortingState),
+  ) {
+    const nextSorting = typeof updater === "function" ? updater(sorting) : updater;
+    const nextSort = getStudentsSortField(nextSorting[0]?.id);
+
+    updateSearch((currentSearch) => ({
+      ...currentSearch,
+      sort: nextSort,
+      order: nextSort ? (nextSorting[0]?.desc ? "desc" : "asc") : undefined,
+      page: 1,
+    })).catch((error) => {
+      const normalizedError =
+        error instanceof Error
+          ? error
+          : new Error("Students sorting update failed.");
+
+      console.error("Students sorting update failed.", normalizedError);
+    });
+  }
+
+  function setPagination(
+    updater:
+      | PaginationState
+      | ((currentPagination: PaginationState) => PaginationState),
+  ) {
+    const nextPagination =
+      typeof updater === "function" ? updater(pagination) : updater;
+    const nextLimit = nextPagination.pageSize;
+    const nextPage = nextPagination.pageIndex + 1;
+
+    updateSearch((currentSearch) => ({
+      ...currentSearch,
+      limit: nextLimit,
+      page: nextLimit === currentSearch.limit ? nextPage : 1,
+    })).catch((error) => {
+      const normalizedError =
+        error instanceof Error
+          ? error
+          : new Error("Students pagination update failed.");
+
+      console.error("Students pagination update failed.", normalizedError);
+    });
   }
 
   return {
@@ -136,8 +210,8 @@ export function useStudentsPageData() {
     students: hasSelectedStatuses ? studentsQuery.data?.items ?? [] : [],
     total: hasSelectedStatuses ? studentsQuery.data?.total ?? 0 : 0,
     page: hasSelectedStatuses
-      ? studentsQuery.data?.page ?? pagination.pageIndex + 1
-      : pagination.pageIndex + 1,
+      ? studentsQuery.data?.page ?? routeSearch.page
+      : routeSearch.page,
     limit: hasSelectedStatuses
       ? studentsQuery.data?.limit ?? pagination.pageSize
       : pagination.pageSize,
@@ -174,62 +248,105 @@ export function useStudentsPageData() {
     hasActiveFilters: search.length > 0 || hasStatusFilters,
     clearFilters: () => {
       setSearchInput("");
-      setSearch("");
-      setSelectedStatuses(DEFAULT_STUDENT_STATUSES);
-      setSorting([]);
-      resetToFirstPage();
-    },
-    clearStatusFilters: () => {
-      setSelectedStatuses(DEFAULT_STUDENT_STATUSES);
-      resetToFirstPage();
-    },
-    onStatusCheckedChange: (status: StudentStatus, checked: boolean) => {
-      setSelectedStatuses((previousStatuses) =>
-        setStudentStatusChecked({
-          checked,
-          selectedStatuses: previousStatuses,
-          status,
-        }),
-      );
-      resetToFirstPage();
-    },
-    onSortingChange: (updater: SortingState | ((old: SortingState) => SortingState)) => {
-      setSorting((previousSorting) => {
-        const nextSorting =
-          typeof updater === "function" ? updater(previousSorting) : updater;
+      updateSearch({
+        search: "",
+        statuses: DEFAULT_STUDENT_STATUSES,
+        sort: undefined,
+        order: undefined,
+        page: 1,
+        limit: routeSearch.limit || DEFAULT_STUDENTS_PAGE_SIZE,
+      }).catch((error) => {
+        const normalizedError =
+          error instanceof Error
+            ? error
+            : new Error("Students filter reset failed.");
 
-        resetToFirstPage();
-
-        return nextSorting;
+        console.error("Students filter reset failed.", normalizedError);
       });
     },
+    clearStatusFilters: () => {
+      updateSearch((currentSearch) => ({
+        ...currentSearch,
+        statuses: DEFAULT_STUDENT_STATUSES,
+        page: 1,
+      })).catch((error) => {
+        const normalizedError =
+          error instanceof Error
+            ? error
+            : new Error("Students status filter reset failed.");
+
+        console.error("Students status filter reset failed.", normalizedError);
+      });
+    },
+    onStatusCheckedChange: (status: StudentStatus, checked: boolean) => {
+      updateSearch((currentSearch) => ({
+        ...currentSearch,
+        statuses: setStudentStatusChecked({
+          checked,
+          selectedStatuses: currentSearch.statuses,
+          status,
+        }),
+        page: 1,
+      })).catch((error) => {
+        const normalizedError =
+          error instanceof Error
+            ? error
+            : new Error("Students status filter update failed.");
+
+        console.error("Students status filter update failed.", normalizedError);
+      });
+    },
+    onSortingChange: (updater: SortingState | ((old: SortingState) => SortingState)) => {
+      setSorting(updater);
+    },
     onPageSizeChange: (pageSize: number) => {
-      setPagination({
-        pageIndex: 0,
-        pageSize,
+      updateSearch((currentSearch) => ({
+        ...currentSearch,
+        limit: pageSize,
+        page: 1,
+      })).catch((error) => {
+        const normalizedError =
+          error instanceof Error
+            ? error
+            : new Error("Students page size update failed.");
+
+        console.error("Students page size update failed.", normalizedError);
       });
     },
     onPreviousPage: () => {
-      setPagination((currentPagination) => ({
-        ...currentPagination,
-        pageIndex: Math.max(currentPagination.pageIndex - 1, 0),
-      }));
+      updateSearch((currentSearch) => ({
+        ...currentSearch,
+        page: Math.max(currentSearch.page - 1, 1),
+      })).catch((error) => {
+        const normalizedError =
+          error instanceof Error
+            ? error
+            : new Error("Students previous page navigation failed.");
+
+        console.error(
+          "Students previous page navigation failed.",
+          normalizedError,
+        );
+      });
     },
     onNextPage: () => {
-      setPagination((currentPagination) => ({
-        ...currentPagination,
-        pageIndex:
+      updateSearch((currentSearch) => ({
+        ...currentSearch,
+        page:
           studentsQuery.data?.totalPages && studentsQuery.data.totalPages > 0
-            ? Math.min(
-                currentPagination.pageIndex + 1,
-                studentsQuery.data.totalPages - 1,
-              )
-            : currentPagination.pageIndex,
-      }));
+            ? Math.min(currentSearch.page + 1, studentsQuery.data.totalPages)
+            : currentSearch.page,
+      })).catch((error) => {
+        const normalizedError =
+          error instanceof Error
+            ? error
+            : new Error("Students next page navigation failed.");
+
+        console.error("Students next page navigation failed.", normalizedError);
+      });
     },
-    canPreviousPage: pagination.pageIndex > 0,
-    canNextPage:
-      (studentsQuery.data?.totalPages ?? 0) > pagination.pageIndex + 1,
+    canPreviousPage: routeSearch.page > 1,
+    canNextPage: (studentsQuery.data?.totalPages ?? 0) > routeSearch.page,
     isCreatingStudent: createStudentMutation.isPending,
     submitCreateStudent: async (body: CreateStudentRequest) => {
       setCreateErrorMessage(null);

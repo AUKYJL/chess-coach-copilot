@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useParams } from "react-router-dom";
 
 import { useStudentOverviewData } from "./model";
 import {
@@ -33,10 +32,14 @@ const defaultChessAccountDraft = {
   username: "",
 };
 
-export function StudentOverviewPage() {
-  const { studentId } = useParams();
-  const routeStudentId = studentId ?? "";
-  const query = useStudentOverviewData({ studentId: routeStudentId });
+type StudentOverviewPageProps = {
+  studentId: string;
+};
+
+export function StudentOverviewPage({
+  studentId,
+}: StudentOverviewPageProps) {
+  const query = useStudentOverviewData({ studentId });
   const overview = query.resources.overview.data;
   const editingAccount = useMemo(
     () =>

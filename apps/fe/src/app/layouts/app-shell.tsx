@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation } from "@tanstack/react-router";
 
 import { cn } from "@/shared/lib/cn";
 import {
@@ -34,7 +34,8 @@ export function AppShell() {
   const coachInitials = getCoachInitials(displayName);
   const showLogoutButton = status === SESSION_STATUS.AUTHENTICATED;
   const isStudentsRoute =
-    location.pathname === "/students" || location.pathname.startsWith("/students/");
+    location.pathname === "/students" ||
+    location.pathname.startsWith("/students/");
 
   return (
     <div className="bg-background min-h-dvh">

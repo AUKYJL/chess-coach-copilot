@@ -1,20 +1,20 @@
 export const AUTHENTICATED_LANDING_PATH = "/students";
 
-export type AuthRedirectState = {
-  from?: {
-    pathname: string;
-    search?: string;
-    hash?: string;
-  };
+export type AuthRedirectSearch = {
+  redirect?: string;
 };
 
 export function getAuthRedirectPath(
-  state: AuthRedirectState | null | undefined,
+  redirectPath: string | null | undefined,
   fallbackPath = AUTHENTICATED_LANDING_PATH,
 ): string {
-  const from = state?.from;
+  if (
+    typeof redirectPath === "string" &&
+    redirectPath.startsWith("/") &&
+    !redirectPath.startsWith("//")
+  ) {
+    return redirectPath;
+  }
 
-  return from
-    ? `${from.pathname}${from.search ?? ""}${from.hash ?? ""}`
-    : fallbackPath;
+  return fallbackPath;
 }

@@ -10,13 +10,15 @@ import {
 } from "@/shared/ui";
 import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
+type AuthCheckingSplashProps = {
+  error: Error | null;
+  onRetry: () => void;
+};
+
 export function AuthCheckingSplash({
   error,
   onRetry,
-}: {
-  error: Error | null;
-  onRetry: () => void;
-}) {
+}: AuthCheckingSplashProps) {
   return (
     <div className="bg-background min-h-dvh">
       <Container className="flex min-h-dvh items-start justify-center px-4 py-8 sm:px-6 sm:py-10 md:items-center md:py-14">

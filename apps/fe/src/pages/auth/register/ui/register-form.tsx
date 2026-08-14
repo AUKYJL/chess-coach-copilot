@@ -1,9 +1,8 @@
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import type { Location } from "react-router-dom";
-import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   REQUEST_FAILURE_KIND,
@@ -11,7 +10,7 @@ import {
   getRequestFailureKind,
 } from "@/shared/api";
 import {
-  type AuthRedirectState,
+  AUTHENTICATED_LANDING_PATH,
   getAuthRedirectPath,
 } from "@/shared/lib/auth-redirect";
 import {
@@ -51,11 +50,13 @@ function getRegisterErrorMessage(status?: number, error?: unknown): string {
   return exhaustiveCheck;
 }
 
-export function RegisterForm() {
-  const location: Location<AuthRedirectState | null | undefined> =
-    useLocation();
-  const redirectState = location.state;
+type RegisterFormProps = {
+  redirectPath?: string;
+};
+
+export function RegisterForm({ redirectPath }: RegisterFormProps) {
   const navigate = useNavigate();
+  const router = useRouter();
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<RegisterFormValues>({
@@ -94,10 +95,19 @@ export function RegisterForm() {
               return;
             }
 
-            const redirectPath = getAuthRedirectPath(redirectState);
-
             applyAuthenticatedSession(result.data);
-            await navigate(redirectPath, { replace: true });
+            const nextPath = getAuthRedirectPath(redirectPath);
+
+            if (nextPath === AUTHENTICATED_LANDING_PATH) {
+              await navigate({
+                to: AUTHENTICATED_LANDING_PATH,
+                replace: true,
+              });
+
+              return;
+            }
+
+            router.history.push(nextPath);
           } catch (error) {
             setSubmissionError(getRegisterErrorMessage(undefined, error));
           } finally {
