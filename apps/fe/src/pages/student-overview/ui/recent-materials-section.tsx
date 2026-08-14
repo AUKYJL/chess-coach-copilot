@@ -36,7 +36,7 @@ export function RecentMaterialsSection({
           materials.map((material) => (
             <div
               key={material.id}
-              className="bg-surface-card rounded-[22px] px-4 py-4"
+              className="border-border bg-surface-card rounded-[22px] border px-4 py-4"
             >
               <span className="bg-surface text-muted-foreground inline-flex rounded-full px-2.5 py-1 text-xs font-semibold">
                 {material.kind}
@@ -54,7 +54,7 @@ export function RecentMaterialsSection({
             </div>
           ))
         ) : (
-          <div className="bg-surface-card rounded-[22px] px-4 py-4 md:col-span-2 xl:col-span-3">
+          <div className="border-border bg-surface-card rounded-[22px] border px-4 py-4 md:col-span-2 xl:col-span-3">
             <p className="text-foreground text-sm font-semibold">
               No recent materials yet
             </p>

@@ -19,7 +19,9 @@ export function SectionSkeletonCard({
         {Array.from({ length: lines }, (_, index) => (
           <Skeleton
             key={index}
-            className={tall && index === 0 ? "h-40 w-full rounded-[24px]" : "h-4 w-full"}
+            className={
+              tall && index === 0 ? "h-40 w-full rounded-[24px]" : "h-4 w-full"
+            }
           />
         ))}
       </CardContent>
@@ -49,7 +51,7 @@ export function StudentOverviewSkeleton() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <Card key={index} className="bg-surface-card border-0 shadow-none">
+          <Card key={index} className="bg-surface-card shadow-none">
             <CardContent className="space-y-3 px-6 py-6">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-10 w-28" />
@@ -61,7 +63,11 @@ export function StudentOverviewSkeleton() {
 
       <section className="grid gap-4 md:gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(360px,0.96fr)] xl:items-start">
         <div className="space-y-4 md:space-y-5">
-          <SectionSkeletonCard title="Performance trend loading" lines={5} tall />
+          <SectionSkeletonCard
+            title="Performance trend loading"
+            lines={5}
+            tall
+          />
           <SectionSkeletonCard title="Progress insight loading" lines={4} />
           <div className="grid gap-4 md:gap-5 lg:grid-cols-2">
             <SectionSkeletonCard title="Weakness profile loading" lines={6} />

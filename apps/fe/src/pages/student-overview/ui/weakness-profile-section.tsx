@@ -104,7 +104,7 @@ export function WeaknessProfileSection({
         </div>
 
         {profile.sampleInsight ? (
-          <div className="bg-surface-card rounded-[20px] px-4 py-4">
+          <div className="border-border bg-surface-card rounded-[20px] border px-4 py-4">
             <p className="text-foreground text-sm leading-6">
               {profile.sampleInsight}
             </p>

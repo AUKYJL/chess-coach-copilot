@@ -8,6 +8,7 @@ import {
   fetchClient,
   getRequestFailureKind,
 } from "@/shared/api";
+import { cn } from "@/shared/lib/cn";
 import { InlineAlert } from "@/shared/ui";
 import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
@@ -31,17 +32,27 @@ function getLogoutErrorMessage(status?: number, error?: unknown): string {
   return exhaustiveCheck;
 }
 
-export function LogoutButton() {
+type LogoutButtonProps = {
+  className?: string;
+  buttonClassName?: string;
+  fullWidth?: boolean;
+};
+
+export function LogoutButton({
+  className,
+  buttonClassName,
+  fullWidth = true,
+}: LogoutButtonProps = {}) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   return (
-    <div className="space-y-3">
+    <div className={cn("space-y-3", className)}>
       {errorMessage ? <InlineAlert>{errorMessage}</InlineAlert> : null}
       <Button
-        className="w-full"
+        className={cn(fullWidth ? "w-full" : null, buttonClassName)}
         disabled={isSubmitting}
         onClick={async () => {
           setErrorMessage(null);

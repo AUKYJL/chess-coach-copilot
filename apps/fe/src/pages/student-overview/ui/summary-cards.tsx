@@ -3,7 +3,7 @@ import { TrendingUp } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { Card, CardContent, CardHeader } from "@/shared/ui";
 
-import { toneChipClasses, type SummaryCardViewModel } from "../model";
+import { type SummaryCardViewModel, toneChipClasses } from "../model";
 
 type SummaryCardsProps = {
   cards: SummaryCardViewModel[];
@@ -19,7 +19,7 @@ export function SummaryCards({ cards }: SummaryCardsProps) {
         <Card
           key={card.id}
           data-testid="summary-card"
-          className="bg-surface-card border-0 shadow-none"
+          className="bg-surface-card shadow-none"
         >
           <CardHeader className="gap-4 pb-3">
             <div className="flex items-center justify-between gap-3">

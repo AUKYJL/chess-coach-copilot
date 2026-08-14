@@ -59,7 +59,7 @@ export function RecentGamesSection({ games }: RecentGamesSectionProps) {
             </div>
           ))
         ) : (
-          <div className="bg-surface-card rounded-[22px] px-4 py-4">
+          <div className="border-border bg-surface-card rounded-[22px] border px-4 py-4">
             <p className="text-foreground text-sm font-semibold">
               No recent games yet
             </p>

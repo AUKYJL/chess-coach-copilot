@@ -1,10 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
 
-import {
-  SESSION_STATUS,
-  useSessionStore,
-} from "@/entities/session";
-import { LogoutButton } from "@/features/logout-button";
+import { cn } from "@/shared/lib/cn";
 import {
   Container,
   TYPOGRAPHY_COLOR,
@@ -13,12 +9,29 @@ import {
 } from "@/shared/ui";
 
 import { WorkspaceLinks } from "./workspace-links";
+import { SESSION_STATUS, useSessionStore } from "@/entities/session";
+import { LogoutButton } from "@/features/logout-button";
+
+function getCoachInitials(displayName: string): string {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return "C";
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
 export function AppShell() {
   const location = useLocation();
   const coach = useSessionStore((state) => state.coach);
   const status = useSessionStore((state) => state.status);
   const displayName = coach?.displayName ?? "Coach";
+  const coachSecondaryLabel = coach?.email ?? "Coach account";
+  const coachInitials = getCoachInitials(displayName);
   const showLogoutButton = status === SESSION_STATUS.AUTHENTICATED;
   const isStudentOverviewRoute = location.pathname.startsWith("/students/");
 
@@ -37,7 +50,9 @@ export function AppShell() {
             </div>
 
             <div className="border-divider bg-surface min-w-0 rounded-[22px] border px-3 py-2 text-right">
-              <p className="text-foreground text-sm font-semibold">{displayName}</p>
+              <p className="text-foreground text-sm font-semibold">
+                {displayName}
+              </p>
               <Typography
                 as="p"
                 color={TYPOGRAPHY_COLOR.SECONDARY}
@@ -75,20 +90,37 @@ export function AppShell() {
             <WorkspaceLinks />
           </div>
 
-          <div className="border-divider bg-surface rounded-[28px] border px-4 py-4">
-            <p className="text-foreground text-sm font-semibold">{displayName}</p>
-            <Typography
-              as="p"
-              className="mt-1"
-              color={TYPOGRAPHY_COLOR.SECONDARY}
-              variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
-            >
-              Coach account
-            </Typography>
-            {showLogoutButton ? (
-              <div className="mt-3">
-                <LogoutButton />
+          <div className="border-divider flex items-center justify-between gap-3 border-t pt-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="relative shrink-0">
+                <div className="bg-avatar text-avatar-foreground flex size-11 items-center justify-center rounded-full text-sm font-semibold">
+                  {coachInitials}
+                </div>
+                <span className="bg-success ring-surface-sidebar absolute right-0 bottom-0 size-3 rounded-full ring-2" />
               </div>
+              <div className="min-w-0">
+                <p className="text-foreground truncate text-sm font-semibold">
+                  {displayName}
+                </p>
+                <Typography
+                  as="p"
+                  className="truncate"
+                  color={TYPOGRAPHY_COLOR.SECONDARY}
+                  variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
+                >
+                  {coachSecondaryLabel}
+                </Typography>
+              </div>
+            </div>
+            {showLogoutButton ? (
+              <LogoutButton
+                buttonClassName={cn(
+                  "h-auto shrink-0 rounded-full px-0 py-0 text-xs font-semibold",
+                  "hover:bg-transparent hover:text-foreground",
+                )}
+                className="shrink-0"
+                fullWidth={false}
+              />
             ) : null}
           </div>
         </div>
