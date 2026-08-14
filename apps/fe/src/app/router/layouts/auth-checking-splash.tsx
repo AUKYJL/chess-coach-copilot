@@ -1,7 +1,6 @@
 import { LoaderCircle } from "lucide-react";
 
 import {
-  Button,
   Container,
   InlineAlert,
   TYPOGRAPHY_AS,
@@ -9,6 +8,7 @@ import {
   TYPOGRAPHY_VARIANT,
   Typography,
 } from "@/shared/ui";
+import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
 export function AuthCheckingSplash({
   error,
@@ -36,7 +36,9 @@ export function AuthCheckingSplash({
                   as={TYPOGRAPHY_AS.H1}
                   variant={TYPOGRAPHY_VARIANT.H4}
                 >
-                  {error ? "Unable to restore your session" : "Checking your session..."}
+                  {error
+                    ? "Unable to restore your session"
+                    : "Checking your session..."}
                 </Typography>
                 <Typography
                   as={TYPOGRAPHY_AS.P}
@@ -77,9 +79,9 @@ export function AuthCheckingSplash({
             <Button
               className="w-full"
               onClick={onRetry}
-              size="lg"
+              size={BUTTON_SIZE.LG}
               type="button"
-              variant={error ? "default" : "outline"}
+              variant={error ? BUTTON_VARIANT.DEFAULT : BUTTON_VARIANT.OUTLINE}
             >
               Retry session check
             </Button>

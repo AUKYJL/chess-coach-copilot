@@ -29,4 +29,4 @@ async function exportOpenApi(): Promise<void> {
   }
 }
 
-void exportOpenApi();
+await exportOpenApi();

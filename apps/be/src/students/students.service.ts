@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
+  AnalysisJobStatus,
   MomentSeverity,
   Prisma,
   WeaknessTag,
@@ -21,6 +22,13 @@ import { UpdateStudentDto } from './dto/update-student.dto.js';
 
 const RECENT_ITEMS_LIMIT = 5;
 const ANALYSIS_PROFILE_LIMIT = 10;
+const PERFORMANCE_TREND_RANGE_DAYS = 90;
+const PERFORMANCE_TREND_PRIMARY_METRIC = 'Severe mistakes per game';
+const PERFORMANCE_TREND_RANGE = '90D';
+const severeMistakeSeverities = new Set<MomentSeverity>([
+  MomentSeverity.BLUNDER,
+  MomentSeverity.MATE,
+]);
 
 @Injectable()
 export class StudentsService {
@@ -352,6 +360,64 @@ export class StudentsService {
     };
   }
 
+  async getPerformanceTrend(studentId: string, coachAccountId: string) {
+    await this.getOne(studentId, coachAccountId);
+
+    const startDate = this.getPerformanceTrendStartDate();
+    const [analyses, analysisJobs] = await Promise.all([
+      this.prisma.gameAnalysis.findMany({
+        where: {
+          studentId,
+          coachAccountId,
+        },
+        select: {
+          analysisJobId: true,
+          createdAt: true,
+          mistakes: {
+            select: {
+              severity: true,
+            },
+          },
+        },
+      }),
+      this.prisma.analysisJob.findMany({
+        where: {
+          studentId,
+          coachAccountId,
+        },
+        select: {
+          id: true,
+          status: true,
+        },
+      }),
+    ]);
+    const completedAnalysisJobIds = new Set(
+      analysisJobs
+        .filter((job) => job.status === AnalysisJobStatus.COMPLETED)
+        .map((job) => job.id),
+    );
+    const points = analyses
+      .filter(
+        (analysis) =>
+          analysis.createdAt >= startDate &&
+          completedAnalysisJobIds.has(analysis.analysisJobId),
+      )
+      .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
+      .map((analysis) => ({
+      date: analysis.createdAt.toISOString().slice(0, 10),
+      value: analysis.mistakes.filter((mistake) =>
+        severeMistakeSeverities.has(mistake.severity),
+      ).length,
+      }));
+
+    return {
+      direction: this.getPerformanceTrendDirection(points),
+      primaryMetric: PERFORMANCE_TREND_PRIMARY_METRIC,
+      range: PERFORMANCE_TREND_RANGE,
+      points,
+    };
+  }
+
   async update(
     studentId: string,
     coachAccountId: string,
@@ -395,5 +461,55 @@ export class StudentsService {
       default:
         return { archivedAt: null };
     }
+  }
+
+  private getPerformanceTrendStartDate() {
+    const now = new Date();
+    const startDate = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+    );
+
+    startDate.setUTCDate(
+      startDate.getUTCDate() - (PERFORMANCE_TREND_RANGE_DAYS - 1),
+    );
+
+    return startDate;
+  }
+
+  private getPerformanceTrendDirection(
+    points: Array<{
+      value: number;
+    }>,
+  ) {
+    if (points.length < 2) {
+      return 'UNKNOWN' as const;
+    }
+
+    const midpoint = Math.floor(points.length / 2);
+    const earliestHalf = points.slice(0, midpoint);
+    const latestHalf = points.slice(midpoint);
+
+    const earliestAverage = this.getAverageValue(earliestHalf);
+    const latestAverage = this.getAverageValue(latestHalf);
+
+    if (latestAverage < earliestAverage) {
+      return 'IMPROVING' as const;
+    }
+
+    if (latestAverage > earliestAverage) {
+      return 'DECLINING' as const;
+    }
+
+    return 'STABLE' as const;
+  }
+
+  private getAverageValue(
+    points: Array<{
+      value: number;
+    }>,
+  ) {
+    return (
+      points.reduce((total, point) => total + point.value, 0) / points.length
+    );
   }
 }

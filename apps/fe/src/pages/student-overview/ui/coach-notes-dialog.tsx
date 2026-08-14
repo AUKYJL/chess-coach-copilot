@@ -3,10 +3,7 @@ import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import type { CoachNotesDraft } from "../model";
-
 import {
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -21,6 +18,9 @@ import {
   FormMessage,
   Textarea,
 } from "@/shared/ui";
+import { BUTTON_VARIANT, Button } from "@/shared/ui/button";
+
+import type { CoachNotesDraft } from "../model";
 
 const coachNotesSchema = z.object({
   notes: z.string().trim().max(1000, "Keep notes under 1000 characters."),
@@ -30,7 +30,7 @@ type CoachNotesDialogProps = {
   open: boolean;
   draft: CoachNotesDraft;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (draft: CoachNotesDraft) => void;
+  onSubmit: (draft: CoachNotesDraft) => Promise<void>;
 };
 
 export function CoachNotesDialog({
@@ -64,15 +64,15 @@ export function CoachNotesDialog({
         <DialogHeader>
           <DialogTitle>Coach notes</DialogTitle>
           <DialogDescription>
-            These notes stay local to the prototype and update the right-rail context.
+            Save coach notes for the student context rail.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form
             className="space-y-4"
-            onSubmit={form.handleSubmit((values) =>
-              onSubmit({ notes: values.notes.trim() }),
+            onSubmit={form.handleSubmit(
+              async (values) => await onSubmit({ notes: values.notes.trim() }),
             )}
           >
             <FormField
@@ -92,12 +92,12 @@ export function CoachNotesDialog({
             <DialogFooter>
               <Button
                 type="button"
-                variant="outline"
+                variant={BUTTON_VARIANT.OUTLINE}
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit">Save locally</Button>
+              <Button type="submit">Save notes</Button>
             </DialogFooter>
           </form>
         </Form>

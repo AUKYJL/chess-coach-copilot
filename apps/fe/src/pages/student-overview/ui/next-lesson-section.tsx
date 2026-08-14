@@ -1,7 +1,6 @@
 import { ArrowRight, GraduationCap } from "lucide-react";
 
 import {
-  Button,
   Card,
   CardContent,
   CardHeader,
@@ -10,6 +9,7 @@ import {
   TYPOGRAPHY_VARIANT,
   Typography,
 } from "@/shared/ui";
+import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
 import type { NextLessonViewModel } from "../model";
 
@@ -59,7 +59,7 @@ export function NextLessonSection({ lesson }: NextLessonSectionProps) {
           >
             {lesson.supportingText}
           </Typography>
-          <Button variant="ghost" size="sm" disabled>
+          <Button variant={BUTTON_VARIANT.GHOST} size={BUTTON_SIZE.SM} disabled>
             View analysis
             <ArrowRight className="size-4" />
           </Button>

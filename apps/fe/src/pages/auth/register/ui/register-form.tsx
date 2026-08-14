@@ -5,35 +5,33 @@ import { useForm } from "react-hook-form";
 import type { Location } from "react-router-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { applyAuthenticatedSession } from "@/entities/session";
 import {
+  REQUEST_FAILURE_KIND,
   fetchClient,
   getRequestFailureKind,
-  REQUEST_FAILURE_KIND,
 } from "@/shared/api";
 import {
-  getAuthRedirectPath,
   type AuthRedirectState,
+  getAuthRedirectPath,
 } from "@/shared/lib/auth-redirect";
 import {
-  Button,
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  Input,
   InlineAlert,
+  Input,
   PasswordField,
 } from "@/shared/ui";
+import { BUTTON_SIZE, Button } from "@/shared/ui/button";
 
-import { registerSchema, type RegisterFormValues } from "../model";
+import { type RegisterFormValues, registerSchema } from "../model";
 
-function getRegisterErrorMessage(
-  status?: number,
-  error?: unknown,
-): string {
+import { applyAuthenticatedSession } from "@/entities/session";
+
+function getRegisterErrorMessage(status?: number, error?: unknown): string {
   const failureKind = getRequestFailureKind({ error, status });
 
   switch (failureKind) {
@@ -54,7 +52,8 @@ function getRegisterErrorMessage(
 }
 
 export function RegisterForm() {
-  const location: Location<AuthRedirectState | null | undefined> = useLocation();
+  const location: Location<AuthRedirectState | null | undefined> =
+    useLocation();
   const redirectState = location.state;
   const navigate = useNavigate();
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -164,19 +163,20 @@ export function RegisterForm() {
           )}
         />
 
-        {submissionError ? (
-          <InlineAlert>{submissionError}</InlineAlert>
-        ) : null}
+        {submissionError ? <InlineAlert>{submissionError}</InlineAlert> : null}
 
         <Button
           className="w-full"
           disabled={isSubmitting}
-          size="lg"
+          size={BUTTON_SIZE.LG}
           type="submit"
         >
           {isSubmitting ? (
             <>
-              <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+              <LoaderCircle
+                aria-hidden="true"
+                className="size-4 animate-spin"
+              />
               Creating account…
             </>
           ) : (

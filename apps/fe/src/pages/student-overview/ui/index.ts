@@ -9,7 +9,6 @@ export { PerformanceTrendSection } from "./performance-trend-section";
 export { ProgressInsightSection } from "./progress-insight-section";
 export { RecentGamesSection } from "./recent-games-section";
 export { RecentMaterialsSection } from "./recent-materials-section";
-export { ScenarioSwitcher } from "./scenario-switcher";
 export { SectionErrorState } from "./section-error-state";
 export { StudentContextPanel } from "./student-context-panel";
 export { StudentHeader } from "./student-header";

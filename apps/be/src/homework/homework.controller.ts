@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -29,9 +28,12 @@ export class HomeworkController {
   @Post('analysis/:analysisId/homework/generate')
   requestGeneration(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('analysisId', new ParseUUIDPipe()) analysisId: string,
+    @Param('analysisId') analysisId: string,
   ) {
-    return this.homeworkService.requestGeneration(analysisId, coach.coachAccountId);
+    return this.homeworkService.requestGeneration(
+      analysisId,
+      coach.coachAccountId,
+    );
   }
 
   @Get('homework')
@@ -51,7 +53,7 @@ export class HomeworkController {
   @Get('homework/:homeworkId')
   getOne(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('homeworkId', new ParseUUIDPipe()) homeworkId: string,
+    @Param('homeworkId') homeworkId: string,
   ) {
     return this.homeworkService.getOne(homeworkId, coach.coachAccountId);
   }
@@ -59,7 +61,7 @@ export class HomeworkController {
   @Patch('homework/:homeworkId')
   update(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('homeworkId', new ParseUUIDPipe()) homeworkId: string,
+    @Param('homeworkId') homeworkId: string,
     @Body() dto: HomeworkUpdateDto,
   ) {
     return this.homeworkService.update(homeworkId, coach.coachAccountId, dto);
@@ -69,7 +71,7 @@ export class HomeworkController {
   @Delete('homework/:homeworkId')
   async remove(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('homeworkId', new ParseUUIDPipe()) homeworkId: string,
+    @Param('homeworkId') homeworkId: string,
   ) {
     await this.homeworkService.remove(homeworkId, coach.coachAccountId);
   }

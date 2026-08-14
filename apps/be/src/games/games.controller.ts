@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard.js';
 import { CurrentCoach } from '../shared/decorators/current-coach.decorator.js';
@@ -25,7 +18,7 @@ export class GamesController {
   @Get('students/:studentId/games')
   async listStudentGames(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('studentId') studentId: string,
     @Query() query: ListStudentGamesQueryDto,
   ) {
     return this.gamesService.listStudentGames({
@@ -40,7 +33,7 @@ export class GamesController {
   @Get('games/:gameId')
   getOne(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('gameId', new ParseUUIDPipe()) gameId: string,
+    @Param('gameId') gameId: string,
   ) {
     return this.gamesService.getOwnedGame(gameId, coach.coachAccountId);
   }
@@ -49,7 +42,7 @@ export class GamesController {
   @Get('games/:gameId/pgn')
   async getPgn(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('gameId', new ParseUUIDPipe()) gameId: string,
+    @Param('gameId') gameId: string,
   ) {
     const game = await this.gamesService.getOwnedGamePgn(
       gameId,

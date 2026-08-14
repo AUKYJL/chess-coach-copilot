@@ -71,6 +71,13 @@ describe('Swagger docs (e2e)', () => {
     expect(
       getOperation(document, '/api/students/{studentId}/overview', 'get'),
     ).toBeDefined();
+    expect(
+      getOperation(
+        document,
+        '/api/students/{studentId}/performance-trend',
+        'get',
+      ),
+    ).toBeDefined();
     expect(getOperation(document, '/api/auth/register', 'post')).toMatchObject({
       responses: {
         '201': {

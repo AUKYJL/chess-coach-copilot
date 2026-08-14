@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   UseGuards,
@@ -49,7 +48,7 @@ export class ExternalAccountsController {
   @Get()
   async list(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('studentId') studentId: string,
   ) {
     const items = await this.externalAccountsService.list(
       studentId,
@@ -73,7 +72,7 @@ export class ExternalAccountsController {
   @Post()
   create(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('studentId') studentId: string,
     @Body() dto: CreateExternalAccountDto,
   ) {
     return this.externalAccountsService.create(
@@ -91,8 +90,8 @@ export class ExternalAccountsController {
   @Patch(':externalAccountId')
   update(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
-    @Param('externalAccountId', new ParseUUIDPipe()) externalAccountId: string,
+    @Param('studentId') studentId: string,
+    @Param('externalAccountId') externalAccountId: string,
     @Body() dto: UpdateExternalAccountDto,
   ) {
     return this.externalAccountsService.update(
@@ -112,8 +111,8 @@ export class ExternalAccountsController {
   @Delete(':externalAccountId')
   async remove(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
-    @Param('externalAccountId', new ParseUUIDPipe()) externalAccountId: string,
+    @Param('studentId') studentId: string,
+    @Param('externalAccountId') externalAccountId: string,
   ) {
     await this.externalAccountsService.remove(
       studentId,

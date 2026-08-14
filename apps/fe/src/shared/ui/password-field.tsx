@@ -3,7 +3,7 @@ import * as React from "react";
 
 import { cn } from "@/shared/lib/cn";
 
-import { Button } from "./button";
+import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "./button";
 import { Input } from "./input";
 
 const PasswordField = React.forwardRef<
@@ -24,8 +24,8 @@ const PasswordField = React.forwardRef<
 
       <Button
         type="button"
-        variant="ghost"
-        size="icon"
+        variant={BUTTON_VARIANT.GHOST}
+        size={BUTTON_SIZE.ICON}
         className="absolute top-1 right-1 size-9 rounded-xl"
         aria-label={visible ? "Hide password" : "Show password"}
         aria-pressed={visible}

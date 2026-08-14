@@ -1,13 +1,10 @@
 import type {
-  PerformanceTrendResponse,
+  AnalysisDetailsResponse,
   StudentAnalysisProfileResponse,
-  StudentLessonPreviewResponse,
   StudentOverviewResponse,
+  StudentPerformanceTrendResponse,
   StudentProgressResponse,
-} from "@/shared/api/student";
-
-import type { OverviewScenarioLocalState } from "./dialog-state";
-import type { StudentOverviewScenarioId } from "./scenario";
+} from "./api-types";
 
 export type ResourceStatus = "ready" | "loading" | "error";
 
@@ -18,19 +15,12 @@ export type SectionResource<T> = {
   retriable: boolean;
 };
 
-export type OverviewScenarioResources = {
+export type StudentOverviewResources = {
   overview: SectionResource<StudentOverviewResponse>;
   analysisProfile: SectionResource<StudentAnalysisProfileResponse>;
-  lessonPreview: SectionResource<StudentLessonPreviewResponse>;
-  performanceTrend: SectionResource<PerformanceTrendResponse>;
-  progressDetails?: SectionResource<StudentProgressResponse>;
-};
-
-export type OverviewScenario = {
-  id: StudentOverviewScenarioId;
-  label: string;
-  resources: OverviewScenarioResources;
-  localState?: OverviewScenarioLocalState;
+  lessonPreview: SectionResource<AnalysisDetailsResponse>;
+  performanceTrend: SectionResource<StudentPerformanceTrendResponse>;
+  progressDetails: SectionResource<StudentProgressResponse>;
 };
 
 export type StudentOverviewQueryStatus = "ready" | "loading" | "error";

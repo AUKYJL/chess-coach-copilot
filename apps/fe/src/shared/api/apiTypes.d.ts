@@ -148,6 +148,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/students/{studentId}/performance-trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StudentsController_getPerformanceTrend"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/students/{studentId}/archive": {
         parameters: {
             query?: never;
@@ -524,6 +540,162 @@ export interface components {
             /** @example true */
             archived: boolean;
         };
+        StudentOverviewStudentResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            coachAccountId: string;
+            displayName: string;
+            birthYear: number | null;
+            rating: number | null;
+            notes: string | null;
+            /** Format: date-time */
+            archivedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ExternalAccountResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            studentId: string;
+            /** @enum {string} */
+            platform: "LICHESS" | "CHESS_COM";
+            username: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        StudentOverviewStatsResponse: {
+            gameCount: number;
+            analysisCount: number;
+            reportCount: number;
+            homeworkCount: number;
+        };
+        LatestProgressReferenceResponse: {
+            /** Format: uuid */
+            id: string;
+            analysisCount: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        RecentGameResponse: {
+            /** Format: uuid */
+            id: string;
+            sourceLabel: string | null;
+            /** @enum {string} */
+            studentColor: "WHITE" | "BLACK";
+            event: string | null;
+            site: string | null;
+            whitePlayerName: string | null;
+            blackPlayerName: string | null;
+            openingHeader: string | null;
+            ecoCode: string | null;
+            rawResult: string | null;
+            /** @enum {string} */
+            derivedResult: "WIN" | "LOSS" | "DRAW" | "UNKNOWN";
+            plyCount: number | null;
+            /** Format: date-time */
+            importedAt: string;
+            /** @enum {string|null} */
+            latestAnalysisJobStatus: "PENDING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED" | null;
+            /** Format: uuid */
+            latestAnalysisJobId: string | null;
+            /** Format: uuid */
+            latestAnalysisId: string | null;
+        };
+        RecentAnalysisResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            analysisJobId: string;
+            /** Format: uuid */
+            gameId: string;
+            /** @enum {string|null} */
+            mainWeaknessTag: "MISSED_FORK" | "MISSED_PIN" | "MISSED_DOUBLE_ATTACK" | "MISSED_DISCOVERED_ATTACK" | "MISSED_MATE" | "ALLOWED_MATE" | "HANGING_PIECE" | "MISSED_CAPTURE" | "BAD_CAPTURE" | "MISSED_OPPONENT_THREAT" | "OPENED_LINE" | "UNKNOWN_TACTICAL_ERROR" | "KING_SAFETY" | "DELAYED_CASTLING" | "POOR_DEVELOPMENT" | "EARLY_QUEEN" | "BAD_TRADE" | "POOR_CONVERSION" | "OPENING_STRATEGY" | "PAWN_STRUCTURE" | "ENDGAME_TECHNIQUE" | "UNKNOWN_STRATEGIC_ERROR" | "TIME_MANAGEMENT" | "CALCULATION_DEPTH" | "TUNNEL_VISION" | "MATERIAL_GREED" | "LOW_BOARD_AWARENESS" | "INSUFFICIENT_ANNOTATION_DATA" | "REDUCED_CONFIDENCE" | null;
+            recommendedLessonTitle: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        RecentReportResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            analysisId: string;
+            title: string;
+            /** @enum {string} */
+            audience: "COACH" | "PARENT";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        RecentHomeworkResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            analysisId: string;
+            title: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        StudentOverviewResponse: {
+            student: components["schemas"]["StudentOverviewStudentResponse"];
+            externalAccounts: components["schemas"]["ExternalAccountResponse"][];
+            stats: components["schemas"]["StudentOverviewStatsResponse"];
+            latestProgress: components["schemas"]["LatestProgressReferenceResponse"] | null;
+            recentGames: components["schemas"]["RecentGameResponse"][];
+            recentAnalyses: components["schemas"]["RecentAnalysisResponse"][];
+            recentReports: components["schemas"]["RecentReportResponse"][];
+            recentHomework: components["schemas"]["RecentHomeworkResponse"][];
+        };
+        WeaknessTagCountResponse: {
+            /** @enum {string} */
+            tag: "MISSED_FORK" | "MISSED_PIN" | "MISSED_DOUBLE_ATTACK" | "MISSED_DISCOVERED_ATTACK" | "MISSED_MATE" | "ALLOWED_MATE" | "HANGING_PIECE" | "MISSED_CAPTURE" | "BAD_CAPTURE" | "MISSED_OPPONENT_THREAT" | "OPENED_LINE" | "UNKNOWN_TACTICAL_ERROR" | "KING_SAFETY" | "DELAYED_CASTLING" | "POOR_DEVELOPMENT" | "EARLY_QUEEN" | "BAD_TRADE" | "POOR_CONVERSION" | "OPENING_STRATEGY" | "PAWN_STRUCTURE" | "ENDGAME_TECHNIQUE" | "UNKNOWN_STRATEGIC_ERROR" | "TIME_MANAGEMENT" | "CALCULATION_DEPTH" | "TUNNEL_VISION" | "MATERIAL_GREED" | "LOW_BOARD_AWARENESS" | "INSUFFICIENT_ANNOTATION_DATA" | "REDUCED_CONFIDENCE";
+            count: number;
+        };
+        SeverityCountResponse: {
+            /** @enum {string} */
+            severity: "INACCURACY" | "MISTAKE" | "BLUNDER" | "MATE" | "UNKNOWN";
+            count: number;
+        };
+        SampleMistakeResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            analysisId: string;
+            /** Format: uuid */
+            gameId: string;
+            /** @enum {string} */
+            severity: "INACCURACY" | "MISTAKE" | "BLUNDER" | "MATE" | "UNKNOWN";
+            category: string;
+            explanation: string;
+            suggestedFix: string | null;
+        };
+        StudentAnalysisProfileResponse: {
+            analysisCountUsed: number;
+            /** @enum {string|null} */
+            mainWeaknessTag: "MISSED_FORK" | "MISSED_PIN" | "MISSED_DOUBLE_ATTACK" | "MISSED_DISCOVERED_ATTACK" | "MISSED_MATE" | "ALLOWED_MATE" | "HANGING_PIECE" | "MISSED_CAPTURE" | "BAD_CAPTURE" | "MISSED_OPPONENT_THREAT" | "OPENED_LINE" | "UNKNOWN_TACTICAL_ERROR" | "KING_SAFETY" | "DELAYED_CASTLING" | "POOR_DEVELOPMENT" | "EARLY_QUEEN" | "BAD_TRADE" | "POOR_CONVERSION" | "OPENING_STRATEGY" | "PAWN_STRUCTURE" | "ENDGAME_TECHNIQUE" | "UNKNOWN_STRATEGIC_ERROR" | "TIME_MANAGEMENT" | "CALCULATION_DEPTH" | "TUNNEL_VISION" | "MATERIAL_GREED" | "LOW_BOARD_AWARENESS" | "INSUFFICIENT_ANNOTATION_DATA" | "REDUCED_CONFIDENCE" | null;
+            secondaryWeaknessTags: ("MISSED_FORK" | "MISSED_PIN" | "MISSED_DOUBLE_ATTACK" | "MISSED_DISCOVERED_ATTACK" | "MISSED_MATE" | "ALLOWED_MATE" | "HANGING_PIECE" | "MISSED_CAPTURE" | "BAD_CAPTURE" | "MISSED_OPPONENT_THREAT" | "OPENED_LINE" | "UNKNOWN_TACTICAL_ERROR" | "KING_SAFETY" | "DELAYED_CASTLING" | "POOR_DEVELOPMENT" | "EARLY_QUEEN" | "BAD_TRADE" | "POOR_CONVERSION" | "OPENING_STRATEGY" | "PAWN_STRUCTURE" | "ENDGAME_TECHNIQUE" | "UNKNOWN_STRATEGIC_ERROR" | "TIME_MANAGEMENT" | "CALCULATION_DEPTH" | "TUNNEL_VISION" | "MATERIAL_GREED" | "LOW_BOARD_AWARENESS" | "INSUFFICIENT_ANNOTATION_DATA" | "REDUCED_CONFIDENCE")[];
+            tagCounts: components["schemas"]["WeaknessTagCountResponse"][];
+            severityCounts: components["schemas"]["SeverityCountResponse"][];
+            sampleMistakes: components["schemas"]["SampleMistakeResponse"][];
+            recommendedLessonTitle: string | null;
+        };
+        PerformanceTrendPointResponse: {
+            /** @example 2026-08-13 */
+            date: string;
+            value: number;
+        };
+        StudentPerformanceTrendResponse: {
+            /** @enum {string} */
+            direction: "IMPROVING" | "STABLE" | "DECLINING" | "UNKNOWN";
+            primaryMetric: string;
+            /** @enum {string} */
+            range: "90D";
+            points: components["schemas"]["PerformanceTrendPointResponse"][];
+        };
         CreateExternalAccountDto: {
             /**
              * @example LICHESS
@@ -541,6 +713,97 @@ export interface components {
             platform: "LICHESS" | "CHESS_COM";
             /** @example maksim_sokolov_2012 */
             username: string;
+        };
+        AnalysisCriticalMomentResponse: {
+            /** Format: uuid */
+            id: string;
+            analysisId: string;
+            ply: number;
+            fullMoveNumber: number;
+            moveNumber: string;
+            /** @enum {string} */
+            moveColor: "WHITE" | "BLACK";
+            san: string;
+            lan: string | null;
+            uci: string | null;
+            beforeFen: string;
+            afterFen: string;
+            bestMove: string | null;
+            bestVariation: {
+                [key: string]: unknown;
+            }[];
+            nags: {
+                [key: string]: unknown;
+            }[];
+            comments: {
+                [key: string]: unknown;
+            }[];
+            evaluationBefore: {
+                [key: string]: unknown;
+            } | null;
+            evaluationAfter: {
+                [key: string]: unknown;
+            } | null;
+            /** @enum {string} */
+            severity: "INACCURACY" | "MISTAKE" | "BLUNDER" | "MATE" | "UNKNOWN";
+            sourceEvidence: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AnalysisMistakeResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            analysisId: string;
+            /** Format: uuid */
+            criticalMomentId: string | null;
+            /** @enum {string} */
+            severity: "INACCURACY" | "MISTAKE" | "BLUNDER" | "MATE" | "UNKNOWN";
+            category: string;
+            explanation: string;
+            suggestedFix: string | null;
+            sourceEvidence: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AnalysisDetailsResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            analysisJobId: string;
+            /** Format: uuid */
+            gameId: string;
+            /** Format: uuid */
+            studentId: string;
+            /** @enum {string} */
+            confidenceLevel: "HIGH" | "MEDIUM" | "LOW";
+            /** @enum {string} */
+            annotationCoverage: "NONE" | "PARTIAL" | "FULL";
+            reducedConfidenceWarning: string | null;
+            overallDiagnosis: string;
+            openingName: string | null;
+            /** @enum {string} */
+            result: "WIN" | "LOSS" | "DRAW" | "UNKNOWN";
+            /** @enum {string|null} */
+            mainWeaknessTag: "MISSED_FORK" | "MISSED_PIN" | "MISSED_DOUBLE_ATTACK" | "MISSED_DISCOVERED_ATTACK" | "MISSED_MATE" | "ALLOWED_MATE" | "HANGING_PIECE" | "MISSED_CAPTURE" | "BAD_CAPTURE" | "MISSED_OPPONENT_THREAT" | "OPENED_LINE" | "UNKNOWN_TACTICAL_ERROR" | "KING_SAFETY" | "DELAYED_CASTLING" | "POOR_DEVELOPMENT" | "EARLY_QUEEN" | "BAD_TRADE" | "POOR_CONVERSION" | "OPENING_STRATEGY" | "PAWN_STRUCTURE" | "ENDGAME_TECHNIQUE" | "UNKNOWN_STRATEGIC_ERROR" | "TIME_MANAGEMENT" | "CALCULATION_DEPTH" | "TUNNEL_VISION" | "MATERIAL_GREED" | "LOW_BOARD_AWARENESS" | "INSUFFICIENT_ANNOTATION_DATA" | "REDUCED_CONFIDENCE" | null;
+            secondaryWeaknessTags: ("MISSED_FORK" | "MISSED_PIN" | "MISSED_DOUBLE_ATTACK" | "MISSED_DISCOVERED_ATTACK" | "MISSED_MATE" | "ALLOWED_MATE" | "HANGING_PIECE" | "MISSED_CAPTURE" | "BAD_CAPTURE" | "MISSED_OPPONENT_THREAT" | "OPENED_LINE" | "UNKNOWN_TACTICAL_ERROR" | "KING_SAFETY" | "DELAYED_CASTLING" | "POOR_DEVELOPMENT" | "EARLY_QUEEN" | "BAD_TRADE" | "POOR_CONVERSION" | "OPENING_STRATEGY" | "PAWN_STRUCTURE" | "ENDGAME_TECHNIQUE" | "UNKNOWN_STRATEGIC_ERROR" | "TIME_MANAGEMENT" | "CALCULATION_DEPTH" | "TUNNEL_VISION" | "MATERIAL_GREED" | "LOW_BOARD_AWARENESS" | "INSUFFICIENT_ANNOTATION_DATA" | "REDUCED_CONFIDENCE")[];
+            recommendedLessonTitle: string | null;
+            recommendedLessonWhy: string | null;
+            recommendedFocusPoints: string[];
+            criticalMoments: components["schemas"]["AnalysisCriticalMomentResponse"][];
+            mistakes: components["schemas"]["AnalysisMistakeResponse"][];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         ImportPgnDto: {
             /**
@@ -609,6 +872,29 @@ export interface components {
              *     }
              */
             content?: Record<string, never>;
+        };
+        ProgressSnapshotResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            studentId: string;
+            analysisCount: number;
+            summary: {
+                [key: string]: unknown;
+            };
+            promptVersion: string;
+            model: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ProgressReadResponse: {
+            /** @enum {string} */
+            status: "ready" | "not-enough-data";
+            requiredAnalysisCount: number;
+            availableAnalysisCount: number;
+            snapshot: components["schemas"]["ProgressSnapshotResponse"] | null;
         };
     };
     responses: never;
@@ -818,7 +1104,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["StudentOverviewResponse"];
+                };
             };
         };
     };
@@ -837,7 +1125,30 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["StudentAnalysisProfileResponse"];
+                };
+            };
+        };
+    };
+    StudentsController_getPerformanceTrend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentPerformanceTrendResponse"];
+                };
             };
         };
     };
@@ -1109,7 +1420,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AnalysisDetailsResponse"];
+                };
             };
         };
     };
@@ -1355,7 +1668,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProgressReadResponse"];
+                };
             };
         };
     };

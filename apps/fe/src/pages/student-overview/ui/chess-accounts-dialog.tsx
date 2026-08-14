@@ -4,13 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import type {
-  ChessAccountDraft,
-  ChessAccountItem,
-} from "../model";
-
 import {
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -31,6 +25,9 @@ import {
   SelectValue,
   Separator,
 } from "@/shared/ui";
+import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "@/shared/ui/button";
+
+import type { ChessAccountDraft, ChessAccountItem } from "../model";
 
 const chessAccountSchema = z.object({
   platform: z.enum(["LICHESS", "CHESS_COM"]),
@@ -43,9 +40,12 @@ type ChessAccountsDialogProps = {
   editingAccountId: string | null;
   draft: ChessAccountDraft;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (draft: ChessAccountDraft, accountId?: string | null) => void;
+  onSubmit: (
+    draft: ChessAccountDraft,
+    accountId?: string | null,
+  ) => Promise<void>;
   onEditAccount: (accountId: string) => void;
-  onRemoveAccount: (accountId: string) => void;
+  onRemoveAccount: (accountId: string) => Promise<void>;
 };
 
 export function ChessAccountsDialog({
@@ -84,7 +84,7 @@ export function ChessAccountsDialog({
         <DialogHeader>
           <DialogTitle>Chess accounts</DialogTitle>
           <DialogDescription>
-            Add, edit, or remove linked chess accounts locally for this prototype.
+            Add, edit, or remove linked chess accounts for this student.
           </DialogDescription>
         </DialogHeader>
 
@@ -104,17 +104,19 @@ export function ChessAccountsDialog({
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
-                        variant="ghost"
-                        size="sm"
+                        variant={BUTTON_VARIANT.GHOST}
+                        size={BUTTON_SIZE.SM}
                         onClick={() => onEditAccount(account.id)}
                       >
                         <PencilLine className="size-4" />
                         Edit
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemoveAccount(account.id)}
+                        variant={BUTTON_VARIANT.GHOST}
+                        size={BUTTON_SIZE.SM}
+                        onClick={async () => {
+                          await onRemoveAccount(account.id);
+                        }}
                       >
                         <Trash2 className="size-4" />
                         Remove
@@ -138,8 +140,8 @@ export function ChessAccountsDialog({
               </h3>
               {editingAccountId ? (
                 <Button
-                  variant="ghost"
-                  size="sm"
+                  variant={BUTTON_VARIANT.GHOST}
+                  size={BUTTON_SIZE.SM}
                   onClick={() => onEditAccount("")}
                 >
                   Add another account
@@ -150,14 +152,15 @@ export function ChessAccountsDialog({
             <Form {...form}>
               <form
                 className="space-y-4"
-                onSubmit={form.handleSubmit((values) =>
-                  onSubmit(
-                    {
-                      platform: values.platform,
-                      username: values.username.trim(),
-                    },
-                    editingAccountId,
-                  ),
+                onSubmit={form.handleSubmit(
+                  async (values) =>
+                    await onSubmit(
+                      {
+                        platform: values.platform,
+                        username: values.username.trim(),
+                      },
+                      editingAccountId,
+                    ),
                 )}
               >
                 <FormField
@@ -202,13 +205,13 @@ export function ChessAccountsDialog({
                 <DialogFooter>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant={BUTTON_VARIANT.OUTLINE}
                     onClick={() => onOpenChange(false)}
                   >
                     Done
                   </Button>
                   <Button type="submit">
-                    {editingAccountId ? "Update locally" : "Add locally"}
+                    {editingAccountId ? "Update account" : "Add account"}
                   </Button>
                 </DialogFooter>
               </form>

@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -30,7 +29,7 @@ export class ReportsController {
   @Post('analysis/:analysisId/reports/generate')
   requestGeneration(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('analysisId', new ParseUUIDPipe()) analysisId: string,
+    @Param('analysisId') analysisId: string,
     @Body() dto: ReportGenerationRequestDto,
   ) {
     return this.reportsService.requestGeneration(
@@ -57,7 +56,7 @@ export class ReportsController {
   @Get('reports/:reportId')
   getOne(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('reportId', new ParseUUIDPipe()) reportId: string,
+    @Param('reportId') reportId: string,
   ) {
     return this.reportsService.getOne(reportId, coach.coachAccountId);
   }
@@ -65,7 +64,7 @@ export class ReportsController {
   @Patch('reports/:reportId')
   update(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('reportId', new ParseUUIDPipe()) reportId: string,
+    @Param('reportId') reportId: string,
     @Body() dto: ReportUpdateDto,
   ) {
     return this.reportsService.update(reportId, coach.coachAccountId, dto);
@@ -75,7 +74,7 @@ export class ReportsController {
   @Delete('reports/:reportId')
   async remove(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('reportId', new ParseUUIDPipe()) reportId: string,
+    @Param('reportId') reportId: string,
   ) {
     await this.reportsService.remove(reportId, coach.coachAccountId);
   }

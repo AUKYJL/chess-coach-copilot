@@ -2,17 +2,17 @@ import type {
   PerformanceDirection,
   RecentGameRecord,
   StudentOverviewResponse,
-} from "@/shared/api/student";
+} from "./api-types";
 
 import { getPerformanceDirectionTone, getSeverityTone } from "./semantic-tones";
 import type {
   ChessAccountItem,
   MaterialRowViewModel,
   NextLessonViewModel,
-  OverviewScenarioResources,
   PerformanceTrendViewModel,
   ProgressInsightViewModel,
   RecentGameRowViewModel,
+  StudentOverviewResources,
   StudentOverviewQueryStatus,
   StudentOverviewViewModel,
 } from "./index";
@@ -51,6 +51,12 @@ function formatDate(value: string) {
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function getProgressSummaryText(summary: Record<string, unknown>) {
+  return typeof summary.summary === "string" && summary.summary.length > 0
+    ? summary.summary
+    : "A narrative progress summary is not available yet.";
 }
 
 function directionToLabel(direction: PerformanceDirection) {
@@ -104,7 +110,7 @@ function getOpeningLabel(game: RecentGameRecord) {
   return game.openingHeader ?? game.ecoCode ?? "Opening pending";
 }
 
-export function getAnalyzedGamesCount(resources: OverviewScenarioResources) {
+export function getAnalyzedGamesCount(resources: StudentOverviewResources) {
   const overviewCount = resources.overview.data?.stats.analysisCount;
 
   if (typeof overviewCount === "number") {
@@ -140,7 +146,7 @@ export function getStudentInitials(displayName: string) {
 
 // DERIVED VIEW-MODEL FIELD: narrative progress copy remains separate from chart mapping.
 export function mapProgressInsightToViewModel(
-  resources: OverviewScenarioResources,
+  resources: StudentOverviewResources,
 ): ProgressInsightViewModel | null {
   const latestProgress = resources.overview.data?.latestProgress;
   const progressResource = resources.progressDetails;
@@ -152,8 +158,7 @@ export function mapProgressInsightToViewModel(
       title: "Progress insight",
       summary:
         "The latest annotated game is still being processed, so the narrative summary is not ready yet.",
-      supportingText:
-        "Progress insight will appear after local analysis finishes.",
+      supportingText: "Progress insight will appear after analysis finishes.",
     };
   }
 
@@ -162,8 +167,8 @@ export function mapProgressInsightToViewModel(
       title: "Progress insight",
       summary:
         progressResource.errorMessage ??
-        "The narrative progress summary is unavailable in this local review state.",
-      supportingText: "Use Retry locally to rebuild the mock-only section.",
+        "The narrative progress summary is unavailable right now.",
+      supportingText: "Use Retry to request the latest progress summary again.",
     };
   }
 
@@ -173,7 +178,7 @@ export function mapProgressInsightToViewModel(
   ) {
     return {
       title: "Progress insight",
-      summary: progressSnapshot.summary.summary,
+      summary: getProgressSummaryText(progressSnapshot.summary),
       supportingText: `Based on ${formatCount(progressSnapshot.analysisCount, "analysis")} · Updated ${formatDate(progressSnapshot.updatedAt)}`,
     };
   }
@@ -202,7 +207,7 @@ export function mapProgressInsightToViewModel(
       summary:
         "A narrative progress summary will appear here once a recent analysis snapshot is available.",
       supportingText:
-        "This prototype keeps progress copy separate from chart data.",
+        "Narrative progress copy stays separate from chart data.",
     };
   }
 
@@ -249,7 +254,7 @@ export function mapRecentMaterialsToViewModel(
 
 // DERIVED VIEW-MODEL FIELD: chart-only data stays isolated from narrative progress insight.
 export function mapPerformanceTrendToViewModel(
-  resources: OverviewScenarioResources,
+  resources: StudentOverviewResources,
 ): PerformanceTrendViewModel {
   const performanceTrend = resources.performanceTrend.data;
   const direction = performanceTrend?.direction ?? "UNKNOWN";
@@ -263,7 +268,7 @@ export function mapPerformanceTrendToViewModel(
   };
 }
 
-function mapStudentInformation(resources: OverviewScenarioResources) {
+function mapStudentInformation(resources: StudentOverviewResources) {
   const overview = resources.overview.data;
 
   if (!overview) {
@@ -308,7 +313,7 @@ function mapStudentInformation(resources: OverviewScenarioResources) {
 }
 
 function mapChessAccounts(
-  resources: OverviewScenarioResources,
+  resources: StudentOverviewResources,
 ): ChessAccountItem[] {
   return (
     resources.overview.data?.externalAccounts.map((account) => ({
@@ -320,7 +325,7 @@ function mapChessAccounts(
 }
 
 function mapNextLesson(
-  resources: OverviewScenarioResources,
+  resources: StudentOverviewResources,
 ): NextLessonViewModel {
   const lessonResource = resources.lessonPreview;
   const analysisProfile = resources.analysisProfile.data;
@@ -335,7 +340,7 @@ function mapNextLesson(
       rationale:
         "The latest imported game is still being parsed, so a focused recommendation is not ready yet.",
       focusPoints: [],
-      supportingText: "Local-only mock processing state",
+      supportingText: "Waiting for the latest analysis result",
     };
   }
 
@@ -346,7 +351,7 @@ function mapNextLesson(
         lessonResource.errorMessage ??
         "The lesson recommendation failed to load in this review state.",
       focusPoints: [],
-      supportingText: "Local-only retry available",
+      supportingText: "Retry when the lesson recommendation is available again",
     };
   }
 
@@ -366,7 +371,7 @@ function mapNextLesson(
 }
 
 export function getStudentOverviewStatus(
-  resources: OverviewScenarioResources,
+  resources: StudentOverviewResources,
 ): StudentOverviewQueryStatus {
   if (resources.overview.status === "error") {
     return "error";
@@ -380,7 +385,7 @@ export function getStudentOverviewStatus(
 }
 
 export function mapStudentOverviewViewModel(
-  resources: OverviewScenarioResources,
+  resources: StudentOverviewResources,
 ): StudentOverviewViewModel {
   const overview = resources.overview.data;
   const analysisProfile = resources.analysisProfile.data;

@@ -1,37 +1,23 @@
-import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 
-import type { ExternalAccountRecord } from "@/shared/api/student";
+import { $api } from "@/shared/api";
 
 import {
   getStudentOverviewStatus,
   mapStudentOverviewViewModel,
 } from "./mappers";
-import { getStudentOverviewScenario } from "./mock-scenarios";
 import type {
-  AnalyzeGameDraft,
-  ChessAccountDraft,
-  CoachNotesDraft,
-  EditStudentDraft,
-  OverviewScenario,
   StudentOverviewDialogState,
   StudentOverviewQueryResult,
-  StudentOverviewScenarioId,
+  StudentOverviewResources,
 } from "./index";
+
+const EMPTY_UUID = "00000000-0000-0000-0000-000000000000";
 
 type UseStudentOverviewDataOptions = {
   studentId: string;
-  scenarioId?: StudentOverviewScenarioId;
 };
-
-function cloneScenario(scenario: OverviewScenario): OverviewScenario {
-  return structuredClone(scenario);
-}
-
-function getScenarioBaseline(
-  scenarioId: StudentOverviewScenarioId,
-): OverviewScenario {
-  return cloneScenario(getStudentOverviewScenario(scenarioId));
-}
 
 function createDefaultDialogState(): StudentOverviewDialogState {
   return {
@@ -40,86 +26,286 @@ function createDefaultDialogState(): StudentOverviewDialogState {
   };
 }
 
-function createExternalAccountRecord(
-  studentId: string,
-  draft: ChessAccountDraft,
-): ExternalAccountRecord {
-  const timestamp = Date.now();
+function getErrorMessage(error: unknown, fallback: string) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    error.message.length > 0
+  ) {
+    return error.message;
+  }
 
-  return {
-    id: `local-account-${timestamp}`,
-    studentId,
-    platform: draft.platform,
-    username: draft.username,
-    createdAt: new Date(timestamp).toISOString(),
-    updatedAt: new Date(timestamp).toISOString(),
-  };
+  return fallback;
 }
 
-function applyRetryToScenario(scenario: OverviewScenario): OverviewScenario {
-  const nextScenario = cloneScenario(scenario);
-  const baselineScenario = getScenarioBaseline(nextScenario.id);
-
-  if (nextScenario.resources.overview.status === "error") {
-    nextScenario.resources = structuredClone(baselineScenario.resources);
-    return nextScenario;
+function toSectionResource<T>(args: {
+  data: T | undefined;
+  error: unknown;
+  fallbackMessage: string;
+  isError: boolean;
+  isPending: boolean;
+}): {
+  data: T | null;
+  errorMessage?: string;
+  retriable: boolean;
+  status: "error" | "loading" | "ready";
+} {
+  if (args.isError) {
+    return {
+      status: "error",
+      data: args.data ?? null,
+      errorMessage: getErrorMessage(args.error, args.fallbackMessage),
+      retriable: true,
+    };
   }
 
-  if (nextScenario.resources.analysisProfile.status === "error") {
-    nextScenario.resources.analysisProfile = structuredClone(
-      baselineScenario.resources.analysisProfile,
-    );
+  if (args.isPending) {
+    return {
+      status: "loading",
+      data: args.data ?? null,
+      retriable: false,
+    };
   }
 
-  if (nextScenario.resources.lessonPreview.status === "error") {
-    nextScenario.resources.lessonPreview = structuredClone(
-      baselineScenario.resources.lessonPreview,
-    );
-  }
-
-  if (nextScenario.resources.performanceTrend.status === "error") {
-    nextScenario.resources.performanceTrend = structuredClone(
-      baselineScenario.resources.performanceTrend,
-    );
-  }
-
-  if (nextScenario.resources.progressDetails?.status === "error") {
-    nextScenario.resources.progressDetails = structuredClone(
-      baselineScenario.resources.progressDetails,
-    );
-  }
-
-  return nextScenario;
+  return {
+    status: "ready",
+    data: args.data ?? null,
+    retriable: false,
+  };
 }
 
 export function useStudentOverviewData({
   studentId,
-  scenarioId = "populated",
 }: UseStudentOverviewDataOptions): StudentOverviewQueryResult {
-  const [scenario, setScenario] = useState(() =>
-    getScenarioBaseline(scenarioId),
-  );
+  const queryClient = useQueryClient();
   const [dialogState, setDialogState] = useState(createDefaultDialogState);
+  const hasStudentId = studentId.length > 0;
+  const studentPathParams = useMemo(
+    () => ({
+      params: {
+        path: {
+          studentId: studentId || EMPTY_UUID,
+        },
+      },
+    }),
+    [studentId],
+  );
+  const overviewQueryKey = $api.queryOptions(
+    "get",
+    "/api/students/{studentId}/overview",
+    studentPathParams,
+  ).queryKey;
+  const analysisProfileQueryKey = $api.queryOptions(
+    "get",
+    "/api/students/{studentId}/analysis-profile",
+    studentPathParams,
+  ).queryKey;
+  const performanceTrendQueryKey = $api.queryOptions(
+    "get",
+    "/api/students/{studentId}/performance-trend",
+    studentPathParams,
+  ).queryKey;
+  const progressQueryKey = $api.queryOptions(
+    "get",
+    "/api/students/{studentId}/progress",
+    studentPathParams,
+  ).queryKey;
+  const overviewQuery = $api.useQuery(
+    "get",
+    "/api/students/{studentId}/overview",
+    studentPathParams,
+    {
+      enabled: hasStudentId,
+    },
+  );
+  const analysisProfileQuery = $api.useQuery(
+    "get",
+    "/api/students/{studentId}/analysis-profile",
+    studentPathParams,
+    {
+      enabled: hasStudentId,
+    },
+  );
+  const performanceTrendQuery = $api.useQuery(
+    "get",
+    "/api/students/{studentId}/performance-trend",
+    studentPathParams,
+    {
+      enabled: hasStudentId,
+    },
+  );
+  const progressQuery = $api.useQuery(
+    "get",
+    "/api/students/{studentId}/progress",
+    studentPathParams,
+    {
+      enabled: hasStudentId,
+    },
+  );
+  const latestAnalysisId = overviewQuery.data?.recentAnalyses[0]?.id ?? null;
+  const lessonPreviewPathParams = useMemo(
+    () => ({
+      params: {
+        path: {
+          analysisId: latestAnalysisId ?? EMPTY_UUID,
+        },
+      },
+    }),
+    [latestAnalysisId],
+  );
+  const lessonPreviewQuery = $api.useQuery(
+    "get",
+    "/api/analysis/{analysisId}",
+    lessonPreviewPathParams,
+    {
+      enabled: hasStudentId && latestAnalysisId !== null,
+    },
+  );
+  const updateStudentMutation = $api.useMutation(
+    "patch",
+    "/api/students/{studentId}",
+  );
+  const archiveStudentMutation = $api.useMutation(
+    "post",
+    "/api/students/{studentId}/archive",
+  );
+  const createExternalAccountMutation = $api.useMutation(
+    "post",
+    "/api/students/{studentId}/external-accounts",
+  );
+  const updateExternalAccountMutation = $api.useMutation(
+    "patch",
+    "/api/students/{studentId}/external-accounts/{externalAccountId}",
+  );
+  const removeExternalAccountMutation = $api.useMutation(
+    "delete",
+    "/api/students/{studentId}/external-accounts/{externalAccountId}",
+  );
+  const importPgnMutation = $api.useMutation(
+    "post",
+    "/api/students/{studentId}/imports/pgn",
+  );
 
   useEffect(() => {
-    setScenario(getScenarioBaseline(scenarioId));
     setDialogState(createDefaultDialogState());
-  }, [scenarioId, studentId]);
+  }, [studentId]);
 
-  const status = getStudentOverviewStatus(scenario.resources);
+  const resources = useMemo<StudentOverviewResources>(() => {
+    const overview = toSectionResource({
+      data: overviewQuery.data,
+      error: overviewQuery.error,
+      fallbackMessage: "The student overview foundation failed to load.",
+      isError: overviewQuery.isError,
+      isPending: overviewQuery.isPending,
+    });
+    const analysisProfile = toSectionResource({
+      data: analysisProfileQuery.data,
+      error: analysisProfileQuery.error,
+      fallbackMessage: "The weakness profile section failed to load.",
+      isError: analysisProfileQuery.isError,
+      isPending: analysisProfileQuery.isPending,
+    });
+    const performanceTrend = toSectionResource({
+      data: performanceTrendQuery.data,
+      error: performanceTrendQuery.error,
+      fallbackMessage: "The trend section failed to load.",
+      isError: performanceTrendQuery.isError,
+      isPending: performanceTrendQuery.isPending,
+    });
+    const progressDetails = toSectionResource({
+      data: progressQuery.data,
+      error: progressQuery.error,
+      fallbackMessage: "The narrative progress summary is unavailable.",
+      isError: progressQuery.isError,
+      isPending: progressQuery.isPending,
+    });
+    const lessonPreview =
+      latestAnalysisId === null && overview.status === "ready"
+        ? {
+            status: "ready" as const,
+            data: null,
+            retriable: false,
+          }
+        : toSectionResource({
+            data: lessonPreviewQuery.data,
+            error: lessonPreviewQuery.error,
+            fallbackMessage: "The next lesson section failed to load.",
+            isError: lessonPreviewQuery.isError,
+            isPending: lessonPreviewQuery.isPending,
+          });
+
+    return {
+      overview,
+      analysisProfile,
+      lessonPreview,
+      performanceTrend,
+      progressDetails,
+    };
+  }, [
+    analysisProfileQuery.data,
+    analysisProfileQuery.error,
+    analysisProfileQuery.isError,
+    analysisProfileQuery.isPending,
+    latestAnalysisId,
+    lessonPreviewQuery.data,
+    lessonPreviewQuery.error,
+    lessonPreviewQuery.isError,
+    lessonPreviewQuery.isPending,
+    overviewQuery.data,
+    overviewQuery.error,
+    overviewQuery.isError,
+    overviewQuery.isPending,
+    performanceTrendQuery.data,
+    performanceTrendQuery.error,
+    performanceTrendQuery.isError,
+    performanceTrendQuery.isPending,
+    progressQuery.data,
+    progressQuery.error,
+    progressQuery.isError,
+    progressQuery.isPending,
+  ]);
+  const status = getStudentOverviewStatus(resources);
+
+  async function invalidateOverview() {
+    await queryClient.invalidateQueries({
+      queryKey: overviewQueryKey,
+    });
+  }
+
+  async function invalidatePgnDependentQueries() {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: overviewQueryKey,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: analysisProfileQueryKey,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: performanceTrendQueryKey,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: progressQueryKey,
+      }),
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === "get" &&
+          query.queryKey[1] === "/api/analysis/{analysisId}",
+      }),
+    ]);
+  }
 
   return {
     studentId,
-    scenario,
+    resources,
     dialogState,
     status,
-    data:
-      status === "ready"
-        ? mapStudentOverviewViewModel(scenario.resources)
-        : null,
+    data: status === "ready" ? mapStudentOverviewViewModel(resources) : null,
     error:
       status === "error"
-        ? (scenario.resources.overview.errorMessage ??
+        ? (resources.overview.errorMessage ??
           "The student overview foundation failed to load.")
         : null,
     openDialog: (kind, options) => {
@@ -131,129 +317,117 @@ export function useStudentOverviewData({
     closeDialog: () => {
       setDialogState(createDefaultDialogState());
     },
-    retry: () => {
-      setScenario((current) => applyRetryToScenario(current));
+    retryOverview: async () => {
+      await overviewQuery.refetch();
     },
-    toggleArchived: () => {
-      setScenario((current) => {
-        const nextScenario = cloneScenario(current);
-        const overview = nextScenario.resources.overview.data;
-
-        if (!overview) {
-          return current;
-        }
-
-        overview.student.archivedAt = overview.student.archivedAt
-          ? null
-          : "2026-08-10T12:00:00Z";
-
-        return nextScenario;
-      });
+    retryAnalysisProfile: async () => {
+      await analysisProfileQuery.refetch();
     },
-    submitAnalyzeGame: (draft: AnalyzeGameDraft) => {
-      setScenario((current) => {
-        const nextScenario = cloneScenario(current);
+    retryPerformanceTrend: async () => {
+      await performanceTrendQuery.refetch();
+    },
+    retryLessonPreview: async () => {
+      if (latestAnalysisId === null) {
+        return;
+      }
 
-        nextScenario.localState = {
-          ...nextScenario.localState,
-          analyzeGameDraft: draft,
-        };
+      await lessonPreviewQuery.refetch();
+    },
+    toggleArchived: async () => {
+      const student = overviewQuery.data?.student;
 
-        return nextScenario;
+      if (!student) {
+        return;
+      }
+
+      await archiveStudentMutation.mutateAsync({
+        ...studentPathParams,
+        body: {
+          archived: student.archivedAt === null,
+        },
       });
+      await invalidateOverview();
+    },
+    submitAnalyzeGame: async (draft) => {
+      await importPgnMutation.mutateAsync({
+        ...studentPathParams,
+        body: {
+          rawPgn: draft.rawPgn,
+          studentColor: draft.studentColor,
+          sourceLabel: draft.sourceLabel || undefined,
+        },
+      });
+      await invalidatePgnDependentQueries();
       setDialogState(createDefaultDialogState());
     },
-    submitEditStudent: (draft: EditStudentDraft) => {
-      setScenario((current) => {
-        const nextScenario = cloneScenario(current);
-        const overview = nextScenario.resources.overview.data;
+    submitEditStudent: async (draft) => {
+      const body = {
+        displayName: draft.displayName,
+        birthYear: draft.birthYear ?? undefined,
+        rating: draft.rating ?? undefined,
+        notes: draft.notes || undefined,
+      };
 
-        if (!overview) {
-          return current;
-        }
-
-        overview.student.displayName = draft.displayName;
-        overview.student.birthYear = draft.birthYear;
-        overview.student.rating = draft.rating;
-        overview.student.notes = draft.notes.trim() || null;
-
-        return nextScenario;
+      await updateStudentMutation.mutateAsync({
+        ...studentPathParams,
+        body,
       });
+      await invalidateOverview();
       setDialogState(createDefaultDialogState());
     },
-    submitChessAccount: (draft, options) => {
-      setScenario((current) => {
-        const nextScenario = cloneScenario(current);
-        const overview = nextScenario.resources.overview.data;
+    submitChessAccount: async (draft, options) => {
+      if (options?.accountId) {
+        await updateExternalAccountMutation.mutateAsync({
+          params: {
+            path: {
+              studentId: studentId || EMPTY_UUID,
+              externalAccountId: options.accountId,
+            },
+          },
+          body: {
+            platform: draft.platform,
+            username: draft.username,
+          },
+        });
+      } else {
+        await createExternalAccountMutation.mutateAsync({
+          ...studentPathParams,
+          body: {
+            platform: draft.platform,
+            username: draft.username,
+          },
+        });
+      }
 
-        if (!overview) {
-          return current;
-        }
-
-        if (options?.accountId) {
-          overview.externalAccounts = overview.externalAccounts.map(
-            (account) =>
-              account.id === options.accountId
-                ? {
-                    ...account,
-                    platform: draft.platform,
-                    username: draft.username,
-                    updatedAt: "2026-08-10T12:00:00Z",
-                  }
-                : account,
-          );
-        } else {
-          overview.externalAccounts = [
-            ...overview.externalAccounts,
-            createExternalAccountRecord(studentId, draft),
-          ];
-        }
-
-        nextScenario.localState = {
-          ...nextScenario.localState,
-          chessAccountDraft: draft,
-        };
-
-        return nextScenario;
-      });
+      await invalidateOverview();
       setDialogState({
         kind: "chess-accounts",
         editingChessAccountId: null,
       });
     },
-    removeChessAccount: (accountId) => {
-      setScenario((current) => {
-        const nextScenario = cloneScenario(current);
-        const overview = nextScenario.resources.overview.data;
-
-        if (!overview) {
-          return current;
-        }
-
-        overview.externalAccounts = overview.externalAccounts.filter(
-          (account) => account.id !== accountId,
-        );
-
-        return nextScenario;
+    removeChessAccount: async (accountId) => {
+      await removeExternalAccountMutation.mutateAsync({
+        params: {
+          path: {
+            studentId: studentId || EMPTY_UUID,
+            externalAccountId: accountId,
+          },
+        },
       });
+      await invalidateOverview();
       setDialogState({
         kind: "chess-accounts",
         editingChessAccountId: null,
       });
     },
-    submitCoachNotes: (draft: CoachNotesDraft) => {
-      setScenario((current) => {
-        const nextScenario = cloneScenario(current);
-        const overview = nextScenario.resources.overview.data;
-
-        if (!overview) {
-          return current;
-        }
-
-        overview.student.notes = draft.notes.trim() || null;
-
-        return nextScenario;
+    submitCoachNotes: async (draft) => {
+      await updateStudentMutation.mutateAsync({
+        ...studentPathParams,
+        body: {
+          notes: draft.notes || undefined,
+        },
       });
+      await invalidateOverview();
       setDialogState(createDefaultDialogState());
     },
   };

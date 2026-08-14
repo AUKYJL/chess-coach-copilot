@@ -4,7 +4,7 @@ import { Button, Card, CardContent, CardHeader, CardTitle } from "@/shared/ui";
 
 type OverviewErrorStateProps = {
   description: string;
-  onRetry: () => void;
+  onRetry: () => Promise<void>;
 };
 
 export function OverviewErrorState({
@@ -21,7 +21,13 @@ export function OverviewErrorState({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm leading-6">{description}</p>
-        <Button onClick={onRetry}>Retry locally</Button>
+        <Button
+          onClick={async () => {
+            await onRetry();
+          }}
+        >
+          Retry
+        </Button>
       </CardContent>
     </Card>
   );

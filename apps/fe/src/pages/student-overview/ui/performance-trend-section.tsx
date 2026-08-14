@@ -69,7 +69,7 @@ export function PerformanceTrendSection({
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-foreground text-sm leading-7">
-            Trend data is not available yet for this scenario.
+            Trend data is not available yet for this student.
           </p>
           <Typography
             color={TYPOGRAPHY_COLOR.SECONDARY}

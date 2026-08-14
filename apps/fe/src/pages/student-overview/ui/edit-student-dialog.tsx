@@ -3,10 +3,7 @@ import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import type { EditStudentDraft } from "../model";
-
 import {
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -22,6 +19,9 @@ import {
   Input,
   Textarea,
 } from "@/shared/ui";
+import { BUTTON_VARIANT, Button } from "@/shared/ui/button";
+
+import type { EditStudentDraft } from "../model";
 
 const editStudentSchema = z.object({
   displayName: z.string().trim().min(1, "Student name is required."),
@@ -53,7 +53,9 @@ type EditStudentFormValues = {
   notes: string;
 };
 
-function toEditStudentFormValues(draft: EditStudentDraft): EditStudentFormValues {
+function toEditStudentFormValues(
+  draft: EditStudentDraft,
+): EditStudentFormValues {
   return {
     displayName: draft.displayName,
     birthYear: draft.birthYear !== null ? String(draft.birthYear) : "",
@@ -66,7 +68,7 @@ type EditStudentDialogProps = {
   open: boolean;
   draft: EditStudentDraft;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (draft: EditStudentDraft) => void;
+  onSubmit: (draft: EditStudentDraft) => Promise<void>;
 };
 
 export function EditStudentDialog({
@@ -95,22 +97,23 @@ export function EditStudentDialog({
         <DialogHeader>
           <DialogTitle>Edit student</DialogTitle>
           <DialogDescription>
-            Update student identity locally for this prototype review.
+            Update the student profile and saved coach notes.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form
             className="space-y-4"
-            onSubmit={form.handleSubmit((values) =>
-              onSubmit({
-                displayName: values.displayName.trim(),
-                birthYear: values.birthYear.trim()
-                  ? Number(values.birthYear)
-                  : null,
-                rating: values.rating.trim() ? Number(values.rating) : null,
-                notes: values.notes.trim(),
-              }),
+            onSubmit={form.handleSubmit(
+              async (values) =>
+                await onSubmit({
+                  displayName: values.displayName.trim(),
+                  birthYear: values.birthYear.trim()
+                    ? Number(values.birthYear)
+                    : null,
+                  rating: values.rating.trim() ? Number(values.rating) : null,
+                  notes: values.notes.trim(),
+                }),
             )}
           >
             <FormField
@@ -174,12 +177,12 @@ export function EditStudentDialog({
             <DialogFooter>
               <Button
                 type="button"
-                variant="outline"
+                variant={BUTTON_VARIANT.OUTLINE}
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit">Save locally</Button>
+              <Button type="submit">Save changes</Button>
             </DialogFooter>
           </form>
         </Form>

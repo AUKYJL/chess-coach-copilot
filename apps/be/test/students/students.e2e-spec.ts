@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import {
   AnalysisJobStatus,
+  MomentSeverity,
   WeaknessTag,
 } from '../../src/generated/prisma/client.js';
 import { createE2eApp } from '../helpers/create-e2e-app.js';
@@ -147,6 +148,11 @@ describe('StudentsController (e2e)', () => {
 
     await request(getServer(app))
       .get(`/students/${studentId}/analysis-profile`)
+      .set('Authorization', `Bearer ${coachB.accessToken}`)
+      .expect(404);
+
+    await request(getServer(app))
+      .get(`/students/${studentId}/performance-trend`)
       .set('Authorization', `Bearer ${coachB.accessToken}`)
       .expect(404);
   });
@@ -507,6 +513,178 @@ describe('StudentsController (e2e)', () => {
     });
     expect(profileResponse.body.sampleMistakes[0].severity).toBe('BLUNDER');
   });
+
+  it('returns UNKNOWN when performance trend has no completed analyses', async () => {
+    const coach = await registerCoach(app, 'coach-trend-empty@example.com');
+    const studentId = await createStudent(app, coach.accessToken);
+
+    const response = await request(getServer(app))
+      .get(`/students/${studentId}/performance-trend`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    expect(response.body).toEqual({
+      direction: 'UNKNOWN',
+      primaryMetric: 'Severe mistakes per game',
+      range: '90D',
+      points: [],
+    });
+  });
+
+  it('returns UNKNOWN with one point and excludes non-completed or old analyses', async () => {
+    const coach = await registerCoach(app, 'coach-trend-single@example.com');
+    const studentId = await createStudent(app, coach.accessToken);
+    const coachAccountId = await getCoachAccountId(
+      prisma,
+      'coach-trend-single@example.com',
+    );
+
+    await createAnalysisFixture({
+      prisma,
+      coachAccountId,
+      studentId,
+      analysisCreatedAt: daysAgoUtc(12),
+      jobStatus: 'COMPLETED',
+      mistakeSeverities: [MomentSeverity.BLUNDER, MomentSeverity.MATE],
+    });
+    await createAnalysisFixture({
+      prisma,
+      coachAccountId,
+      studentId,
+      analysisCreatedAt: daysAgoUtc(7),
+      jobStatus: 'FAILED',
+      mistakeSeverities: [MomentSeverity.BLUNDER],
+    });
+    await createAnalysisFixture({
+      prisma,
+      coachAccountId,
+      studentId,
+      analysisCreatedAt: daysAgoUtc(95),
+      jobStatus: 'COMPLETED',
+      mistakeSeverities: [MomentSeverity.BLUNDER],
+    });
+
+    const response = await request(getServer(app))
+      .get(`/students/${studentId}/performance-trend`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    expect(response.body).toEqual({
+      direction: 'UNKNOWN',
+      primaryMetric: 'Severe mistakes per game',
+      range: '90D',
+      points: [
+        {
+          date: formatUtcDate(daysAgoUtc(12)),
+          value: 2,
+        },
+      ],
+    });
+  });
+
+  it('orders 90-day performance trend points ascending and computes severe mistakes per game', async () => {
+    const coach = await registerCoach(app, 'coach-trend-ordered@example.com');
+    const studentId = await createStudent(app, coach.accessToken);
+    const coachAccountId = await getCoachAccountId(
+      prisma,
+      'coach-trend-ordered@example.com',
+    );
+
+    await createAnalysisFixture({
+      prisma,
+      coachAccountId,
+      studentId,
+      analysisCreatedAt: daysAgoUtc(5),
+      jobStatus: 'COMPLETED',
+      mistakeSeverities: [
+        MomentSeverity.BLUNDER,
+        MomentSeverity.MATE,
+        MomentSeverity.MISTAKE,
+      ],
+    });
+    await createAnalysisFixture({
+      prisma,
+      coachAccountId,
+      studentId,
+      analysisCreatedAt: daysAgoUtc(20),
+      jobStatus: 'COMPLETED',
+      mistakeSeverities: [MomentSeverity.MATE, MomentSeverity.INACCURACY],
+    });
+
+    const response = await request(getServer(app))
+      .get(`/students/${studentId}/performance-trend`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      direction: 'DECLINING',
+      primaryMetric: 'Severe mistakes per game',
+      range: '90D',
+      points: [
+        {
+          date: formatUtcDate(daysAgoUtc(20)),
+          value: 1,
+        },
+        {
+          date: formatUtcDate(daysAgoUtc(5)),
+          value: 2,
+        },
+      ],
+    });
+  });
+
+  it('computes IMPROVING, DECLINING, and STABLE performance trend directions', async () => {
+    const coach = await registerCoach(
+      app,
+      'coach-trend-directions@example.com',
+    );
+    const improvingStudentId = await createStudent(app, coach.accessToken);
+    const decliningStudentId = await createStudent(app, coach.accessToken);
+    const stableStudentId = await createStudent(app, coach.accessToken);
+    const coachAccountId = await getCoachAccountId(
+      prisma,
+      'coach-trend-directions@example.com',
+    );
+
+    await createPerformanceTrendSeries({
+      prisma,
+      coachAccountId,
+      studentId: improvingStudentId,
+      values: [4, 3, 1, 0],
+    });
+    await createPerformanceTrendSeries({
+      prisma,
+      coachAccountId,
+      studentId: decliningStudentId,
+      values: [0, 1, 3, 4],
+    });
+    await createPerformanceTrendSeries({
+      prisma,
+      coachAccountId,
+      studentId: stableStudentId,
+      values: [2, 2, 2, 2],
+    });
+
+    const [improvingResponse, decliningResponse, stableResponse] =
+      await Promise.all([
+        request(getServer(app))
+          .get(`/students/${improvingStudentId}/performance-trend`)
+          .set('Authorization', `Bearer ${coach.accessToken}`)
+          .expect(200),
+        request(getServer(app))
+          .get(`/students/${decliningStudentId}/performance-trend`)
+          .set('Authorization', `Bearer ${coach.accessToken}`)
+          .expect(200),
+        request(getServer(app))
+          .get(`/students/${stableStudentId}/performance-trend`)
+          .set('Authorization', `Bearer ${coach.accessToken}`)
+          .expect(200),
+      ]);
+
+    expect(improvingResponse.body.direction).toBe('IMPROVING');
+    expect(decliningResponse.body.direction).toBe('DECLINING');
+    expect(stableResponse.body.direction).toBe('STABLE');
+  });
 });
 
 async function registerCoach(app: INestApplication, email: string) {
@@ -536,4 +714,144 @@ async function createStudent(app: INestApplication, accessToken: string) {
     .expect(201);
 
   return (response.body as { id: string }).id;
+}
+
+async function getCoachAccountId(
+  prismaService: InMemoryPrismaService,
+  email: string,
+) {
+  const coachAccount = (await prismaService.coachAccount.findUnique({
+    where: { email },
+  })) as { id: string } | null;
+
+  expect(coachAccount).toBeTruthy();
+
+  return coachAccount!.id;
+}
+
+function daysAgoUtc(daysAgo: number): Date {
+  const date = new Date();
+
+  date.setUTCHours(12, 0, 0, 0);
+  date.setUTCDate(date.getUTCDate() - daysAgo);
+
+  return date;
+}
+
+function formatUtcDate(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+async function createAnalysisFixture(args: {
+  prisma: InMemoryPrismaService;
+  coachAccountId: string;
+  studentId: string;
+  analysisCreatedAt: Date;
+  jobStatus: AnalysisJobStatus;
+  mistakeSeverities: MomentSeverity[];
+}) {
+  const uniqueSuffix = `${args.studentId}-${args.analysisCreatedAt.getTime()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+  const game = await args.prisma.game.create({
+    data: {
+      coachAccountId: args.coachAccountId,
+      studentId: args.studentId,
+      sourceType: 'MANUAL_PGN',
+      sourceLabel: `Trend ${uniqueSuffix}`,
+      studentColor: 'WHITE',
+      event: `Trend ${uniqueSuffix}`,
+      site: null,
+      whitePlayerName: 'Student',
+      blackPlayerName: 'Opponent',
+      openingHeader: null,
+      ecoCode: null,
+      rawResult: '1-0',
+      derivedResult: 'WIN',
+      plyCount: 24,
+      rawPgn: `1. e4 e5 ${uniqueSuffix}`,
+      normalizedPgnHash: `trend-${uniqueSuffix}`,
+      hasEngineAnnotations: true,
+      annotationCoverage: 'FULL',
+      reducedConfidenceWarning: null,
+    },
+  });
+  const job = await args.prisma.analysisJob.create({
+    data: {
+      coachAccountId: args.coachAccountId,
+      studentId: args.studentId,
+      gameId: game.id,
+      jobType: 'ANALYSIS',
+      queueName: 'analysis',
+    },
+  });
+  await args.prisma.analysisJob.update({
+    where: { id: job.id },
+    data: {
+      status: args.jobStatus,
+    },
+  });
+  const analysis = await args.prisma.gameAnalysis.create({
+    data: {
+      coachAccountId: args.coachAccountId,
+      studentId: args.studentId,
+      gameId: game.id,
+      analysisJobId: job.id,
+      confidenceLevel: 'HIGH',
+      overallDiagnosis: `Trend diagnosis ${uniqueSuffix}`,
+      openingName: null,
+      result: 'WIN',
+      mainWeaknessTag: 'CALCULATION_DEPTH',
+      secondaryWeaknessTags: [],
+      recommendedLessonTitle: null,
+      recommendedLessonWhy: null,
+      recommendedFocusPoints: [],
+      rawExtractedContext: { uniqueSuffix },
+      rawAnalysisJson: { uniqueSuffix },
+    },
+  });
+
+  await args.prisma.gameAnalysis.update({
+    where: { id: analysis.id },
+    data: {
+      createdAt: args.analysisCreatedAt,
+    },
+  });
+
+  if (args.mistakeSeverities.length > 0) {
+    await args.prisma.mistake.createMany({
+      data: args.mistakeSeverities.map((severity, index) => ({
+        analysisId: analysis.id,
+        criticalMomentId: null,
+        severity,
+        category: `category-${index}`,
+        explanation: `Explanation ${index}`,
+        suggestedFix: null,
+        sourceEvidence: { index },
+      })),
+    });
+  }
+
+  return analysis;
+}
+
+async function createPerformanceTrendSeries(args: {
+  prisma: InMemoryPrismaService;
+  coachAccountId: string;
+  studentId: string;
+  values: number[];
+}) {
+  for (let index = 0; index < args.values.length; index += 1) {
+    await createAnalysisFixture({
+      prisma: args.prisma,
+      coachAccountId: args.coachAccountId,
+      studentId: args.studentId,
+      analysisCreatedAt: daysAgoUtc(args.values.length * 3 - index * 3),
+      jobStatus: 'COMPLETED',
+      mistakeSeverities: Array.from(
+        { length: args.values[index] ?? 0 },
+        () => MomentSeverity.BLUNDER,
+      ),
+    });
+  }
 }

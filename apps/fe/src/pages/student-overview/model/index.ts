@@ -16,43 +16,26 @@ export {
   mapStudentOverviewViewModel,
 } from "./mappers";
 export {
-  getStudentOverviewScenario,
-  studentOverviewScenarios,
-} from "./mock-scenarios";
-export {
   getPerformanceDirectionTone,
   getSeverityTone,
   toneChipClasses,
 } from "./semantic-tones";
-export {
-  defaultStudentOverviewScenarioId,
-  getStudentOverviewScenarioOptions,
-  isStudentOverviewDevelopmentEnvironment,
-  isStudentOverviewScenarioId,
-  resolveStudentOverviewScenarioId,
-  studentOverviewScenarioIds,
-} from "./scenario";
 export { useStudentOverviewData } from "./use-student-overview-data";
 export type {
   AnalyzeGameDraft,
   ChessAccountDraft,
   CoachNotesDraft,
   EditStudentDraft,
-  OverviewScenarioLocalState,
   StudentOverviewDialogKind,
   StudentOverviewDialogState,
 } from "./dialog-state";
 export type { StudentOverviewQueryResult } from "./query-result";
 export type {
-  OverviewScenario,
-  OverviewScenarioResources,
   ResourceStatus,
   SectionResource,
   StudentOverviewQueryStatus,
+  StudentOverviewResources,
 } from "./resource-state";
-export type {
-  StudentOverviewScenarioId,
-} from "./scenario";
 export type {
   ChessAccountItem,
   CoachNotesViewModel,
@@ -68,3 +51,22 @@ export type {
   SummaryCardViewModel,
   WeaknessProfileViewModel,
 } from "./view-model";
+export type {
+  AnalysisDetailsResponse,
+  CreateExternalAccountRequest,
+  ExternalAccountRecord,
+  ExternalPlatform,
+  ImportPgnRequest,
+  PerformanceDirection,
+  PerformanceTrendPoint,
+  RecentGameRecord,
+  SeverityLevel,
+  SetStudentArchiveRequest,
+  StudentAnalysisProfileResponse,
+  StudentColor,
+  StudentOverviewResponse,
+  StudentPerformanceTrendResponse,
+  StudentProgressResponse,
+  UpdateExternalAccountRequest,
+  UpdateStudentRequest,
+} from "./api-types";

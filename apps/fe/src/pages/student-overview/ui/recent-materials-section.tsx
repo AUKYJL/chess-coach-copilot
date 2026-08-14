@@ -1,7 +1,6 @@
 import { ArrowRight } from "lucide-react";
 
 import {
-  Button,
   Card,
   CardContent,
   CardHeader,
@@ -10,6 +9,7 @@ import {
   TYPOGRAPHY_VARIANT,
   Typography,
 } from "@/shared/ui";
+import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
 import type { MaterialRowViewModel } from "../model";
 
@@ -25,7 +25,7 @@ export function RecentMaterialsSection({
       <CardHeader className="gap-3">
         <div className="flex items-center justify-between gap-4">
           <CardTitle>Recent materials</CardTitle>
-          <Button variant="ghost" size="sm" disabled>
+          <Button variant={BUTTON_VARIANT.GHOST} size={BUTTON_SIZE.SM} disabled>
             View all
             <ArrowRight className="size-4" />
           </Button>

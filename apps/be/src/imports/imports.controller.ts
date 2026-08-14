@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Param,
-  ParseUUIDPipe,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -47,7 +40,7 @@ export class ImportsController {
   @Post('pgn')
   importPgn(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('studentId') studentId: string,
     @Body() dto: ImportPgnDto,
   ) {
     return this.importsService.importPgn(studentId, coach.coachAccountId, dto);

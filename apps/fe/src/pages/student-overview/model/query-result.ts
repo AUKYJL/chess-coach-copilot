@@ -7,14 +7,14 @@ import type {
   StudentOverviewDialogState,
 } from "./dialog-state";
 import type {
-  OverviewScenario,
   StudentOverviewQueryStatus,
+  StudentOverviewResources,
 } from "./resource-state";
 import type { StudentOverviewViewModel } from "./view-model";
 
 export type StudentOverviewQueryResult = {
   studentId: string;
-  scenario: OverviewScenario;
+  resources: StudentOverviewResources;
   dialogState: StudentOverviewDialogState;
   status: StudentOverviewQueryStatus;
   data: StudentOverviewViewModel | null;
@@ -24,14 +24,17 @@ export type StudentOverviewQueryResult = {
     options?: { editingChessAccountId?: string | null },
   ) => void;
   closeDialog: () => void;
-  retry: () => void;
-  toggleArchived: () => void;
-  submitAnalyzeGame: (draft: AnalyzeGameDraft) => void;
-  submitEditStudent: (draft: EditStudentDraft) => void;
+  retryOverview: () => Promise<void>;
+  retryAnalysisProfile: () => Promise<void>;
+  retryPerformanceTrend: () => Promise<void>;
+  retryLessonPreview: () => Promise<void>;
+  toggleArchived: () => Promise<void>;
+  submitAnalyzeGame: (draft: AnalyzeGameDraft) => Promise<void>;
+  submitEditStudent: (draft: EditStudentDraft) => Promise<void>;
   submitChessAccount: (
     draft: ChessAccountDraft,
     options?: { accountId?: string | null },
-  ) => void;
-  removeChessAccount: (accountId: string) => void;
-  submitCoachNotes: (draft: CoachNotesDraft) => void;
+  ) => Promise<void>;
+  removeChessAccount: (accountId: string) => Promise<void>;
+  submitCoachNotes: (draft: CoachNotesDraft) => Promise<void>;
 };

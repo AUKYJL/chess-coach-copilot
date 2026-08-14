@@ -1,7 +1,4 @@
-import type {
-  PerformanceDirection,
-  SeverityLevel,
-} from "@/shared/api/student";
+import type { PerformanceDirection, SeverityLevel } from "./api-types";
 
 import type { SummaryCardTone } from "./view-model";
 

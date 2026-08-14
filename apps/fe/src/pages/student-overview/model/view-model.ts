@@ -1,4 +1,4 @@
-import type { PerformanceTrendPoint } from "@/shared/api/student";
+import type { PerformanceTrendPoint } from "./api-types";
 
 export type SummaryCardTone =
   "neutral" | "info" | "success" | "warning" | "danger";

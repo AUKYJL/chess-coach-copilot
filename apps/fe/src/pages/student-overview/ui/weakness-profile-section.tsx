@@ -1,7 +1,6 @@
 import { ArrowRight, ShieldAlert } from "lucide-react";
 
 import {
-  Button,
   Card,
   CardContent,
   CardHeader,
@@ -10,8 +9,9 @@ import {
   TYPOGRAPHY_VARIANT,
   Typography,
 } from "@/shared/ui";
+import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
-import { toneChipClasses, type WeaknessProfileViewModel } from "../model";
+import { type WeaknessProfileViewModel, toneChipClasses } from "../model";
 
 type WeaknessProfileSectionProps = {
   profile: WeaknessProfileViewModel;
@@ -63,7 +63,12 @@ export function WeaknessProfileSection({
               Main pattern: {profile.mainWeakness}
             </Typography>
           </div>
-          <Button variant="ghost" size="sm" className="shrink-0" disabled>
+          <Button
+            variant={BUTTON_VARIANT.GHOST}
+            size={BUTTON_SIZE.SM}
+            className="shrink-0"
+            disabled
+          >
             Full analysis
             <ArrowRight className="size-4" />
           </Button>

@@ -5,7 +5,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -15,6 +14,7 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiExtraModels,
+  ApiOkResponse,
   ApiParam,
   ApiTags,
   getSchemaPath,
@@ -30,12 +30,24 @@ import type { AuthenticatedCoach } from '../shared/types/authenticated-coach.typ
 import { CreateStudentDto } from './dto/create-student.dto.js';
 import { ListStudentsQueryDto } from './dto/list-students.query.js';
 import { SetStudentArchiveDto } from './dto/set-student-archive.dto.js';
+import {
+  StudentAnalysisProfileResponse,
+  StudentOverviewResponse,
+  StudentPerformanceTrendResponse,
+} from './dto/student-overview.response.js';
 import { UpdateStudentDto } from './dto/update-student.dto.js';
 import { StudentsService } from './students.service.js';
 
 @ApiTags('Students')
 @ApiBearerAuth()
-@ApiExtraModels(CreateStudentDto, UpdateStudentDto, SetStudentArchiveDto)
+@ApiExtraModels(
+  CreateStudentDto,
+  UpdateStudentDto,
+  SetStudentArchiveDto,
+  StudentOverviewResponse,
+  StudentAnalysisProfileResponse,
+  StudentPerformanceTrendResponse,
+)
 @UseGuards(JwtAccessGuard)
 @Controller('students')
 export class StudentsController {
@@ -73,27 +85,69 @@ export class StudentsController {
   @Get(':studentId')
   getOne(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('studentId') studentId: string,
   ) {
     return this.studentsService.getOne(studentId, coach.coachAccountId);
   }
 
   @UseGuards(CoachStudentAccessGuard)
+  @ApiParam({
+    name: 'studentId',
+    example: swaggerParamExamples.studentId,
+    format: 'uuid',
+  })
+  @ApiOkResponse({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(StudentOverviewResponse) }],
+    },
+  })
   @Get(':studentId/overview')
   getOverview(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('studentId') studentId: string,
   ) {
     return this.studentsService.getOverview(studentId, coach.coachAccountId);
   }
 
   @UseGuards(CoachStudentAccessGuard)
+  @ApiParam({
+    name: 'studentId',
+    example: swaggerParamExamples.studentId,
+    format: 'uuid',
+  })
+  @ApiOkResponse({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(StudentAnalysisProfileResponse) }],
+    },
+  })
   @Get(':studentId/analysis-profile')
   getAnalysisProfile(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('studentId') studentId: string,
   ) {
     return this.studentsService.getAnalysisProfile(
+      studentId,
+      coach.coachAccountId,
+    );
+  }
+
+  @UseGuards(CoachStudentAccessGuard)
+  @ApiParam({
+    name: 'studentId',
+    example: swaggerParamExamples.studentId,
+    format: 'uuid',
+  })
+  @ApiOkResponse({
+    schema: {
+      allOf: [{ $ref: getSchemaPath(StudentPerformanceTrendResponse) }],
+    },
+  })
+  @Get(':studentId/performance-trend')
+  getPerformanceTrend(
+    @CurrentCoach() coach: AuthenticatedCoach,
+    @Param('studentId') studentId: string,
+  ) {
+    return this.studentsService.getPerformanceTrend(
       studentId,
       coach.coachAccountId,
     );
@@ -114,7 +168,7 @@ export class StudentsController {
   @Patch(':studentId')
   update(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('studentId') studentId: string,
     @Body() dto: UpdateStudentDto,
   ) {
     return this.studentsService.update(studentId, coach.coachAccountId, dto);
@@ -136,7 +190,7 @@ export class StudentsController {
   @Post(':studentId/archive')
   setArchiveState(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @Param('studentId') studentId: string,
     @Body() dto: SetStudentArchiveDto,
   ) {
     return this.studentsService.setArchiveState(

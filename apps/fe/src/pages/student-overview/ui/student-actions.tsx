@@ -1,19 +1,19 @@
 import { MoreHorizontal, Sparkles } from "lucide-react";
 
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui";
+import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
 type StudentActionsProps = {
   isArchived: boolean;
   onAnalyzeGame: () => void;
   onOpenChessAccounts: () => void;
   onEditStudent: () => void;
-  onToggleArchived: () => void;
+  onToggleArchived: () => Promise<void>;
 };
 
 export function StudentActions({
@@ -25,13 +25,21 @@ export function StudentActions({
 }: StudentActionsProps) {
   return (
     <div className="flex w-full flex-wrap items-center justify-start gap-3 sm:w-auto sm:justify-end">
-      <Button size="lg" className="sm:flex-none" onClick={onAnalyzeGame}>
+      <Button
+        size={BUTTON_SIZE.LG}
+        className="sm:flex-none"
+        onClick={onAnalyzeGame}
+      >
         <Sparkles className="size-4" />
         Analyze game
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" aria-label="More actions">
+          <Button
+            variant={BUTTON_VARIANT.OUTLINE}
+            size={BUTTON_SIZE.ICON}
+            aria-label="More actions"
+          >
             <MoreHorizontal className="size-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -42,7 +50,11 @@ export function StudentActions({
           <DropdownMenuItem onClick={onOpenChessAccounts}>
             Chess accounts
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onToggleArchived}>
+          <DropdownMenuItem
+            onClick={async () => {
+              await onToggleArchived();
+            }}
+          >
             {isArchived ? "Restore student" : "Archive student"}
           </DropdownMenuItem>
         </DropdownMenuContent>

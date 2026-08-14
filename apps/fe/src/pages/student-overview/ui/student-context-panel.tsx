@@ -1,7 +1,6 @@
 import { NotebookPen, UserRound } from "lucide-react";
 
 import {
-  Button,
   Card,
   CardContent,
   CardHeader,
@@ -11,6 +10,7 @@ import {
   TYPOGRAPHY_VARIANT,
   Typography,
 } from "@/shared/ui";
+import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
 import type {
   ChessAccountItem,
@@ -61,7 +61,11 @@ export function StudentContextPanel({
         <CardHeader className="gap-3">
           <div className="flex items-center justify-between gap-4">
             <CardTitle>Chess accounts</CardTitle>
-            <Button variant="ghost" size="sm" onClick={onOpenChessAccounts}>
+            <Button
+              variant={BUTTON_VARIANT.GHOST}
+              size={BUTTON_SIZE.SM}
+              onClick={onOpenChessAccounts}
+            >
               Manage
             </Button>
           </div>
@@ -99,7 +103,11 @@ export function StudentContextPanel({
               <NotebookPen className="text-accent size-4" />
               <CardTitle>Coach notes</CardTitle>
             </div>
-            <Button variant="ghost" size="sm" onClick={onOpenCoachNotes}>
+            <Button
+              variant={BUTTON_VARIANT.GHOST}
+              size={BUTTON_SIZE.SM}
+              onClick={onOpenCoachNotes}
+            >
               Edit
             </Button>
           </div>

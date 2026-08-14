@@ -3,12 +3,6 @@ import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 
 import {
-  analyzeGameSchema,
-  isAnnotatedPgn,
-  type AnalyzeGameDraft,
-} from "../model";
-import {
-  Button,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -26,12 +20,19 @@ import {
   RadioGroupItem,
   Textarea,
 } from "@/shared/ui";
+import { BUTTON_VARIANT, Button } from "@/shared/ui/button";
+
+import {
+  type AnalyzeGameDraft,
+  analyzeGameSchema,
+  isAnnotatedPgn,
+} from "../model";
 
 type AnalyzeGameDialogProps = {
   open: boolean;
   draft: AnalyzeGameDraft;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (draft: AnalyzeGameDraft) => void;
+  onSubmit: (draft: AnalyzeGameDraft) => Promise<void>;
 };
 
 export function AnalyzeGameDialog({
@@ -67,20 +68,20 @@ export function AnalyzeGameDialog({
         <DialogHeader>
           <DialogTitle>Analyze game</DialogTitle>
           <DialogDescription>
-            This mock-only workflow accepts already annotated PGN only. No
-            network request is made in this prototype.
+            Submit an already annotated PGN for backend analysis. Only annotated
+            PGN is accepted here.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form
             className="space-y-4"
-            onSubmit={form.handleSubmit((values) => {
+            onSubmit={form.handleSubmit(async (values) => {
               if (!isAnnotatedPgn(values.rawPgn)) {
                 return;
               }
 
-              onSubmit({
+              await onSubmit({
                 rawPgn: values.rawPgn.trim(),
                 studentColor: values.studentColor,
                 sourceLabel: values.sourceLabel.trim(),
@@ -149,12 +150,12 @@ export function AnalyzeGameDialog({
             <DialogFooter>
               <Button
                 type="button"
-                variant="outline"
+                variant={BUTTON_VARIANT.OUTLINE}
                 onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit">Save locally</Button>
+              <Button type="submit">Analyze game</Button>
             </DialogFooter>
           </form>
         </Form>

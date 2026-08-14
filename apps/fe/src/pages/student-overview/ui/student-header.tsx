@@ -7,7 +7,7 @@ type StudentHeaderProps = {
   onAnalyzeGame: () => void;
   onOpenChessAccounts: () => void;
   onEditStudent: () => void;
-  onToggleArchived: () => void;
+  onToggleArchived: () => Promise<void>;
 };
 
 export function StudentHeader({

@@ -1,4 +1,4 @@
-import type { ExternalPlatform, StudentColor } from "@/shared/api/student";
+import type { ExternalPlatform, StudentColor } from "./api-types";
 
 export type AnalyzeGameDraft = {
   rawPgn: string;
@@ -23,14 +23,12 @@ export type CoachNotesDraft = {
 };
 
 export type StudentOverviewDialogKind =
-  "analyze-game" | "edit-student" | "chess-accounts" | "coach-notes";
+  | "analyze-game"
+  | "edit-student"
+  | "chess-accounts"
+  | "coach-notes";
 
 export type StudentOverviewDialogState = {
   kind: StudentOverviewDialogKind | null;
   editingChessAccountId: string | null;
-};
-
-export type OverviewScenarioLocalState = {
-  analyzeGameDraft?: AnalyzeGameDraft;
-  chessAccountDraft?: ChessAccountDraft;
 };

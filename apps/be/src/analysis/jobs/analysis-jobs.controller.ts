@@ -4,7 +4,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Post,
   Query,
   UseGuards,
@@ -42,7 +41,7 @@ export class AnalysisJobsController {
   @Get(':jobId')
   getStatus(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('jobId', new ParseUUIDPipe()) jobId: string,
+    @Param('jobId') jobId: string,
   ) {
     return this.analysisJobsService.getJobResponse(jobId, coach.coachAccountId);
   }
@@ -51,7 +50,7 @@ export class AnalysisJobsController {
   @Post(':jobId/retry')
   retry(
     @CurrentCoach() coach: AuthenticatedCoach,
-    @Param('jobId', new ParseUUIDPipe()) jobId: string,
+    @Param('jobId') jobId: string,
   ) {
     return this.analysisJobsService.retry(jobId, coach.coachAccountId);
   }

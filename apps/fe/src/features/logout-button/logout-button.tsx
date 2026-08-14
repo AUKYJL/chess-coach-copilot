@@ -3,18 +3,17 @@ import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { terminateSession } from "@/entities/session";
 import {
+  REQUEST_FAILURE_KIND,
   fetchClient,
   getRequestFailureKind,
-  REQUEST_FAILURE_KIND,
 } from "@/shared/api";
-import { Button, InlineAlert } from "@/shared/ui";
+import { InlineAlert } from "@/shared/ui";
+import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
-function getLogoutErrorMessage(
-  status?: number,
-  error?: unknown,
-): string {
+import { terminateSession } from "@/entities/session";
+
+function getLogoutErrorMessage(status?: number, error?: unknown): string {
   const failureKind = getRequestFailureKind({ error, status });
 
   switch (failureKind) {
@@ -65,8 +64,8 @@ export function LogoutButton() {
             setIsSubmitting(false);
           }
         }}
-        size="sm"
-        variant="ghost"
+        size={BUTTON_SIZE.SM}
+        variant={BUTTON_VARIANT.GHOST}
       >
         {isSubmitting ? (
           <>

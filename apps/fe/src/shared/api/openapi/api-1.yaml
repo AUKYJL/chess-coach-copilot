@@ -193,10 +193,17 @@ paths:
           required: true
           in: path
           schema:
+            format: uuid
+            example: 7f4a8c2d-1b7e-4a7f-9d3b-2c6f4e8a9b10
             type: string
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StudentOverviewResponse"
       security: *a2
       tags: *a3
   /api/students/{studentId}/analysis-profile:
@@ -207,10 +214,38 @@ paths:
           required: true
           in: path
           schema:
+            format: uuid
+            example: 7f4a8c2d-1b7e-4a7f-9d3b-2c6f4e8a9b10
             type: string
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StudentAnalysisProfileResponse"
+      security: *a2
+      tags: *a3
+  /api/students/{studentId}/performance-trend:
+    get:
+      operationId: StudentsController_getPerformanceTrend
+      parameters:
+        - name: studentId
+          required: true
+          in: path
+          schema:
+            format: uuid
+            example: 7f4a8c2d-1b7e-4a7f-9d3b-2c6f4e8a9b10
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/StudentPerformanceTrendResponse"
       security: *a2
       tags: *a3
   /api/students/{studentId}/archive:
@@ -521,6 +556,11 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/AnalysisDetailsResponse"
       security: *a10
       tags: *a11
   /api/students/{studentId}/imports/pgn:
@@ -750,6 +790,11 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ProgressReadResponse"
       security: &a16
         - bearer: []
       tags: &a17
@@ -882,6 +927,555 @@ components:
           example: true
       required:
         - archived
+    StudentOverviewStudentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        coachAccountId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        birthYear:
+          type: number
+          nullable: true
+        rating:
+          type: number
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - coachAccountId
+        - displayName
+        - birthYear
+        - rating
+        - notes
+        - archivedAt
+        - createdAt
+        - updatedAt
+    ExternalAccountResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        studentId:
+          type: string
+          format: uuid
+        platform:
+          type: string
+          enum:
+            - LICHESS
+            - CHESS_COM
+        username:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - studentId
+        - platform
+        - username
+        - createdAt
+        - updatedAt
+    StudentOverviewStatsResponse:
+      type: object
+      properties:
+        gameCount:
+          type: number
+        analysisCount:
+          type: number
+        reportCount:
+          type: number
+        homeworkCount:
+          type: number
+      required:
+        - gameCount
+        - analysisCount
+        - reportCount
+        - homeworkCount
+    LatestProgressReferenceResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysisCount:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - analysisCount
+        - createdAt
+    RecentGameResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sourceLabel:
+          type: string
+          nullable: true
+        studentColor:
+          type: string
+          enum:
+            - WHITE
+            - BLACK
+        event:
+          type: string
+          nullable: true
+        site:
+          type: string
+          nullable: true
+        whitePlayerName:
+          type: string
+          nullable: true
+        blackPlayerName:
+          type: string
+          nullable: true
+        openingHeader:
+          type: string
+          nullable: true
+        ecoCode:
+          type: string
+          nullable: true
+        rawResult:
+          type: string
+          nullable: true
+        derivedResult:
+          type: string
+          enum:
+            - WIN
+            - LOSS
+            - DRAW
+            - UNKNOWN
+        plyCount:
+          type: number
+          nullable: true
+        importedAt:
+          type: string
+          format: date-time
+        latestAnalysisJobStatus:
+          type: string
+          enum:
+            - PENDING
+            - PARSING
+            - EXTRACTING_ANNOTATIONS
+            - CLASSIFICATION
+            - GENERATING_OUTPUT
+            - COMPLETED
+            - FAILED
+          nullable: true
+        latestAnalysisJobId:
+          type: string
+          format: uuid
+          nullable: true
+        latestAnalysisId:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+        - id
+        - sourceLabel
+        - studentColor
+        - event
+        - site
+        - whitePlayerName
+        - blackPlayerName
+        - openingHeader
+        - ecoCode
+        - rawResult
+        - derivedResult
+        - plyCount
+        - importedAt
+        - latestAnalysisJobStatus
+        - latestAnalysisJobId
+        - latestAnalysisId
+    RecentAnalysisResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysisJobId:
+          type: string
+          format: uuid
+        gameId:
+          type: string
+          format: uuid
+        mainWeaknessTag:
+          type: string
+          enum:
+            - MISSED_FORK
+            - MISSED_PIN
+            - MISSED_DOUBLE_ATTACK
+            - MISSED_DISCOVERED_ATTACK
+            - MISSED_MATE
+            - ALLOWED_MATE
+            - HANGING_PIECE
+            - MISSED_CAPTURE
+            - BAD_CAPTURE
+            - MISSED_OPPONENT_THREAT
+            - OPENED_LINE
+            - UNKNOWN_TACTICAL_ERROR
+            - KING_SAFETY
+            - DELAYED_CASTLING
+            - POOR_DEVELOPMENT
+            - EARLY_QUEEN
+            - BAD_TRADE
+            - POOR_CONVERSION
+            - OPENING_STRATEGY
+            - PAWN_STRUCTURE
+            - ENDGAME_TECHNIQUE
+            - UNKNOWN_STRATEGIC_ERROR
+            - TIME_MANAGEMENT
+            - CALCULATION_DEPTH
+            - TUNNEL_VISION
+            - MATERIAL_GREED
+            - LOW_BOARD_AWARENESS
+            - INSUFFICIENT_ANNOTATION_DATA
+            - REDUCED_CONFIDENCE
+          nullable: true
+        recommendedLessonTitle:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - analysisJobId
+        - gameId
+        - mainWeaknessTag
+        - recommendedLessonTitle
+        - createdAt
+    RecentReportResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysisId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        audience:
+          type: string
+          enum:
+            - COACH
+            - PARENT
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - analysisId
+        - title
+        - audience
+        - createdAt
+    RecentHomeworkResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysisId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - analysisId
+        - title
+        - createdAt
+    StudentOverviewResponse:
+      type: object
+      properties:
+        student:
+          $ref: "#/components/schemas/StudentOverviewStudentResponse"
+        externalAccounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExternalAccountResponse"
+        stats:
+          $ref: "#/components/schemas/StudentOverviewStatsResponse"
+        latestProgress:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/LatestProgressReferenceResponse"
+        recentGames:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentGameResponse"
+        recentAnalyses:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentAnalysisResponse"
+        recentReports:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentReportResponse"
+        recentHomework:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentHomeworkResponse"
+      required:
+        - student
+        - externalAccounts
+        - stats
+        - latestProgress
+        - recentGames
+        - recentAnalyses
+        - recentReports
+        - recentHomework
+    WeaknessTagCountResponse:
+      type: object
+      properties:
+        tag:
+          type: string
+          enum:
+            - MISSED_FORK
+            - MISSED_PIN
+            - MISSED_DOUBLE_ATTACK
+            - MISSED_DISCOVERED_ATTACK
+            - MISSED_MATE
+            - ALLOWED_MATE
+            - HANGING_PIECE
+            - MISSED_CAPTURE
+            - BAD_CAPTURE
+            - MISSED_OPPONENT_THREAT
+            - OPENED_LINE
+            - UNKNOWN_TACTICAL_ERROR
+            - KING_SAFETY
+            - DELAYED_CASTLING
+            - POOR_DEVELOPMENT
+            - EARLY_QUEEN
+            - BAD_TRADE
+            - POOR_CONVERSION
+            - OPENING_STRATEGY
+            - PAWN_STRUCTURE
+            - ENDGAME_TECHNIQUE
+            - UNKNOWN_STRATEGIC_ERROR
+            - TIME_MANAGEMENT
+            - CALCULATION_DEPTH
+            - TUNNEL_VISION
+            - MATERIAL_GREED
+            - LOW_BOARD_AWARENESS
+            - INSUFFICIENT_ANNOTATION_DATA
+            - REDUCED_CONFIDENCE
+        count:
+          type: number
+      required:
+        - tag
+        - count
+    SeverityCountResponse:
+      type: object
+      properties:
+        severity:
+          type: string
+          enum:
+            - INACCURACY
+            - MISTAKE
+            - BLUNDER
+            - MATE
+            - UNKNOWN
+        count:
+          type: number
+      required:
+        - severity
+        - count
+    SampleMistakeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysisId:
+          type: string
+          format: uuid
+        gameId:
+          type: string
+          format: uuid
+        severity:
+          type: string
+          enum:
+            - INACCURACY
+            - MISTAKE
+            - BLUNDER
+            - MATE
+            - UNKNOWN
+        category:
+          type: string
+        explanation:
+          type: string
+        suggestedFix:
+          type: string
+          nullable: true
+      required:
+        - id
+        - analysisId
+        - gameId
+        - severity
+        - category
+        - explanation
+        - suggestedFix
+    StudentAnalysisProfileResponse:
+      type: object
+      properties:
+        analysisCountUsed:
+          type: number
+        mainWeaknessTag:
+          type: string
+          enum:
+            - MISSED_FORK
+            - MISSED_PIN
+            - MISSED_DOUBLE_ATTACK
+            - MISSED_DISCOVERED_ATTACK
+            - MISSED_MATE
+            - ALLOWED_MATE
+            - HANGING_PIECE
+            - MISSED_CAPTURE
+            - BAD_CAPTURE
+            - MISSED_OPPONENT_THREAT
+            - OPENED_LINE
+            - UNKNOWN_TACTICAL_ERROR
+            - KING_SAFETY
+            - DELAYED_CASTLING
+            - POOR_DEVELOPMENT
+            - EARLY_QUEEN
+            - BAD_TRADE
+            - POOR_CONVERSION
+            - OPENING_STRATEGY
+            - PAWN_STRUCTURE
+            - ENDGAME_TECHNIQUE
+            - UNKNOWN_STRATEGIC_ERROR
+            - TIME_MANAGEMENT
+            - CALCULATION_DEPTH
+            - TUNNEL_VISION
+            - MATERIAL_GREED
+            - LOW_BOARD_AWARENESS
+            - INSUFFICIENT_ANNOTATION_DATA
+            - REDUCED_CONFIDENCE
+          nullable: true
+        secondaryWeaknessTags:
+          type: array
+          items:
+            type: string
+            enum:
+              - MISSED_FORK
+              - MISSED_PIN
+              - MISSED_DOUBLE_ATTACK
+              - MISSED_DISCOVERED_ATTACK
+              - MISSED_MATE
+              - ALLOWED_MATE
+              - HANGING_PIECE
+              - MISSED_CAPTURE
+              - BAD_CAPTURE
+              - MISSED_OPPONENT_THREAT
+              - OPENED_LINE
+              - UNKNOWN_TACTICAL_ERROR
+              - KING_SAFETY
+              - DELAYED_CASTLING
+              - POOR_DEVELOPMENT
+              - EARLY_QUEEN
+              - BAD_TRADE
+              - POOR_CONVERSION
+              - OPENING_STRATEGY
+              - PAWN_STRUCTURE
+              - ENDGAME_TECHNIQUE
+              - UNKNOWN_STRATEGIC_ERROR
+              - TIME_MANAGEMENT
+              - CALCULATION_DEPTH
+              - TUNNEL_VISION
+              - MATERIAL_GREED
+              - LOW_BOARD_AWARENESS
+              - INSUFFICIENT_ANNOTATION_DATA
+              - REDUCED_CONFIDENCE
+        tagCounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/WeaknessTagCountResponse"
+        severityCounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeverityCountResponse"
+        sampleMistakes:
+          type: array
+          items:
+            $ref: "#/components/schemas/SampleMistakeResponse"
+        recommendedLessonTitle:
+          type: string
+          nullable: true
+      required:
+        - analysisCountUsed
+        - mainWeaknessTag
+        - secondaryWeaknessTags
+        - tagCounts
+        - severityCounts
+        - sampleMistakes
+        - recommendedLessonTitle
+    PerformanceTrendPointResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          example: 2026-08-13
+        value:
+          type: number
+      required:
+        - date
+        - value
+    StudentPerformanceTrendResponse:
+      type: object
+      properties:
+        direction:
+          type: string
+          enum:
+            - IMPROVING
+            - STABLE
+            - DECLINING
+            - UNKNOWN
+        primaryMetric:
+          type: string
+        range:
+          type: string
+          enum:
+            - 90D
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/PerformanceTrendPointResponse"
+      required:
+        - direction
+        - primaryMetric
+        - range
+        - points
     CreateExternalAccountDto:
       type: object
       properties:
@@ -912,6 +1506,303 @@ components:
       required:
         - platform
         - username
+    AnalysisCriticalMomentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysisId:
+          type: string
+        ply:
+          type: number
+        fullMoveNumber:
+          type: number
+        moveNumber:
+          type: string
+        moveColor:
+          type: string
+          enum:
+            - WHITE
+            - BLACK
+        san:
+          type: string
+        lan:
+          type: string
+          nullable: true
+        uci:
+          type: string
+          nullable: true
+        beforeFen:
+          type: string
+        afterFen:
+          type: string
+        bestMove:
+          type: string
+          nullable: true
+        bestVariation:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nags:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        comments:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        evaluationBefore:
+          type: object
+          additionalProperties: true
+          nullable: true
+        evaluationAfter:
+          type: object
+          additionalProperties: true
+          nullable: true
+        severity:
+          type: string
+          enum:
+            - INACCURACY
+            - MISTAKE
+            - BLUNDER
+            - MATE
+            - UNKNOWN
+        sourceEvidence:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - analysisId
+        - ply
+        - fullMoveNumber
+        - moveNumber
+        - moveColor
+        - san
+        - lan
+        - uci
+        - beforeFen
+        - afterFen
+        - bestMove
+        - bestVariation
+        - nags
+        - comments
+        - evaluationBefore
+        - evaluationAfter
+        - severity
+        - sourceEvidence
+        - createdAt
+        - updatedAt
+    AnalysisMistakeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysisId:
+          type: string
+          format: uuid
+        criticalMomentId:
+          type: string
+          format: uuid
+          nullable: true
+        severity:
+          type: string
+          enum:
+            - INACCURACY
+            - MISTAKE
+            - BLUNDER
+            - MATE
+            - UNKNOWN
+        category:
+          type: string
+        explanation:
+          type: string
+        suggestedFix:
+          type: string
+          nullable: true
+        sourceEvidence:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - analysisId
+        - criticalMomentId
+        - severity
+        - category
+        - explanation
+        - suggestedFix
+        - sourceEvidence
+        - createdAt
+        - updatedAt
+    AnalysisDetailsResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysisJobId:
+          type: string
+          format: uuid
+        gameId:
+          type: string
+          format: uuid
+        studentId:
+          type: string
+          format: uuid
+        confidenceLevel:
+          type: string
+          enum:
+            - HIGH
+            - MEDIUM
+            - LOW
+        annotationCoverage:
+          type: string
+          enum:
+            - NONE
+            - PARTIAL
+            - FULL
+        reducedConfidenceWarning:
+          type: string
+          nullable: true
+        overallDiagnosis:
+          type: string
+        openingName:
+          type: string
+          nullable: true
+        result:
+          type: string
+          enum:
+            - WIN
+            - LOSS
+            - DRAW
+            - UNKNOWN
+        mainWeaknessTag:
+          type: string
+          enum:
+            - MISSED_FORK
+            - MISSED_PIN
+            - MISSED_DOUBLE_ATTACK
+            - MISSED_DISCOVERED_ATTACK
+            - MISSED_MATE
+            - ALLOWED_MATE
+            - HANGING_PIECE
+            - MISSED_CAPTURE
+            - BAD_CAPTURE
+            - MISSED_OPPONENT_THREAT
+            - OPENED_LINE
+            - UNKNOWN_TACTICAL_ERROR
+            - KING_SAFETY
+            - DELAYED_CASTLING
+            - POOR_DEVELOPMENT
+            - EARLY_QUEEN
+            - BAD_TRADE
+            - POOR_CONVERSION
+            - OPENING_STRATEGY
+            - PAWN_STRUCTURE
+            - ENDGAME_TECHNIQUE
+            - UNKNOWN_STRATEGIC_ERROR
+            - TIME_MANAGEMENT
+            - CALCULATION_DEPTH
+            - TUNNEL_VISION
+            - MATERIAL_GREED
+            - LOW_BOARD_AWARENESS
+            - INSUFFICIENT_ANNOTATION_DATA
+            - REDUCED_CONFIDENCE
+          nullable: true
+        secondaryWeaknessTags:
+          type: array
+          items:
+            type: string
+            enum:
+              - MISSED_FORK
+              - MISSED_PIN
+              - MISSED_DOUBLE_ATTACK
+              - MISSED_DISCOVERED_ATTACK
+              - MISSED_MATE
+              - ALLOWED_MATE
+              - HANGING_PIECE
+              - MISSED_CAPTURE
+              - BAD_CAPTURE
+              - MISSED_OPPONENT_THREAT
+              - OPENED_LINE
+              - UNKNOWN_TACTICAL_ERROR
+              - KING_SAFETY
+              - DELAYED_CASTLING
+              - POOR_DEVELOPMENT
+              - EARLY_QUEEN
+              - BAD_TRADE
+              - POOR_CONVERSION
+              - OPENING_STRATEGY
+              - PAWN_STRUCTURE
+              - ENDGAME_TECHNIQUE
+              - UNKNOWN_STRATEGIC_ERROR
+              - TIME_MANAGEMENT
+              - CALCULATION_DEPTH
+              - TUNNEL_VISION
+              - MATERIAL_GREED
+              - LOW_BOARD_AWARENESS
+              - INSUFFICIENT_ANNOTATION_DATA
+              - REDUCED_CONFIDENCE
+        recommendedLessonTitle:
+          type: string
+          nullable: true
+        recommendedLessonWhy:
+          type: string
+          nullable: true
+        recommendedFocusPoints:
+          type: array
+          items:
+            type: string
+        criticalMoments:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalysisCriticalMomentResponse"
+        mistakes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalysisMistakeResponse"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - analysisJobId
+        - gameId
+        - studentId
+        - confidenceLevel
+        - annotationCoverage
+        - reducedConfidenceWarning
+        - overallDiagnosis
+        - openingName
+        - result
+        - mainWeaknessTag
+        - secondaryWeaknessTags
+        - recommendedLessonTitle
+        - recommendedLessonWhy
+        - recommendedFocusPoints
+        - criticalMoments
+        - mistakes
+        - createdAt
+        - updatedAt
     ImportPgnDto:
       type: object
       properties:
@@ -993,3 +1884,58 @@ components:
               - Checks, captures, threats
             notes:
               - Discuss move-order discipline in next lesson
+    ProgressSnapshotResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        studentId:
+          type: string
+          format: uuid
+        analysisCount:
+          type: number
+        summary:
+          type: object
+          additionalProperties: true
+        promptVersion:
+          type: string
+        model:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - studentId
+        - analysisCount
+        - summary
+        - promptVersion
+        - model
+        - createdAt
+        - updatedAt
+    ProgressReadResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - ready
+            - not-enough-data
+        requiredAnalysisCount:
+          type: number
+        availableAnalysisCount:
+          type: number
+        snapshot:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/ProgressSnapshotResponse"
+      required:
+        - status
+        - requiredAnalysisCount
+        - availableAnalysisCount
+        - snapshot

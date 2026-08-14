@@ -149,5 +149,7 @@ SET "secondaryWeaknessTagsNew" = ARRAY(
 );
 
 ALTER TABLE "GameAnalysis"
-DROP COLUMN "secondaryWeaknessTags",
+DROP COLUMN "secondaryWeaknessTags";
+
+ALTER TABLE "GameAnalysis"
 RENAME COLUMN "secondaryWeaknessTagsNew" TO "secondaryWeaknessTags";
