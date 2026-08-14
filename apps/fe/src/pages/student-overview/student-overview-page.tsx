@@ -99,7 +99,7 @@ export function StudentOverviewPage() {
   }
 
   return (
-    <div className="space-y-5 md:space-y-6 xl:space-y-8">
+    <div className="space-y-4 md:space-y-5 xl:space-y-6">
       <StudentHeader
         student={query.data.student}
         onAnalyzeGame={() => query.openDialog("analyze-game")}
@@ -110,8 +110,8 @@ export function StudentOverviewPage() {
       <OverviewTabs />
       <SummaryCards cards={query.data.summaryCards} />
 
-      <section className="grid gap-5 md:gap-6 xl:grid-cols-[minmax(0,1.62fr)_minmax(320px,0.94fr)]">
-        <div className="order-1 min-w-0 xl:col-start-1">
+      <section className="grid gap-4 md:gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(360px,0.96fr)] xl:items-start">
+        <div className="min-w-0 space-y-4 md:space-y-5">
           {query.resources.performanceTrend.status === "error" ? (
             <SectionErrorState
               title="Performance trend unavailable"
@@ -130,18 +130,10 @@ export function StudentOverviewPage() {
           ) : (
             <PerformanceTrendSection trend={query.data.performanceTrend} />
           )}
-        </div>
 
-        <div className="order-2 min-w-0 xl:col-start-2 xl:row-span-2">
-          <RecentGamesSection games={query.data.recentGames} />
-        </div>
-
-        <div className="order-3 min-w-0 xl:col-start-1">
           <ProgressInsightSection insight={query.data.progressInsight} />
-        </div>
 
-        <div className="order-4 min-w-0 xl:col-start-1">
-          <div className="grid gap-5 md:gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 md:gap-5 lg:grid-cols-2">
             {query.resources.analysisProfile.status === "error" ? (
               <SectionErrorState
                 title="Weakness profile unavailable"
@@ -172,13 +164,12 @@ export function StudentOverviewPage() {
               <NextLessonSection lesson={query.data.nextLesson} />
             )}
           </div>
-        </div>
 
-        <div className="order-5 min-w-0 xl:col-start-1">
           <RecentMaterialsSection materials={query.data.recentMaterials} />
         </div>
 
-        <div className="order-6 min-w-0 xl:col-start-2">
+        <div className="min-w-0 space-y-4 md:space-y-5">
+          <RecentGamesSection games={query.data.recentGames} />
           <StudentContextPanel
             accounts={query.data.chessAccounts}
             coachNotes={query.data.coachNotes}

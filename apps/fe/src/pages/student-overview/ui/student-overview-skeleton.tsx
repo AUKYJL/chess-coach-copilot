@@ -29,9 +29,9 @@ export function SectionSkeletonCard({
 
 export function StudentOverviewSkeleton() {
   return (
-    <div className="space-y-6 xl:space-y-8">
-      <div className="border-border bg-surface rounded-[32px] border px-6 py-6 md:px-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+    <div className="space-y-4 md:space-y-5 xl:space-y-6">
+      <div className="border-border bg-surface rounded-[28px] border px-5 py-5 md:px-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
             <Skeleton className="size-[4.5rem] rounded-full" />
             <div className="space-y-3">
@@ -59,16 +59,20 @@ export function StudentOverviewSkeleton() {
         ))}
       </div>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.62fr)_minmax(320px,0.94fr)]">
-        <SectionSkeletonCard title="Performance trend loading" lines={5} tall />
-        <SectionSkeletonCard title="Recent games loading" lines={9} />
-        <SectionSkeletonCard title="Progress insight loading" lines={4} />
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SectionSkeletonCard title="Weakness profile loading" lines={6} />
-          <SectionSkeletonCard title="Next lesson loading" lines={6} />
+      <section className="grid gap-4 md:gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(360px,0.96fr)] xl:items-start">
+        <div className="space-y-4 md:space-y-5">
+          <SectionSkeletonCard title="Performance trend loading" lines={5} tall />
+          <SectionSkeletonCard title="Progress insight loading" lines={4} />
+          <div className="grid gap-4 md:gap-5 lg:grid-cols-2">
+            <SectionSkeletonCard title="Weakness profile loading" lines={6} />
+            <SectionSkeletonCard title="Next lesson loading" lines={6} />
+          </div>
+          <SectionSkeletonCard title="Recent materials loading" lines={4} />
         </div>
-        <SectionSkeletonCard title="Recent materials loading" lines={4} />
-        <SectionSkeletonCard title="Student context loading" lines={7} />
+        <div className="space-y-4 md:space-y-5">
+          <SectionSkeletonCard title="Recent games loading" lines={9} />
+          <SectionSkeletonCard title="Student context loading" lines={7} />
+        </div>
       </section>
     </div>
   );

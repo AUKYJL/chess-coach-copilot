@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 import {
   SESSION_STATUS,
@@ -15,10 +15,12 @@ import {
 import { WorkspaceLinks } from "./workspace-links";
 
 export function AppShell() {
+  const location = useLocation();
   const coach = useSessionStore((state) => state.coach);
   const status = useSessionStore((state) => state.status);
   const displayName = coach?.displayName ?? "Coach";
   const showLogoutButton = status === SESSION_STATUS.AUTHENTICATED;
+  const isStudentOverviewRoute = location.pathname.startsWith("/students/");
 
   return (
     <div className="bg-background min-h-dvh">
@@ -94,7 +96,7 @@ export function AppShell() {
 
       <main className="min-w-0 xl:min-h-dvh xl:pl-60">
         <div className="min-w-0 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-8 xl:py-8">
-          <Container>
+          <Container size={isStudentOverviewRoute ? "workspace" : "default"}>
             <Outlet />
           </Container>
         </div>

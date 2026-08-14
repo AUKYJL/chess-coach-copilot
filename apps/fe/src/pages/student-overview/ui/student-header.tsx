@@ -22,13 +22,13 @@ export function StudentHeader({
   );
 
   return (
-    <header className="border-border bg-surface rounded-[32px] border px-6 py-6 shadow-[0_24px_60px_-42px_rgba(32,33,36,0.32)] md:px-8">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+    <header className="border-border bg-surface rounded-[28px] border px-5 py-5 md:px-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-4">
           <div className="bg-avatar text-avatar-foreground flex size-[4.5rem] shrink-0 items-center justify-center rounded-full text-xl font-semibold">
             {student.initials}
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <p className="text-muted-foreground text-xs font-semibold tracking-[0.22em] uppercase">
               {student.breadcrumbLabel}
             </p>

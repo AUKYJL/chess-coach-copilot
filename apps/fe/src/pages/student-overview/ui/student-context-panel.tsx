@@ -34,7 +34,7 @@ export function StudentContextPanel({
   onOpenCoachNotes,
 }: StudentContextPanelProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-5">
       <Card>
         <CardHeader className="gap-2">
           <div className="flex items-center gap-2">
@@ -58,7 +58,7 @@ export function StudentContextPanel({
       </Card>
 
       <Card>
-        <CardHeader className="gap-3">
+        <CardHeader className="gap-2">
           <div className="flex items-center justify-between gap-4">
             <CardTitle>Chess accounts</CardTitle>
             <Button
