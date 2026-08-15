@@ -10,6 +10,7 @@ import {
 import type { LlmService } from '../../src/llm/llm.service.js';
 import type { LlmResponse } from '../../src/llm/llm.types.js';
 import { ANALYSIS_CLASSIFIER_SYSTEM_PROMPT } from '../../src/analysis/classification/analysis-classifier.prompt.js';
+import { analysisResultPayloadSchema } from '../../src/analysis/classification/analysis-result.schema.js';
 import type { ParsedPgn } from '../../src/analysis/preparation/pgn-parser.service.js';
 import type {
   ExtractedAnnotationContext,
@@ -152,7 +153,7 @@ function createExtractedContext(
 }
 
 describe('AnalysisClassifierService', () => {
-  it('calls LlmService.classify with the runtime prompt and stringified payload', async () => {
+  it('calls LlmService.classify with schema-aware runtime prompt metadata and stringified payload', async () => {
     const classifyMock = jest.fn(() =>
       Promise.resolve({
         payload: {
@@ -209,6 +210,10 @@ describe('AnalysisClassifierService', () => {
           },
         ],
       }),
+      structuredOutput: {
+        name: 'analysis_result_payload',
+        schema: analysisResultPayloadSchema,
+      },
     });
     expect(result.promptVersion).toBe('v2');
     expect(result.model).toBe('test-model');
@@ -245,7 +250,7 @@ describe('AnalysisClassifierService', () => {
     );
   });
 
-  it('throws when LLM returns an invalid payload', async () => {
+  it('keeps downstream runtime validation for invalid sourceEvidence payloads', async () => {
     const classifyMock = jest.fn(() =>
       Promise.resolve({
         payload: {
@@ -278,6 +283,19 @@ describe('AnalysisClassifierService', () => {
 
     await expect(
       service.classify(createParsedPgn(), createExtractedContext()),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({
+      name: 'LlmResponseValidationError',
+      failureCode: 'INVALID_PAYLOAD',
+      rawText: '{}',
+      parsedPayload: expect.objectContaining({
+        mistakes: [
+          expect.objectContaining({
+            sourceEvidence: [],
+          }),
+        ],
+      }),
+      model: 'test-model',
+      promptVersion: 'v2',
+    });
   });
 });

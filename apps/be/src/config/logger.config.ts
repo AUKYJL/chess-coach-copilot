@@ -2,13 +2,7 @@ import { registerAs } from '@nestjs/config';
 import { APP_ENVIRONMENT, type AppEnvironment } from './app.config.js';
 
 type LoggerLevel =
-  | 'fatal'
-  | 'error'
-  | 'warn'
-  | 'info'
-  | 'debug'
-  | 'trace'
-  | 'silent';
+  'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
 
 const LOGGER_LEVELS: LoggerLevel[] = [
   'fatal',

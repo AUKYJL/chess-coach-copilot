@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiExtraModels,
@@ -10,8 +18,13 @@ import {
 import { JwtAccessGuard } from '../../auth/guards/jwt-access.guard.js';
 import { CurrentCoach } from '../../shared/decorators/current-coach.decorator.js';
 import type { AuthenticatedCoach } from '../../shared/types/authenticated-coach.type.js';
-import { AnalysisDetailsResponse } from '../dto/analysis-details.response.js';
+import {
+  AnalysisDetailsResponse,
+  AnalysisMistakeResponse,
+} from '../dto/analysis-details.response.js';
+import { UpdateMistakeReviewDto } from '../dto/update-mistake-review.dto.js';
 import { AnalysisQueriesService } from './analysis-queries.service.js';
+import { AnalysisReviewsService } from './analysis-reviews.service.js';
 
 @ApiTags('Analysis')
 @ApiBearerAuth()
@@ -21,6 +34,7 @@ import { AnalysisQueriesService } from './analysis-queries.service.js';
 export class AnalysisController {
   constructor(
     private readonly analysisQueriesService: AnalysisQueriesService,
+    private readonly analysisReviewsService: AnalysisReviewsService,
   ) {}
 
   @ApiQuery({ name: 'studentId', required: false, format: 'uuid' })
@@ -50,6 +64,22 @@ export class AnalysisController {
     return this.analysisQueriesService.getOwnedAnalysisDetails(
       analysisId,
       coach.coachAccountId,
+    );
+  }
+
+  @Patch('mistakes/:mistakeId/review')
+  @ApiOkResponse({
+    type: AnalysisMistakeResponse,
+  })
+  updateMistakeReview(
+    @CurrentCoach() coach: AuthenticatedCoach,
+    @Param('mistakeId') mistakeId: string,
+    @Body() dto: UpdateMistakeReviewDto,
+  ) {
+    return this.analysisReviewsService.updateOwnedMistakeReview(
+      mistakeId,
+      coach.coachAccountId,
+      dto,
     );
   }
 }

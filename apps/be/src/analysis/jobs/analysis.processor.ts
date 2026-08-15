@@ -9,7 +9,10 @@ import {
   type Prisma,
 } from '../../generated/prisma/client.js';
 import { HomeworkService } from '../../homework/homework.service.js';
-import { isLlmResponseFormatError } from '../../llm/index.js';
+import {
+  isLlmResponseFormatError,
+  isLlmResponseValidationError,
+} from '../../llm/index.js';
 import { ProgressService } from '../../progress/progress.service.js';
 import {
   ANALYSIS_JOB_NAME,
@@ -350,6 +353,8 @@ export class AnalysisProcessor extends WorkerHost {
       await this.generationTraceService.persistFailure({
         coachAccountId: analysisJob.coachAccountId,
         analysisJobId: analysisJob.id,
+        promptVersion: this.getLlmFailurePromptVersion(error),
+        model: this.getLlmFailureModel(error),
         inputPayload: {
           analysisJobId: analysisJob.id,
           traceId,
@@ -470,8 +475,9 @@ export class AnalysisProcessor extends WorkerHost {
       await this.generationTraceService.persistFailure({
         coachAccountId: analysisJob.coachAccountId,
         analysisJobId: analysisJob.id,
-        promptVersion: 'failed-generation-v1',
-        model: 'generation-processor',
+        promptVersion:
+          this.getLlmFailurePromptVersion(error) ?? 'failed-generation-v1',
+        model: this.getLlmFailureModel(error) ?? 'generation-processor',
         analysisId: analysisJob.sourceAnalysisId ?? undefined,
         inputPayload: this.toGenerationTraceInput(analysisJob),
         outputPayload: this.toFailureOutputPayload(error),
@@ -545,24 +551,61 @@ export class AnalysisProcessor extends WorkerHost {
   }
 
   private toFailureOutputPayload(error: unknown): Prisma.InputJsonValue {
-    if (!isLlmResponseFormatError(error)) {
-      return {};
+    if (isLlmResponseValidationError(error)) {
+      return {
+        rawText: error.rawText,
+        parsedPayload: error.parsedPayload,
+      };
     }
 
-    return {
-      rawText: error.rawText,
-    };
+    if (isLlmResponseFormatError(error)) {
+      return {
+        rawText: error.rawText,
+      };
+    }
+
+    return {};
   }
 
   private getLlmFailureLogFields(error: unknown) {
-    if (!isLlmResponseFormatError(error)) {
-      return {};
+    if (isLlmResponseValidationError(error)) {
+      return {
+        llmFailureCode: error.failureCode,
+        llmRawTextLength: error.rawText.length,
+        llmRawTextPreview: error.rawText.slice(0, LLM_RAW_TEXT_PREVIEW_LIMIT),
+      };
     }
 
-    return {
-      llmFailureCode: error.failureCode,
-      llmRawTextLength: error.rawText.length,
-      llmRawTextPreview: error.rawText.slice(0, LLM_RAW_TEXT_PREVIEW_LIMIT),
-    };
+    if (isLlmResponseFormatError(error)) {
+      return {
+        llmFailureCode: error.failureCode,
+        llmRawTextLength: error.rawText.length,
+        llmRawTextPreview: error.rawText.slice(0, LLM_RAW_TEXT_PREVIEW_LIMIT),
+      };
+    }
+
+    return {};
+  }
+
+  private getLlmFailurePromptVersion(error: unknown) {
+    if (
+      isLlmResponseFormatError(error) ||
+      isLlmResponseValidationError(error)
+    ) {
+      return error.promptVersion;
+    }
+
+    return undefined;
+  }
+
+  private getLlmFailureModel(error: unknown) {
+    if (
+      isLlmResponseFormatError(error) ||
+      isLlmResponseValidationError(error)
+    ) {
+      return error.model;
+    }
+
+    return undefined;
   }
 }

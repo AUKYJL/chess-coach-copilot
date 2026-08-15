@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { SavedAnalysisInputMapper } from '../analysis/classification/saved-analysis-input.mapper.js';
 import { SavedOutputGenerationService } from '../analysis/classification/saved-output-generation.service.js';
 import { GenerationTraceService } from '../analysis/classification/generation-trace.service.js';

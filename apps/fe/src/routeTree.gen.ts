@@ -15,7 +15,9 @@ import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as authRegisterRouteImport } from './routes/(auth)/register'
 import { Route as AuthenticatedActivityRouteImport } from './routes/_authenticated/activity'
 import { Route as AuthenticatedStudentsIndexRouteImport } from './routes/_authenticated/students/index'
-import { Route as AuthenticatedStudentsStudentIdRouteImport } from './routes/_authenticated/students/$studentId'
+import { Route as AuthenticatedStudentsStudentIdRouteRouteImport } from './routes/_authenticated/students/$studentId/route'
+import { Route as AuthenticatedStudentsStudentIdIndexRouteImport } from './routes/_authenticated/students/$studentId/index'
+import { Route as AuthenticatedStudentsStudentIdGamesGameIdRouteImport } from './routes/_authenticated/students/$studentId/games/$gameId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -47,11 +49,23 @@ const AuthenticatedStudentsIndexRoute =
     path: '/students/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedStudentsStudentIdRoute =
-  AuthenticatedStudentsStudentIdRouteImport.update({
+const AuthenticatedStudentsStudentIdRouteRoute =
+  AuthenticatedStudentsStudentIdRouteRouteImport.update({
     id: '/students/$studentId',
     path: '/students/$studentId',
     getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStudentsStudentIdIndexRoute =
+  AuthenticatedStudentsStudentIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedStudentsStudentIdRouteRoute,
+  } as any)
+const AuthenticatedStudentsStudentIdGamesGameIdRoute =
+  AuthenticatedStudentsStudentIdGamesGameIdRouteImport.update({
+    id: '/games/$gameId',
+    path: '/games/$gameId',
+    getParentRoute: () => AuthenticatedStudentsStudentIdRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -59,16 +73,19 @@ export interface FileRoutesByFullPath {
   '/login': typeof authLoginRoute
   '/register': typeof authRegisterRoute
   '/activity': typeof AuthenticatedActivityRoute
-  '/students/$studentId': typeof AuthenticatedStudentsStudentIdRoute
+  '/students/$studentId': typeof AuthenticatedStudentsStudentIdRouteRouteWithChildren
   '/students/': typeof AuthenticatedStudentsIndexRoute
+  '/students/$studentId/': typeof AuthenticatedStudentsStudentIdIndexRoute
+  '/students/$studentId/games/$gameId': typeof AuthenticatedStudentsStudentIdGamesGameIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof authLoginRoute
   '/register': typeof authRegisterRoute
   '/activity': typeof AuthenticatedActivityRoute
-  '/students/$studentId': typeof AuthenticatedStudentsStudentIdRoute
   '/students': typeof AuthenticatedStudentsIndexRoute
+  '/students/$studentId': typeof AuthenticatedStudentsStudentIdIndexRoute
+  '/students/$studentId/games/$gameId': typeof AuthenticatedStudentsStudentIdGamesGameIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,8 +94,10 @@ export interface FileRoutesById {
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/register': typeof authRegisterRoute
   '/_authenticated/activity': typeof AuthenticatedActivityRoute
-  '/_authenticated/students/$studentId': typeof AuthenticatedStudentsStudentIdRoute
+  '/_authenticated/students/$studentId': typeof AuthenticatedStudentsStudentIdRouteRouteWithChildren
   '/_authenticated/students/': typeof AuthenticatedStudentsIndexRoute
+  '/_authenticated/students/$studentId/': typeof AuthenticatedStudentsStudentIdIndexRoute
+  '/_authenticated/students/$studentId/games/$gameId': typeof AuthenticatedStudentsStudentIdGamesGameIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -89,14 +108,17 @@ export interface FileRouteTypes {
     | '/activity'
     | '/students/$studentId'
     | '/students/'
+    | '/students/$studentId/'
+    | '/students/$studentId/games/$gameId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/register'
     | '/activity'
-    | '/students/$studentId'
     | '/students'
+    | '/students/$studentId'
+    | '/students/$studentId/games/$gameId'
   id:
     | '__root__'
     | '/'
@@ -106,6 +128,8 @@ export interface FileRouteTypes {
     | '/_authenticated/activity'
     | '/_authenticated/students/$studentId'
     | '/_authenticated/students/'
+    | '/_authenticated/students/$studentId/'
+    | '/_authenticated/students/$studentId/games/$gameId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -163,21 +187,54 @@ declare module '@tanstack/react-router' {
       id: '/_authenticated/students/$studentId'
       path: '/students/$studentId'
       fullPath: '/students/$studentId'
-      preLoaderRoute: typeof AuthenticatedStudentsStudentIdRouteImport
+      preLoaderRoute: typeof AuthenticatedStudentsStudentIdRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/students/$studentId/': {
+      id: '/_authenticated/students/$studentId/'
+      path: '/'
+      fullPath: '/students/$studentId/'
+      preLoaderRoute: typeof AuthenticatedStudentsStudentIdIndexRouteImport
+      parentRoute: typeof AuthenticatedStudentsStudentIdRouteRoute
+    }
+    '/_authenticated/students/$studentId/games/$gameId': {
+      id: '/_authenticated/students/$studentId/games/$gameId'
+      path: '/games/$gameId'
+      fullPath: '/students/$studentId/games/$gameId'
+      preLoaderRoute: typeof AuthenticatedStudentsStudentIdGamesGameIdRouteImport
+      parentRoute: typeof AuthenticatedStudentsStudentIdRouteRoute
     }
   }
 }
 
+interface AuthenticatedStudentsStudentIdRouteRouteChildren {
+  AuthenticatedStudentsStudentIdIndexRoute: typeof AuthenticatedStudentsStudentIdIndexRoute
+  AuthenticatedStudentsStudentIdGamesGameIdRoute: typeof AuthenticatedStudentsStudentIdGamesGameIdRoute
+}
+
+const AuthenticatedStudentsStudentIdRouteRouteChildren: AuthenticatedStudentsStudentIdRouteRouteChildren =
+  {
+    AuthenticatedStudentsStudentIdIndexRoute:
+      AuthenticatedStudentsStudentIdIndexRoute,
+    AuthenticatedStudentsStudentIdGamesGameIdRoute:
+      AuthenticatedStudentsStudentIdGamesGameIdRoute,
+  }
+
+const AuthenticatedStudentsStudentIdRouteRouteWithChildren =
+  AuthenticatedStudentsStudentIdRouteRoute._addFileChildren(
+    AuthenticatedStudentsStudentIdRouteRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedActivityRoute: typeof AuthenticatedActivityRoute
-  AuthenticatedStudentsStudentIdRoute: typeof AuthenticatedStudentsStudentIdRoute
+  AuthenticatedStudentsStudentIdRouteRoute: typeof AuthenticatedStudentsStudentIdRouteRouteWithChildren
   AuthenticatedStudentsIndexRoute: typeof AuthenticatedStudentsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedActivityRoute: AuthenticatedActivityRoute,
-  AuthenticatedStudentsStudentIdRoute: AuthenticatedStudentsStudentIdRoute,
+  AuthenticatedStudentsStudentIdRouteRoute:
+    AuthenticatedStudentsStudentIdRouteRouteWithChildren,
   AuthenticatedStudentsIndexRoute: AuthenticatedStudentsIndexRoute,
 }
 

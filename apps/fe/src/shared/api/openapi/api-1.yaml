@@ -632,6 +632,30 @@ paths:
                   - $ref: "#/components/schemas/AnalysisDetailsResponse"
       security: *a10
       tags: *a11
+  /api/analysis/mistakes/{mistakeId}/review:
+    patch:
+      operationId: AnalysisController_updateMistakeReview
+      parameters:
+        - name: mistakeId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMistakeReviewDto"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisMistakeResponse"
+      security: *a10
+      tags: *a11
   /api/students/{studentId}/imports/pgn:
     post:
       operationId: ImportsController_importPgn
@@ -1714,6 +1738,138 @@ components:
       required:
         - platform
         - username
+    AnalysisReplayMoveResponse:
+      type: object
+      properties:
+        ply:
+          type: number
+        fullMoveNumber:
+          type: number
+        moveNumber:
+          type: string
+        moveColor:
+          type: string
+          enum:
+            - WHITE
+            - BLACK
+        san:
+          type: string
+        lan:
+          type: string
+          nullable: true
+        uci:
+          type: string
+          nullable: true
+        from:
+          type: string
+          nullable: true
+        to:
+          type: string
+          nullable: true
+        promotion:
+          type: string
+          nullable: true
+        beforeFen:
+          type: string
+        afterFen:
+          type: string
+        evaluationBefore:
+          type: object
+          additionalProperties: true
+          nullable: true
+        evaluationAfter:
+          type: object
+          additionalProperties: true
+          nullable: true
+      required:
+        - ply
+        - fullMoveNumber
+        - moveNumber
+        - moveColor
+        - san
+        - lan
+        - uci
+        - from
+        - to
+        - promotion
+        - beforeFen
+        - afterFen
+        - evaluationBefore
+        - evaluationAfter
+    AnalysisReplayResponse:
+      type: object
+      properties:
+        initialFen:
+          type: string
+        moveCount:
+          type: number
+        moves:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalysisReplayMoveResponse"
+      required:
+        - initialFen
+        - moveCount
+        - moves
+    AnalysisMistakeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        analysisId:
+          type: string
+          format: uuid
+        criticalMomentId:
+          type: string
+          format: uuid
+          nullable: true
+        severity:
+          type: string
+          enum:
+            - INACCURACY
+            - MISTAKE
+            - BLUNDER
+            - MATE
+            - UNKNOWN
+        reviewStatus:
+          type: string
+          enum:
+            - UNREVIEWED
+            - CONFIRMED
+            - REJECTED
+        coachNote:
+          type: string
+          nullable: true
+        category:
+          type: string
+        explanation:
+          type: string
+        suggestedFix:
+          type: string
+          nullable: true
+        sourceEvidence:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - analysisId
+        - criticalMomentId
+        - severity
+        - reviewStatus
+        - coachNote
+        - category
+        - explanation
+        - suggestedFix
+        - sourceEvidence
+        - createdAt
+        - updatedAt
     AnalysisCriticalMomentResponse:
       type: object
       properties:
@@ -1741,6 +1897,15 @@ components:
         uci:
           type: string
           nullable: true
+        from:
+          type: string
+          nullable: true
+        to:
+          type: string
+          nullable: true
+        promotion:
+          type: string
+          nullable: true
         beforeFen:
           type: string
         afterFen:
@@ -1751,18 +1916,15 @@ components:
         bestVariation:
           type: array
           items:
-            type: object
-            additionalProperties: true
+            type: string
         nags:
           type: array
           items:
-            type: object
-            additionalProperties: true
+            type: string
         comments:
           type: array
           items:
-            type: object
-            additionalProperties: true
+            type: string
         evaluationBefore:
           type: object
           additionalProperties: true
@@ -1782,6 +1944,11 @@ components:
         sourceEvidence:
           type: object
           additionalProperties: true
+        mistake:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/AnalysisMistakeResponse"
         createdAt:
           type: string
           format: date-time
@@ -1798,6 +1965,9 @@ components:
         - san
         - lan
         - uci
+        - from
+        - to
+        - promotion
         - beforeFen
         - afterFen
         - bestMove
@@ -1808,54 +1978,7 @@ components:
         - evaluationAfter
         - severity
         - sourceEvidence
-        - createdAt
-        - updatedAt
-    AnalysisMistakeResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        analysisId:
-          type: string
-          format: uuid
-        criticalMomentId:
-          type: string
-          format: uuid
-          nullable: true
-        severity:
-          type: string
-          enum:
-            - INACCURACY
-            - MISTAKE
-            - BLUNDER
-            - MATE
-            - UNKNOWN
-        category:
-          type: string
-        explanation:
-          type: string
-        suggestedFix:
-          type: string
-          nullable: true
-        sourceEvidence:
-          type: object
-          additionalProperties: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-      required:
-        - id
-        - analysisId
-        - criticalMomentId
-        - severity
-        - category
-        - explanation
-        - suggestedFix
-        - sourceEvidence
+        - mistake
         - createdAt
         - updatedAt
     AnalysisDetailsResponse:
@@ -1977,6 +2100,8 @@ components:
           type: array
           items:
             type: string
+        replay:
+          $ref: "#/components/schemas/AnalysisReplayResponse"
         criticalMoments:
           type: array
           items:
@@ -2007,10 +2132,26 @@ components:
         - recommendedLessonTitle
         - recommendedLessonWhy
         - recommendedFocusPoints
+        - replay
         - criticalMoments
         - mistakes
         - createdAt
         - updatedAt
+    UpdateMistakeReviewDto:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - UNREVIEWED
+            - CONFIRMED
+            - REJECTED
+        coachNote:
+          type: string
+          nullable: true
+          example: "Coach note: good strategic idea, but the tactic still fails."
+      required:
+        - status
     ImportPgnDto:
       type: object
       properties:

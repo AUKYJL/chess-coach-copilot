@@ -108,7 +108,18 @@ describe('AnalysisProcessor (integration)', () => {
           Promise.resolve({
             model: 'fake-llm',
             promptVersion: 'test-v1',
-            rawText: '',
+            rawText: JSON.stringify({
+              confidenceLevel: 'HIGH',
+              overallDiagnosis: 'Completed analysis',
+              openingName: 'Test Opening',
+              result: 'WIN',
+              mainWeaknessTag: 'CALCULATION_DEPTH',
+              secondaryWeaknessTags: ['TIME_MANAGEMENT'],
+              recommendedLessonTitle: 'Review tactics',
+              recommendedLessonWhy: 'Missed tactical detail',
+              recommendedFocusPoints: ['Count checks and captures'],
+              mistakes: [],
+            }),
             payload: {
               confidenceLevel: 'HIGH',
               overallDiagnosis: 'Completed analysis',
@@ -612,7 +623,7 @@ describe('AnalysisProcessor (integration)', () => {
     );
   });
 
-  it('marks the job failed and skips persistence when classification payload is invalid', async () => {
+  it('marks the job failed and preserves raw structured payload diagnostics when sourceEvidence is invalid in multiple mistakes', async () => {
     const rawAnnotatedPgn = readFileSync(
       new URL(
         '../fixtures/pgn/annotated-lichess-with-eval.pgn',
@@ -620,6 +631,30 @@ describe('AnalysisProcessor (integration)', () => {
       ),
       'utf8',
     );
+    const invalidPayload = {
+      confidenceLevel: 'HIGH',
+      overallDiagnosis: 'Invalid analysis payload',
+      result: 'WIN',
+      secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
+      recommendedFocusPoints: ['Count checks and captures'],
+      mistakes: [
+        {
+          criticalMomentPly: 12,
+          severity: 'MISTAKE',
+          category: 'calculation',
+          explanation: 'First invalid source evidence shape.',
+          sourceEvidence: [],
+        },
+        {
+          criticalMomentPly: 19,
+          severity: 'MISTAKE',
+          category: 'time_management',
+          explanation: 'Second invalid source evidence shape.',
+          sourceEvidence: [],
+        },
+      ],
+    };
+    const rawText = JSON.stringify(invalidPayload);
     const prisma = new InMemoryPrismaService();
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -651,24 +686,9 @@ describe('AnalysisProcessor (integration)', () => {
         classify: () =>
           Promise.resolve({
             model: 'fake-llm',
-            promptVersion: 'test-v1',
-            rawText: '',
-            payload: {
-              confidenceLevel: 'HIGH',
-              overallDiagnosis: 'Invalid analysis payload',
-              result: 'WIN',
-              secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
-              recommendedFocusPoints: ['Count checks and captures'],
-              mistakes: [
-                {
-                  criticalMomentPly: 12,
-                  severity: 'MISTAKE',
-                  category: 'calculation',
-                  explanation: 'Invalid source evidence shape.',
-                  sourceEvidence: [],
-                },
-              ],
-            },
+            promptVersion: 'test-v2',
+            rawText,
+            payload: invalidPayload,
           }),
       })
       .compile();
@@ -713,13 +733,38 @@ describe('AnalysisProcessor (integration)', () => {
     await processor.processAnalysisJob(job.id);
 
     const updated = await jobsRepository.findById(job.id);
+    const failedTraces = (await prisma.generationTrace.findMany({
+      where: { analysisJobId: job.id },
+    })) as GenerationTrace[];
     const events = await prisma.analysisJobEvent.findMany({
       where: { analysisJobId: job.id },
       orderBy: { createdAt: 'asc' },
     });
+
     expect(updated?.status).toBe('FAILED');
     expect(updated?.failureCode).toBe('ANALYSIS_FAILED');
     expect(updated?.analysis).toBeNull();
+    expect(failedTraces).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          analysisJobId: job.id,
+          failureCode: 'ANALYSIS_FAILED',
+          promptVersion: 'test-v2',
+          model: 'fake-llm',
+          outputPayload: {
+            rawText,
+            parsedPayload: invalidPayload,
+          },
+        }),
+      ]),
+    );
+    expect(
+      (
+        failedTraces[0]?.outputPayload as {
+          parsedPayload: typeof invalidPayload;
+        }
+      ).parsedPayload.mistakes,
+    ).toHaveLength(2);
     expect(events[events.length - 1]).toMatchObject({
       stage: 'analysis_failed',
       traceId: job.traceId,

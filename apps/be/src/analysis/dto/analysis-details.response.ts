@@ -2,10 +2,66 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   ConfidenceLevel,
   GameResult,
+  MistakeReviewStatus,
   MomentSeverity,
   MoveColor,
   WeaknessTag,
 } from '../../generated/prisma/client.js';
+
+export class AnalysisReplayMoveResponse {
+  @ApiProperty()
+  ply: number;
+
+  @ApiProperty()
+  fullMoveNumber: number;
+
+  @ApiProperty()
+  moveNumber: string;
+
+  @ApiProperty({ enum: MoveColor })
+  moveColor: MoveColor;
+
+  @ApiProperty()
+  san: string;
+
+  @ApiProperty({ type: String, nullable: true })
+  lan: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  uci: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  from: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  to: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  promotion: string | null;
+
+  @ApiProperty()
+  beforeFen: string;
+
+  @ApiProperty()
+  afterFen: string;
+
+  @ApiProperty({ type: 'object', additionalProperties: true, nullable: true })
+  evaluationBefore: Record<string, unknown> | null;
+
+  @ApiProperty({ type: 'object', additionalProperties: true, nullable: true })
+  evaluationAfter: Record<string, unknown> | null;
+}
+
+export class AnalysisReplayResponse {
+  @ApiProperty()
+  initialFen: string;
+
+  @ApiProperty()
+  moveCount: number;
+
+  @ApiProperty({ type: () => [AnalysisReplayMoveResponse] })
+  moves: AnalysisReplayMoveResponse[];
+}
 
 export class AnalysisCriticalMomentResponse {
   @ApiProperty({ format: 'uuid' })
@@ -35,6 +91,15 @@ export class AnalysisCriticalMomentResponse {
   @ApiProperty({ type: String, nullable: true })
   uci: string | null;
 
+  @ApiProperty({ type: String, nullable: true })
+  from: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  to: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  promotion: string | null;
+
   @ApiProperty()
   beforeFen: string;
 
@@ -45,22 +110,19 @@ export class AnalysisCriticalMomentResponse {
   bestMove: string | null;
 
   @ApiProperty({
-    type: 'array',
-    items: { type: 'object', additionalProperties: true },
+    type: [String],
   })
-  bestVariation: Record<string, unknown>[];
+  bestVariation: string[];
 
   @ApiProperty({
-    type: 'array',
-    items: { type: 'object', additionalProperties: true },
+    type: [String],
   })
-  nags: Record<string, unknown>[];
+  nags: string[];
 
   @ApiProperty({
-    type: 'array',
-    items: { type: 'object', additionalProperties: true },
+    type: [String],
   })
-  comments: Record<string, unknown>[];
+  comments: string[];
 
   @ApiProperty({ type: 'object', additionalProperties: true, nullable: true })
   evaluationBefore: Record<string, unknown> | null;
@@ -73,6 +135,12 @@ export class AnalysisCriticalMomentResponse {
 
   @ApiProperty({ type: 'object', additionalProperties: true })
   sourceEvidence: Record<string, unknown>;
+
+  @ApiProperty({
+    type: () => AnalysisMistakeResponse,
+    nullable: true,
+  })
+  mistake: AnalysisMistakeResponse | null;
 
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt: Date;
@@ -93,6 +161,12 @@ export class AnalysisMistakeResponse {
 
   @ApiProperty({ enum: MomentSeverity })
   severity: MomentSeverity;
+
+  @ApiProperty({ enum: MistakeReviewStatus })
+  reviewStatus: MistakeReviewStatus;
+
+  @ApiProperty({ type: String, nullable: true })
+  coachNote: string | null;
 
   @ApiProperty()
   category: string;
@@ -158,6 +232,9 @@ export class AnalysisDetailsResponse {
 
   @ApiProperty({ type: [String] })
   recommendedFocusPoints: string[];
+
+  @ApiProperty({ type: () => AnalysisReplayResponse })
+  replay: AnalysisReplayResponse;
 
   @ApiProperty({ type: () => [AnalysisCriticalMomentResponse] })
   criticalMoments: AnalysisCriticalMomentResponse[];

@@ -7,9 +7,14 @@ import type { ParsedPgn } from '../preparation/pgn-parser.service.js';
 import { ANALYSIS_CLASSIFIER_SYSTEM_PROMPT } from './analysis-classifier.prompt.js';
 import {
   AnalysisResultPayload,
+  analysisResultPayloadSchema,
   validateAnalysisResultPayload,
 } from './analysis-result.schema.js';
 import type { ExtractedAnnotationContext } from './annotation-extractor.service.js';
+import {
+  LLM_RESPONSE_VALIDATION_FAILURE_CODE,
+  LlmResponseValidationError,
+} from '../../llm/index.js';
 
 export interface ClassifiedAnalysisResult {
   payload: AnalysisResultPayload;
@@ -21,6 +26,8 @@ export interface ClassifiedAnalysisResult {
 
 const REDUCED_CONFIDENCE_PROMPT_VERSION = 'rule-based-reduced-confidence-v2';
 const REDUCED_CONFIDENCE_MODEL = 'reduced-confidence-fallback';
+const INVALID_ANALYSIS_PAYLOAD_ERROR =
+  'LLM returned a payload incompatible with the analysis result schema';
 
 @Injectable()
 export class AnalysisClassifierService {
@@ -84,10 +91,29 @@ export class AnalysisClassifierService {
     const llmResponse = await this.llmService.classify({
       systemPrompt: ANALYSIS_CLASSIFIER_SYSTEM_PROMPT,
       userPrompt: JSON.stringify(inputPayload),
+      structuredOutput: {
+        name: 'analysis_result_payload',
+        schema: analysisResultPayloadSchema,
+      },
     });
 
+    let payload: AnalysisResultPayload;
+
+    try {
+      payload = validateAnalysisResultPayload(llmResponse.payload);
+    } catch {
+      throw new LlmResponseValidationError(
+        INVALID_ANALYSIS_PAYLOAD_ERROR,
+        LLM_RESPONSE_VALIDATION_FAILURE_CODE.INVALID_PAYLOAD,
+        llmResponse.rawText,
+        llmResponse.payload,
+        llmResponse.model,
+        llmResponse.promptVersion,
+      );
+    }
+
     return {
-      payload: validateAnalysisResultPayload(llmResponse.payload),
+      payload,
       promptVersion: llmResponse.promptVersion,
       model: llmResponse.model,
       rawOutput: llmResponse.payload,

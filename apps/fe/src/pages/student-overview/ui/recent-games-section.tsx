@@ -1,4 +1,5 @@
-import { ArrowRight, Clock3 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ArrowRight, Clock3, SquareArrowOutUpRight } from "lucide-react";
 
 import {
   Card,
@@ -16,9 +17,13 @@ import type { RecentGameRowViewModel } from "../model";
 
 type RecentGamesSectionProps = {
   games: RecentGameRowViewModel[];
+  studentId: string;
 };
 
-export function RecentGamesSection({ games }: RecentGamesSectionProps) {
+export function RecentGamesSection({
+  games,
+  studentId,
+}: RecentGamesSectionProps) {
   return (
     <Card>
       <CardHeader className="gap-3">
@@ -34,10 +39,20 @@ export function RecentGamesSection({ games }: RecentGamesSectionProps) {
         {games.length > 0 ? (
           games.map((game, index) => (
             <div key={game.id} className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-foreground text-sm font-semibold">
-                  {game.playersLabel}
-                </p>
+              <Link
+                className="group block space-y-2 rounded-[22px] transition-colors focus-visible:outline-none"
+                params={{
+                  gameId: game.id,
+                  studentId,
+                }}
+                to="/students/$studentId/games/$gameId"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-foreground group-hover:text-accent text-sm font-semibold transition-colors">
+                    {game.playersLabel}
+                  </p>
+                  <SquareArrowOutUpRight className="text-muted-foreground group-hover:text-accent size-4 shrink-0 transition-colors" />
+                </div>
                 <Typography
                   color={TYPOGRAPHY_COLOR.SECONDARY}
                   variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
@@ -54,7 +69,7 @@ export function RecentGamesSection({ games }: RecentGamesSectionProps) {
                     {game.analysisStateLabel}
                   </span>
                 </div>
-              </div>
+              </Link>
               {index < games.length - 1 ? <Separator /> : null}
             </div>
           ))

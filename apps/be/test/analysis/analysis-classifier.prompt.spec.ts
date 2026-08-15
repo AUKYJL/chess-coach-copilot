@@ -11,6 +11,7 @@ describe('analysis-classifier prompt registry', () => {
       'json_analysis',
       'coach_report',
       'parent_report',
+      'homework',
       'full_pipeline',
       'progress_analysis',
     ]);
@@ -22,21 +23,30 @@ describe('analysis-classifier prompt registry', () => {
     );
   });
 
-  it('documents the runtime input payload and JSON-only response requirement', () => {
+  it('keeps only semantic analysis rules in the classifier prompt', () => {
     expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Analyze only the student side indicated by `studentColor`.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Do not invent evaluations, best moves, opening names, or mistake details that are absent from the input.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Use `openingName` from `headers.opening` when available; otherwise return null.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Keep `result` aligned with the provided runtime `result` field.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Keep `recommendedFocusPoints` practical, specific, and grounded in the diagnosed habits from the input.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'include `sourceEvidence` grounded in the provided structured input.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).not.toContain(
       'Return only JSON',
     );
-    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain('`headers`');
-    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain('`rawResult`');
-    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain('`result`');
-    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain('`studentColor`');
-    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
-      '`annotationCoverage`',
-    );
-    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain('`diagnostics`');
-    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain('`moments`');
-    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
-      '`surroundingMoves`',
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).not.toContain(
+      'Do not wrap the response in markdown',
     );
   });
 

@@ -101,15 +101,17 @@ describe('Analysis jobs (e2e)', () => {
       data: [
         {
           analysisId: analysis!.id,
-          ply: 5,
-          fullMoveNumber: 3,
-          moveNumber: '3.',
+          ply: 3,
+          fullMoveNumber: 2,
+          moveNumber: '2.',
           moveColor: MoveColor.WHITE,
-          san: 'Bb5',
+          san: 'Nf3',
           lan: null,
-          uci: null,
-          beforeFen: 'before-fen',
-          afterFen: 'after-fen',
+          uci: 'g1f3',
+          beforeFen:
+            'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',
+          afterFen:
+            'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2',
           bestMove: 'Bc4',
           bestVariation: ['Bc4', 'Nf6'],
           nags: ['$1'],
@@ -198,10 +200,42 @@ describe('Analysis jobs (e2e)', () => {
       studentId: job!.studentId,
       annotationCoverage: jobGame?.annotationCoverage,
       reducedConfidenceWarning: jobGame?.reducedConfidenceWarning,
+      replay: {
+        initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        moveCount: 4,
+        moves: expect.arrayContaining([
+          expect.objectContaining({
+            ply: 1,
+            moveColor: 'WHITE',
+            san: 'e4',
+            from: 'e2',
+            to: 'e4',
+          }),
+          expect.objectContaining({
+            ply: 2,
+            moveColor: 'BLACK',
+            san: 'e5',
+            from: 'e7',
+            to: 'e5',
+          }),
+        ]),
+      },
       criticalMoments: [
         {
           id: criticalMoment.id,
-          ply: 5,
+          ply: 3,
+          from: 'g1',
+          to: 'f3',
+          promotion: null,
+          bestVariation: ['Bc4', 'Nf6'],
+          nags: ['$1'],
+          comments: ['Playable'],
+          mistake: {
+            criticalMomentId: criticalMoment.id,
+            category: 'calculation',
+            explanation: 'Missed a stronger continuation.',
+            suggestedFix: 'Check forcing moves first.',
+          },
         },
       ],
       mistakes: [

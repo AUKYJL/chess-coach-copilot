@@ -34,6 +34,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.31.0",
     "react": "^19.2.7",
+    "react-chessboard-ui": "^3.0.2",
     "react-dom": "^19.2.7",
     "react-hook-form": "^7.85.0",
     "react-is": "19.2.7",

@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  ReportAudience,
-  type Prisma,
-} from '../../generated/prisma/client.js';
+import { ReportAudience, type Prisma } from '../../generated/prisma/client.js';
 import { LlmService } from '../../llm/llm.service.js';
 import {
   COACH_REPORT_PROMPT,
@@ -152,7 +149,7 @@ export class SavedOutputGenerationService {
       recommendedLessonWhy: value.recommendedLessonWhy,
       recommendedFocusPoints: value.recommendedFocusPoints,
       criticalMoments: value.criticalMoments as Prisma.InputJsonArray,
-      mistakes: value.mistakes as Prisma.InputJsonArray,
+      mistakes: value.mistakes,
     };
   }
 }

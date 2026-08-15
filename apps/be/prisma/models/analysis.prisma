@@ -78,33 +78,39 @@ enum MoveColor {
   BLACK
 }
 
+enum MistakeReviewStatus {
+  UNREVIEWED
+  CONFIRMED
+  REJECTED
+}
+
 model AnalysisJob {
-  id               String            @id @default(uuid())
-  traceId          String            @default(uuid())
+  id               String             @id @default(uuid())
+  traceId          String             @default(uuid())
   coachAccountId   String
   studentId        String
   gameId           String
   jobType          AnalysisJobType
   sourceAnalysisId String?
   reportAudience   ReportAudience?
-  status           AnalysisJobStatus @default(PENDING)
+  status           AnalysisJobStatus  @default(PENDING)
   queueName        String
-  attemptCount     Int               @default(0)
-  maxAttempts      Int               @default(3)
+  attemptCount     Int                @default(0)
+  maxAttempts      Int                @default(3)
   progressPercent  Int?
   failureCode      String?
   failureMessage   String?
   startedAt        DateTime?
   completedAt      DateTime?
   lastRetriedAt    DateTime?
-  coachAccount     CoachAccount      @relation(fields: [coachAccountId], references: [id], onDelete: Cascade)
-  student          Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  game             Game              @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  coachAccount     CoachAccount       @relation(fields: [coachAccountId], references: [id], onDelete: Cascade)
+  student          Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  game             Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
   analysis         GameAnalysis?
   events           AnalysisJobEvent[]
   generationTraces GenerationTrace[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   @@index([traceId])
   @@index([coachAccountId])
@@ -197,18 +203,20 @@ model CriticalMoment {
 }
 
 model Mistake {
-  id               String          @id @default(uuid())
+  id               String              @id @default(uuid())
   analysisId       String
   criticalMomentId String?
-  severity         MomentSeverity  @default(UNKNOWN)
+  severity         MomentSeverity      @default(UNKNOWN)
+  reviewStatus     MistakeReviewStatus @default(UNREVIEWED)
+  coachNote        String?
   category         String
   explanation      String
   suggestedFix     String?
   sourceEvidence   Json
-  analysis         GameAnalysis    @relation(fields: [analysisId], references: [id], onDelete: Cascade)
-  criticalMoment   CriticalMoment? @relation(fields: [criticalMomentId], references: [id], onDelete: SetNull)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  analysis         GameAnalysis        @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  criticalMoment   CriticalMoment?     @relation(fields: [criticalMomentId], references: [id], onDelete: SetNull)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
   @@index([analysisId])
   @@index([criticalMomentId])

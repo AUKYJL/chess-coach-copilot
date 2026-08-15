@@ -340,6 +340,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/analysis/mistakes/{mistakeId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["AnalysisController_updateMistakeReview"];
+        trace?: never;
+    };
     "/api/students/{studentId}/imports/pgn": {
         parameters: {
             query?: never;
@@ -753,6 +769,55 @@ export interface components {
             /** @example maksim_sokolov_2012 */
             username: string;
         };
+        AnalysisReplayMoveResponse: {
+            ply: number;
+            fullMoveNumber: number;
+            moveNumber: string;
+            /** @enum {string} */
+            moveColor: "WHITE" | "BLACK";
+            san: string;
+            lan: string | null;
+            uci: string | null;
+            from: string | null;
+            to: string | null;
+            promotion: string | null;
+            beforeFen: string;
+            afterFen: string;
+            evaluationBefore: {
+                [key: string]: unknown;
+            } | null;
+            evaluationAfter: {
+                [key: string]: unknown;
+            } | null;
+        };
+        AnalysisReplayResponse: {
+            initialFen: string;
+            moveCount: number;
+            moves: components["schemas"]["AnalysisReplayMoveResponse"][];
+        };
+        AnalysisMistakeResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            analysisId: string;
+            /** Format: uuid */
+            criticalMomentId: string | null;
+            /** @enum {string} */
+            severity: "INACCURACY" | "MISTAKE" | "BLUNDER" | "MATE" | "UNKNOWN";
+            /** @enum {string} */
+            reviewStatus: "UNREVIEWED" | "CONFIRMED" | "REJECTED";
+            coachNote: string | null;
+            category: string;
+            explanation: string;
+            suggestedFix: string | null;
+            sourceEvidence: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         AnalysisCriticalMomentResponse: {
             /** Format: uuid */
             id: string;
@@ -765,18 +830,15 @@ export interface components {
             san: string;
             lan: string | null;
             uci: string | null;
+            from: string | null;
+            to: string | null;
+            promotion: string | null;
             beforeFen: string;
             afterFen: string;
             bestMove: string | null;
-            bestVariation: {
-                [key: string]: unknown;
-            }[];
-            nags: {
-                [key: string]: unknown;
-            }[];
-            comments: {
-                [key: string]: unknown;
-            }[];
+            bestVariation: string[];
+            nags: string[];
+            comments: string[];
             evaluationBefore: {
                 [key: string]: unknown;
             } | null;
@@ -788,26 +850,7 @@ export interface components {
             sourceEvidence: {
                 [key: string]: unknown;
             };
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        AnalysisMistakeResponse: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            analysisId: string;
-            /** Format: uuid */
-            criticalMomentId: string | null;
-            /** @enum {string} */
-            severity: "INACCURACY" | "MISTAKE" | "BLUNDER" | "MATE" | "UNKNOWN";
-            category: string;
-            explanation: string;
-            suggestedFix: string | null;
-            sourceEvidence: {
-                [key: string]: unknown;
-            };
+            mistake: components["schemas"]["AnalysisMistakeResponse"] | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -837,12 +880,19 @@ export interface components {
             recommendedLessonTitle: string | null;
             recommendedLessonWhy: string | null;
             recommendedFocusPoints: string[];
+            replay: components["schemas"]["AnalysisReplayResponse"];
             criticalMoments: components["schemas"]["AnalysisCriticalMomentResponse"][];
             mistakes: components["schemas"]["AnalysisMistakeResponse"][];
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        UpdateMistakeReviewDto: {
+            /** @enum {string} */
+            status: "UNREVIEWED" | "CONFIRMED" | "REJECTED";
+            /** @example Coach note: good strategic idea, but the tactic still fails. */
+            coachNote?: string | null;
         };
         ImportPgnDto: {
             /**
@@ -1477,6 +1527,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalysisDetailsResponse"];
+                };
+            };
+        };
+    };
+    AnalysisController_updateMistakeReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mistakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMistakeReviewDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisMistakeResponse"];
                 };
             };
         };

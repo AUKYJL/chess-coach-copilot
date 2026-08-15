@@ -28,7 +28,10 @@ export function readRequestIdHeader(
 }
 
 export function resolveRequestId(
-  request: Pick<{ id?: unknown; headers: IncomingHttpHeaders }, 'id' | 'headers'>,
+  request: Pick<
+    { id?: unknown; headers: IncomingHttpHeaders },
+    'id' | 'headers'
+  >,
 ): string {
   return (
     normalizeRequestId(request.id) ??

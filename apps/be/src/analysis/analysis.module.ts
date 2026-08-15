@@ -15,6 +15,7 @@ import { AnalysisJobsService } from './jobs/analysis-jobs.service.js';
 import { PgnParserService } from './preparation/pgn-parser.service.js';
 import { PgnPreparationService } from './preparation/pgn-preparation.service.js';
 import { AnalysisQueriesService } from './results/analysis-queries.service.js';
+import { AnalysisReviewsService } from './results/analysis-reviews.service.js';
 import { AnalysisResultsRepository } from './results/analysis-results.repository.js';
 import { AnalysisResultsService } from './results/analysis-results.service.js';
 import { AnalysisController } from './results/analysis.controller.js';
@@ -32,6 +33,7 @@ import { AnalysisController } from './results/analysis.controller.js';
     PgnPreparationService,
     AnalysisClassifierService,
     AnalysisQueriesService,
+    AnalysisReviewsService,
     AnalysisResultsService,
     GenerationTraceService,
     SavedAnalysisInputMapper,
@@ -44,6 +46,7 @@ import { AnalysisController } from './results/analysis.controller.js';
     PgnPreparationService,
     AnalysisClassifierService,
     AnalysisQueriesService,
+    AnalysisReviewsService,
     AnalysisResultsService,
     GenerationTraceService,
     SavedAnalysisInputMapper,

@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { StudentOverviewPage } from "@/pages/student-overview";
 
-export const Route = createFileRoute("/_authenticated/students/$studentId")({
+export const Route = createFileRoute("/_authenticated/students/$studentId/")({
   component: StudentOverviewRoute,
 });
 

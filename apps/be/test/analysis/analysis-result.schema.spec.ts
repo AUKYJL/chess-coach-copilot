@@ -100,13 +100,13 @@ describe('validateAnalysisResultPayload', () => {
     });
   });
 
-  it('rejects legacy weakness-tag aliases', () => {
+  it('rejects lowercase or hyphenated weakness-tag aliases', () => {
     expect(() =>
       validateAnalysisResultPayload({
         confidenceLevel: ConfidenceLevel.MEDIUM,
         overallDiagnosis: 'Diagnosis',
         result: GameResult.DRAW,
-        mainWeaknessTag: 'calculation',
+        mainWeaknessTag: 'calculation_depth',
         secondaryWeaknessTags: ['time-management'],
         recommendedFocusPoints: [],
         mistakes: [],

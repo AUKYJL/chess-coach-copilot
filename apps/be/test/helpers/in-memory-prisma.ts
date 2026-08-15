@@ -10,6 +10,7 @@ import {
   ExternalPlatform,
   GameResult,
   GameSourceType,
+  MistakeReviewStatus,
   MomentSeverity,
   MoveColor,
   ReportAudience,
@@ -172,6 +173,8 @@ type MistakeRecord = {
   analysisId: string;
   criticalMomentId: string | null;
   severity: MomentSeverity;
+  reviewStatus: MistakeReviewStatus;
+  coachNote: string | null;
   category: string;
   explanation: string;
   suggestedFix: string | null;
@@ -1355,6 +1358,41 @@ export class InMemoryPrismaService {
   };
 
   mistake = {
+    findFirst: async (args: {
+      where: { id?: string };
+      include?: {
+        analysis?: {
+          select: {
+            coachAccountId?: boolean;
+          };
+        };
+      };
+    }) => {
+      const record =
+        this.mistakes.find((item) => {
+          if (args.where.id && item.id !== args.where.id) {
+            return false;
+          }
+
+          return true;
+        }) ?? null;
+
+      if (!record) {
+        return null;
+      }
+
+      if (!args.include?.analysis) {
+        return structuredClone(record);
+      }
+
+      const analysis =
+        this.analyses.find((item) => item.id === record.analysisId) ?? null;
+
+      return {
+        ...structuredClone(record),
+        analysis: applySelect(analysis, args.include.analysis.select),
+      };
+    },
     deleteMany: async (args: { where: { analysisId: string } }) => {
       const before = this.mistakes.length;
       for (let index = this.mistakes.length - 1; index >= 0; index -= 1) {
@@ -1366,7 +1404,13 @@ export class InMemoryPrismaService {
       return { count: before - this.mistakes.length };
     },
     createMany: async (args: {
-      data: Array<Omit<MistakeRecord, 'id' | 'createdAt' | 'updatedAt'>>;
+      data: Array<
+        Omit<
+          MistakeRecord,
+          'id' | 'createdAt' | 'updatedAt' | 'reviewStatus' | 'coachNote'
+        > &
+          Partial<Pick<MistakeRecord, 'reviewStatus' | 'coachNote'>>
+      >;
     }) => {
       const now = new Date();
       for (const item of args.data) {
@@ -1374,11 +1418,27 @@ export class InMemoryPrismaService {
           id: randomUUID(),
           createdAt: now,
           updatedAt: now,
+          reviewStatus: item.reviewStatus ?? MistakeReviewStatus.UNREVIEWED,
+          coachNote: item.coachNote ?? null,
           ...item,
         });
       }
 
       return { count: args.data.length };
+    },
+    update: async (args: {
+      where: { id: string };
+      data: Partial<MistakeRecord>;
+    }) => {
+      const record = this.mistakes.find((item) => item.id === args.where.id);
+
+      if (!record) {
+        throw new Error('Mistake not found');
+      }
+
+      assignDefined(record, args.data);
+      record.updatedAt = new Date();
+      return structuredClone(record);
     },
   };
 
@@ -1626,7 +1686,8 @@ export class InMemoryPrismaService {
     create: async (args: {
       data: Omit<GenerationTraceRecord, 'id' | 'createdAt' | 'updatedAt'>;
     }) => {
-      const previousTrace = this.generationTraces[this.generationTraces.length - 1];
+      const previousTrace =
+        this.generationTraces[this.generationTraces.length - 1];
       const now = createMonotonicDate(previousTrace);
       const record: GenerationTraceRecord = {
         id: randomUUID(),

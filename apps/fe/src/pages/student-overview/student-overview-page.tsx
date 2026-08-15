@@ -169,7 +169,10 @@ export function StudentOverviewPage({ studentId }: StudentOverviewPageProps) {
         </div>
 
         <div className="min-w-0 space-y-4 md:space-y-5">
-          <RecentGamesSection games={query.data.recentGames} />
+          <RecentGamesSection
+            games={query.data.recentGames}
+            studentId={query.data.student.id}
+          />
           <StudentContextPanel
             accounts={query.data.chessAccounts}
             coachNotes={query.data.coachNotes}
