@@ -10,7 +10,7 @@ import {
 import type { LlmService } from '../../src/llm/llm.service.js';
 import type { LlmResponse } from '../../src/llm/llm.types.js';
 import { ANALYSIS_CLASSIFIER_SYSTEM_PROMPT } from '../../src/analysis/classification/analysis-classifier.prompt.js';
-import { analysisResultPayloadSchema } from '../../src/analysis/classification/analysis-result.schema.js';
+import { analysisInterpretationPayloadSchema } from '../../src/analysis/classification/analysis-interpretation.schema.js';
 import type { ParsedPgn } from '../../src/analysis/preparation/pgn-parser.service.js';
 import type {
   ExtractedAnnotationContext,
@@ -113,6 +113,7 @@ function createParsedPgn(): ParsedPgn {
 
 function createMoment(): ExtractedAnnotationMoment {
   return {
+    momentId: 'moment-1',
     ply: 2,
     fullMoveNumber: 1,
     moveNumber: '1...',
@@ -157,11 +158,8 @@ describe('AnalysisClassifierService', () => {
     const classifyMock = jest.fn(() =>
       Promise.resolve({
         payload: {
-          confidenceLevel: ConfidenceLevel.HIGH,
           overallDiagnosis:
             'The student forced complications without enough calculation.',
-          openingName: 'Sicilian Defense',
-          result: GameResult.LOSS,
           mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
           secondaryWeaknessTags: [WeaknessTag.MISSED_OPPONENT_THREAT],
           recommendedLessonTitle: 'Calculate forcing moves before committing',
@@ -198,6 +196,7 @@ describe('AnalysisClassifierService', () => {
         moments: extractedContext.moments,
         surroundingMoves: [
           {
+            momentId: 'moment-1',
             ply: 2,
             context: parsedPgn.moves.map((move) => ({
               ply: move.ply,
@@ -211,12 +210,15 @@ describe('AnalysisClassifierService', () => {
         ],
       }),
       structuredOutput: {
-        name: 'analysis_result_payload',
-        schema: analysisResultPayloadSchema,
+        name: 'analysis_interpretation_payload',
+        schema: analysisInterpretationPayloadSchema,
       },
     });
     expect(result.promptVersion).toBe('v2');
     expect(result.model).toBe('test-model');
+    expect(result.payload.confidenceLevel).toBe(ConfidenceLevel.HIGH);
+    expect(result.payload.openingName).toBe('Sicilian Defense');
+    expect(result.payload.result).toBe(GameResult.LOSS);
     expect(result.payload.mainWeaknessTag).toBe(WeaknessTag.CALCULATION_DEPTH);
     expect(result.payload.secondaryWeaknessTags).toEqual([
       WeaknessTag.MISSED_OPPONENT_THREAT,
@@ -242,30 +244,67 @@ describe('AnalysisClassifierService', () => {
     );
 
     expect(classifyMock).not.toHaveBeenCalled();
-    expect(result.promptVersion).toBe('rule-based-reduced-confidence-v2');
+    expect(result.promptVersion).toBe('rule-based-reduced-confidence-v3');
     expect(result.model).toBe('reduced-confidence-fallback');
     expect(result.payload.confidenceLevel).toBe(ConfidenceLevel.LOW);
     expect(result.payload.mainWeaknessTag).toBe(
       WeaknessTag.INSUFFICIENT_ANNOTATION_DATA,
     );
+    expect(result.rawOutput).toEqual({
+      mode: 'rule_based_reduced_confidence',
+      reason: 'insufficient_engine_annotations',
+    });
   });
 
-  it('keeps downstream runtime validation for invalid sourceEvidence payloads', async () => {
+  it('defaults omitted non-critical interpretation fields', async () => {
     const classifyMock = jest.fn(() =>
       Promise.resolve({
         payload: {
-          confidenceLevel: ConfidenceLevel.HIGH,
+          overallDiagnosis: 'The student developed the queen too early.',
+          recommendedLessonTitle: 'Queen timing',
+          recommendedLessonWhy: 'The queen was exposed before development.',
+          mistakes: [
+            {
+              momentId: 'moment-1',
+              category: 'opening_strategy',
+              explanation: 'The queen came out before the minor pieces.',
+            },
+          ],
+        },
+        promptVersion: 'v2',
+        model: 'test-model',
+        rawText: '{}',
+      }),
+    ) as () => Promise<LlmResponse>;
+    const llmService: Pick<LlmService, 'classify'> = {
+      classify: classifyMock,
+    };
+    const service = new AnalysisClassifierService(
+      llmService as unknown as LlmService,
+    );
+
+    const result = await service.classify(
+      createParsedPgn(),
+      createExtractedContext(),
+    );
+
+    expect(result.payload.mainWeaknessTag).toBeNull();
+    expect(result.payload.secondaryWeaknessTags).toEqual([]);
+    expect(result.payload.recommendedFocusPoints).toEqual([]);
+  });
+
+  it('rejects unknown momentIds from the AI interpretation payload', async () => {
+    const classifyMock = jest.fn(() =>
+      Promise.resolve({
+        payload: {
           overallDiagnosis: 'Valid diagnosis',
-          result: GameResult.LOSS,
           secondaryWeaknessTags: [],
           recommendedFocusPoints: [],
           mistakes: [
             {
-              criticalMomentPly: 2,
-              severity: 'MISTAKE',
+              momentId: 'moment-99',
               category: 'calculation_depth',
-              explanation: 'Missing enum validation.',
-              sourceEvidence: [],
+              explanation: 'Unknown moment reference.',
             },
           ],
         },
@@ -290,12 +329,162 @@ describe('AnalysisClassifierService', () => {
       parsedPayload: expect.objectContaining({
         mistakes: [
           expect.objectContaining({
-            sourceEvidence: [],
+            momentId: 'moment-99',
           }),
         ],
       }),
       model: 'test-model',
       promptVersion: 'v2',
+      validationIssues: {
+        issues: [
+          {
+            path: ['mistakes', '0', 'momentId'],
+            code: 'custom',
+            message:
+              'Unknown momentId "moment-99" referenced by interpretation payload',
+          },
+        ],
+      },
+    });
+  });
+
+  it('rejects duplicate momentIds from the AI interpretation payload', async () => {
+    const classifyMock = jest.fn(() =>
+      Promise.resolve({
+        payload: {
+          overallDiagnosis: 'Valid diagnosis',
+          secondaryWeaknessTags: [],
+          recommendedFocusPoints: [],
+          mistakes: [
+            {
+              momentId: 'moment-1',
+              category: 'calculation_depth',
+              explanation: 'First interpretation.',
+            },
+            {
+              momentId: 'moment-1',
+              category: 'time_management',
+              explanation: 'Duplicate interpretation.',
+            },
+          ],
+        },
+        promptVersion: 'v2',
+        model: 'test-model',
+        rawText: '{}',
+      }),
+    ) as () => Promise<LlmResponse>;
+    const llmService: Pick<LlmService, 'classify'> = {
+      classify: classifyMock,
+    };
+    const service = new AnalysisClassifierService(
+      llmService as unknown as LlmService,
+    );
+
+    await expect(
+      service.classify(createParsedPgn(), createExtractedContext()),
+    ).rejects.toMatchObject({
+      name: 'LlmResponseValidationError',
+      failureCode: 'INVALID_PAYLOAD',
+      rawText: '{}',
+      parsedPayload: expect.objectContaining({
+        mistakes: [
+          expect.objectContaining({
+            momentId: 'moment-1',
+          }),
+          expect.objectContaining({
+            momentId: 'moment-1',
+          }),
+        ],
+      }),
+      model: 'test-model',
+      promptVersion: 'v2',
+      validationIssues: {
+        issues: [
+          {
+            path: ['mistakes', '0', 'momentId'],
+            code: 'custom',
+            message:
+              'Duplicate momentId "moment-1" referenced by interpretation payload',
+          },
+          {
+            path: ['mistakes', '1', 'momentId'],
+            code: 'custom',
+            message:
+              'Duplicate momentId "moment-1" referenced by interpretation payload',
+          },
+        ],
+      },
+    });
+  });
+
+  it('includes validation issues when the interpretation payload is structurally invalid', async () => {
+    const classifyMock = jest.fn(() =>
+      Promise.resolve({
+        payload: {
+          secondaryWeaknessTags: [],
+          recommendedFocusPoints: [],
+        },
+        promptVersion: 'v2',
+        model: 'test-model',
+        rawText: '{}',
+      }),
+    ) as () => Promise<LlmResponse>;
+    const llmService: Pick<LlmService, 'classify'> = {
+      classify: classifyMock,
+    };
+    const service = new AnalysisClassifierService(
+      llmService as unknown as LlmService,
+    );
+
+    await expect(
+      service.classify(createParsedPgn(), createExtractedContext()),
+    ).rejects.toMatchObject({
+      name: 'LlmResponseValidationError',
+      failureCode: 'INVALID_PAYLOAD',
+      validationIssues: {
+        issues: expect.arrayContaining([
+          expect.objectContaining({
+            path: ['overallDiagnosis'],
+          }),
+          expect.objectContaining({
+            path: ['mistakes'],
+          }),
+        ]),
+      },
+    });
+  });
+
+  it('does not mask unexpected assembler exceptions as LLM validation failures', async () => {
+    const classifyMock = jest.fn(() =>
+      Promise.resolve({
+        payload: {
+          overallDiagnosis: 'Valid diagnosis',
+          secondaryWeaknessTags: [],
+          recommendedFocusPoints: [],
+          mistakes: [],
+        },
+        promptVersion: 'v2',
+        model: 'test-model',
+        rawText: '{}',
+      }),
+    ) as () => Promise<LlmResponse>;
+    const llmService: Pick<LlmService, 'classify'> = {
+      classify: classifyMock,
+    };
+    const service = new AnalysisClassifierService(
+      llmService as unknown as LlmService,
+    );
+
+    await expect(
+      service.classify(
+        {
+          ...createParsedPgn(),
+          result: 'BROKEN_RESULT' as GameResult,
+        },
+        createExtractedContext(),
+      ),
+    ).rejects.toMatchObject({
+      name: 'ZodError',
     });
   });
 });

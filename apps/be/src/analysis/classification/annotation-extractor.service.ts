@@ -11,6 +11,7 @@ import type {
 import type { JsonObject } from '../../shared/types/json-value.type.js';
 
 export interface ExtractedAnnotationMoment {
+  momentId: string;
   ply: number;
   fullMoveNumber: number;
   moveNumber: string;
@@ -57,7 +58,14 @@ export class AnnotationExtractorService {
     );
     const moments = candidateMoves
       .map((move) => this.toMoment(move))
-      .filter((moment): moment is ExtractedAnnotationMoment => moment !== null);
+      .filter(
+        (moment): moment is Omit<ExtractedAnnotationMoment, 'momentId'> =>
+          moment !== null,
+      )
+      .map((moment, index) => ({
+        ...moment,
+        momentId: `moment-${index + 1}`,
+      }));
     const hasStructuredEval = parsedPgn.moves.some(
       (move) => move.evaluationAfter !== null,
     );
@@ -85,7 +93,7 @@ export class AnnotationExtractorService {
 
   private toMoment(
     move: ParsedPgn['moves'][number],
-  ): ExtractedAnnotationMoment | null {
+  ): Omit<ExtractedAnnotationMoment, 'momentId'> | null {
     const severity = this.detectSeverity(move.nags);
 
     if (severity === MomentSeverity.UNKNOWN) {

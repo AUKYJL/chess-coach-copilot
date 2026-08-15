@@ -9,15 +9,8 @@ const PRODUCT_CONTEXT = [
 const STUDENT_ANALYSIS_RULES = [
   'Analyze only the student side indicated by `studentColor`.',
   'Use the structured moments, engine evidence, and surrounding moves as the primary evidence.',
-  'Do not invent evaluations, best moves, opening names, or mistake details that are absent from the input.',
+  'Do not invent evaluations, best moves, move facts, or mistake details that are absent from the input.',
   'Focus on teaching diagnosis: explain why the student decision was weak, not only that it lost material or evaluation.',
-].join('\n');
-
-const CONFIDENCE_RULES = [
-  'Set `confidenceLevel` according to evidence quality.',
-  'Use HIGH only when the payload contains clear structured evidence for the key conclusions.',
-  'Use MEDIUM when the main conclusions are plausible but some important details are uncertain.',
-  'Use LOW when the evidence is sparse, ambiguous, contradictory, or too limited for strong claims.',
 ].join('\n');
 
 export const ALLOWED_WEAKNESS_TAG_VALUES = Object.values(WeaknessTag);
@@ -29,15 +22,16 @@ export const JSON_ANALYSIS_PROMPT = [
   '',
   STUDENT_ANALYSIS_RULES,
   '',
-  CONFIDENCE_RULES,
-  '',
   `Allowed weakness tags: ${ALLOWED_WEAKNESS_TAGS}.`,
   '',
-  'Use `openingName` from `headers.opening` when available; otherwise return null.',
-  'Keep `result` aligned with the provided runtime `result` field.',
+  'Return only semantic coaching interpretation; deterministic game facts are assembled by the backend.',
   'Keep `recommendedFocusPoints` practical, specific, and grounded in the diagnosed habits from the input.',
-  'Each item in `mistakes` should describe one student mistake, explain the coaching lesson behind it, and include `sourceEvidence` grounded in the provided structured input.',
-  'Use `sourceEvidence` to point back to the relevant structured annotations, evaluations, comments, or move context rather than vague summaries.',
+  'Return `secondaryWeaknessTags` as an array and use `[]` when there are no credible secondary tags.',
+  'Return `mainWeaknessTag` as either one allowed tag or `null` when the evidence does not support a single main tag.',
+  'Return `recommendedFocusPoints` as an array and use `[]` when no concrete focus points are justified.',
+  'Each item in `mistakes` must reference an existing structured moment by `momentId`.',
+  'Do not create new moments, do not return `sourceEvidence`, and do not repeat move or evaluation fields that already exist in the input.',
+  'Explain why the student choice was poor and what lesson the student should take from it.',
   'Prefer empty arrays or nulls over invented data when the evidence is missing.',
 ].join('\n');
 

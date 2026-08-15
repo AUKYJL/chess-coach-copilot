@@ -203,6 +203,7 @@ function buildExtractedContext(ply: number): ExtractedAnnotationContext {
     diagnostics: [],
     moments: [
       {
+        momentId: 'moment-1',
         ply,
         fullMoveNumber: 6,
         moveNumber: '6.',
@@ -261,7 +262,7 @@ function buildClassifiedResult(
     },
     promptVersion: 'test-v1',
     model: 'fake-llm',
-    rawOutput: { source: 'test' },
+    rawOutput: { interpretation: 'test' },
     inputPayload: { source: 'test' },
   };
 }

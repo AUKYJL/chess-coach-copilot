@@ -1,20 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client.js';
-import { ConfidenceLevel, WeaknessTag } from '../../generated/prisma/client.js';
 import { LlmService } from '../../llm/llm.service.js';
 import type { JsonObject } from '../../shared/types/json-value.type.js';
 import type { ParsedPgn } from '../preparation/pgn-parser.service.js';
 import { ANALYSIS_CLASSIFIER_SYSTEM_PROMPT } from './analysis-classifier.prompt.js';
-import {
-  AnalysisResultPayload,
-  analysisResultPayloadSchema,
-  validateAnalysisResultPayload,
-} from './analysis-result.schema.js';
+import { AnalysisResultPayload } from './analysis-result.schema.js';
 import type { ExtractedAnnotationContext } from './annotation-extractor.service.js';
 import {
   LLM_RESPONSE_VALIDATION_FAILURE_CODE,
   LlmResponseValidationError,
 } from '../../llm/index.js';
+import { analysisInterpretationPayloadSchema } from './analysis-interpretation.schema.js';
+import {
+  AnalysisInterpretationAssemblyError,
+  assembleAnalysisResultPayload,
+  buildReducedConfidenceAnalysisResult,
+} from './analysis-result-assembler.js';
 
 export interface ClassifiedAnalysisResult {
   payload: AnalysisResultPayload;
@@ -24,10 +25,10 @@ export interface ClassifiedAnalysisResult {
   inputPayload: Prisma.InputJsonObject;
 }
 
-const REDUCED_CONFIDENCE_PROMPT_VERSION = 'rule-based-reduced-confidence-v2';
+const REDUCED_CONFIDENCE_PROMPT_VERSION = 'rule-based-reduced-confidence-v3';
 const REDUCED_CONFIDENCE_MODEL = 'reduced-confidence-fallback';
 const INVALID_ANALYSIS_PAYLOAD_ERROR =
-  'LLM returned a payload incompatible with the analysis result schema';
+  'LLM returned a payload incompatible with the analysis interpretation contract';
 
 @Injectable()
 export class AnalysisClassifierService {
@@ -61,29 +62,16 @@ export class AnalysisClassifierService {
       !extractedContext.hasEngineAnnotations ||
       extractedContext.moments.length === 0
     ) {
-      const payload: AnalysisResultPayload = {
-        confidenceLevel: ConfidenceLevel.LOW,
-        overallDiagnosis:
-          'The game is parseable, but it does not contain enough reliable annotated evidence to derive objective coaching mistakes.',
-        openingName: parsedPgn.headers.opening,
-        result: parsedPgn.result,
-        mainWeaknessTag: WeaknessTag.INSUFFICIENT_ANNOTATION_DATA,
-        secondaryWeaknessTags: [WeaknessTag.REDUCED_CONFIDENCE],
-        recommendedLessonTitle: 'Replay the game with annotated evidence',
-        recommendedLessonWhy:
-          'Reliable best-line or evaluation evidence is required before assigning objective mistake categories.',
-        recommendedFocusPoints: [
-          'Re-export the game with full Lichess annotations',
-          'Review the critical decisions manually',
-        ],
-        mistakes: [],
-      };
+      const payload = buildReducedConfidenceAnalysisResult(parsedPgn);
 
       return {
         payload,
         promptVersion: REDUCED_CONFIDENCE_PROMPT_VERSION,
         model: REDUCED_CONFIDENCE_MODEL,
-        rawOutput: payload,
+        rawOutput: {
+          mode: 'rule_based_reduced_confidence',
+          reason: 'insufficient_engine_annotations',
+        },
         inputPayload,
       };
     }
@@ -92,16 +80,18 @@ export class AnalysisClassifierService {
       systemPrompt: ANALYSIS_CLASSIFIER_SYSTEM_PROMPT,
       userPrompt: JSON.stringify(inputPayload),
       structuredOutput: {
-        name: 'analysis_result_payload',
-        schema: analysisResultPayloadSchema,
+        name: 'analysis_interpretation_payload',
+        schema: analysisInterpretationPayloadSchema,
       },
     });
 
     let payload: AnalysisResultPayload;
 
-    try {
-      payload = validateAnalysisResultPayload(llmResponse.payload);
-    } catch {
+    const interpretationResult = analysisInterpretationPayloadSchema.safeParse(
+      llmResponse.payload,
+    );
+
+    if (!interpretationResult.success) {
       throw new LlmResponseValidationError(
         INVALID_ANALYSIS_PAYLOAD_ERROR,
         LLM_RESPONSE_VALIDATION_FAILURE_CODE.INVALID_PAYLOAD,
@@ -109,6 +99,35 @@ export class AnalysisClassifierService {
         llmResponse.payload,
         llmResponse.model,
         llmResponse.promptVersion,
+        {
+          issues: interpretationResult.error.issues.map((issue) => ({
+            path: issue.path.map((segment) => String(segment)),
+            code: issue.code,
+            message: issue.message,
+          })),
+        },
+      );
+    }
+
+    try {
+      payload = assembleAnalysisResultPayload({
+        parsedPgn,
+        extractedContext,
+        interpretation: interpretationResult.data,
+      });
+    } catch (error) {
+      if (!(error instanceof AnalysisInterpretationAssemblyError)) {
+        throw error;
+      }
+
+      throw new LlmResponseValidationError(
+        INVALID_ANALYSIS_PAYLOAD_ERROR,
+        LLM_RESPONSE_VALIDATION_FAILURE_CODE.INVALID_PAYLOAD,
+        llmResponse.rawText,
+        llmResponse.payload,
+        llmResponse.model,
+        llmResponse.promptVersion,
+        this.toAssemblyValidationIssues(error),
       );
     }
 
@@ -126,6 +145,7 @@ export class AnalysisClassifierService {
     extractedContext: ExtractedAnnotationContext,
   ): Array<JsonObject> {
     return extractedContext.moments.map((moment) => ({
+      momentId: moment.momentId,
       ply: moment.ply,
       context: parsedPgn.moves
         .filter(
@@ -140,5 +160,33 @@ export class AnalysisClassifierService {
           afterFen: move.afterFen,
         })),
     }));
+  }
+
+  private toAssemblyValidationIssues(
+    error: AnalysisInterpretationAssemblyError,
+  ): { issues: Array<{ path: string[]; code: string; message: string }> } {
+    if ('mistakeIndex' in error.details) {
+      return {
+        issues: [
+          {
+            path: [
+              'mistakes',
+              String(error.details.mistakeIndex),
+              'momentId',
+            ],
+            code: 'custom',
+            message: `Unknown momentId "${error.details.momentId}" referenced by interpretation payload`,
+          },
+        ],
+      };
+    }
+
+    return {
+      issues: error.details.duplicateIndexes.map((duplicateIndex) => ({
+        path: ['mistakes', String(duplicateIndex), 'momentId'],
+        code: 'custom',
+        message: `Duplicate momentId "${error.details.momentId}" referenced by interpretation payload`,
+      })),
+    };
   }
 }

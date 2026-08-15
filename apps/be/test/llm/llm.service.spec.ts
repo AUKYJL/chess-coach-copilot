@@ -1,5 +1,4 @@
 import { jest } from '@jest/globals';
-import type { ParsedResponse } from 'openai/resources/responses/responses';
 import { z } from 'zod';
 import {
   LLM_RESPONSE_FORMAT_FAILURE_CODE,
@@ -10,24 +9,23 @@ import { LlmService } from '../../src/llm/llm.service.js';
 const structuredPayloadSchema = z.object({
   result: z.string(),
   score: z.number(),
+  details: z.object({
+    opening: z.string().nullable().optional(),
+  }),
 });
 
 describe('LlmService', () => {
   it('parses a successful structured classify response', async () => {
-    const parse = jest.fn(() =>
+    const create = jest.fn(() =>
       Promise.resolve(
-        createParsedResponse({
+        createResponse({
           status: 'completed',
-          output_text: '{"result":"ok","score":1}',
-          output_parsed: {
-            result: 'ok',
-            score: 1,
-          },
+          output_text: '{"result":"ok","score":1,"details":{"opening":null}}',
         }),
       ),
     );
     const service = createService({
-      parse,
+      create,
     });
 
     await expect(
@@ -42,14 +40,17 @@ describe('LlmService', () => {
     ).resolves.toEqual({
       model: 'test-model',
       promptVersion: 'analysis-structured-output-v2',
-      rawText: '{"result":"ok","score":1}',
+      rawText: '{"result":"ok","score":1,"details":{"opening":null}}',
       payload: {
         result: 'ok',
         score: 1,
+        details: {
+          opening: null,
+        },
       },
     });
 
-    expect(parse).toHaveBeenCalledWith(
+    expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
         model: 'test-model',
         provider: {
@@ -59,21 +60,112 @@ describe('LlmService', () => {
           format: expect.objectContaining({
             type: 'json_schema',
             name: 'analysis_result_payload',
-            strict: false,
+            strict: true,
+            schema: expect.objectContaining({
+              type: 'object',
+              required: expect.arrayContaining([
+                'result',
+                'score',
+                'details',
+              ]),
+              properties: expect.objectContaining({
+                details: expect.objectContaining({
+                  required: ['opening'],
+                  properties: expect.objectContaining({
+                    opening: {
+                      anyOf: [{ type: 'string' }, { type: 'null' }],
+                    },
+                  }),
+                }),
+              }),
+            }),
           }),
         },
       }),
     );
   });
 
+  it('parses a structured classify response wrapped in a json fence', async () => {
+    const service = createService({
+      create: jest.fn(() =>
+        Promise.resolve(
+          createResponse({
+            status: 'completed',
+            output_text:
+              '```json\n{"result":"ok","score":1,"details":{"opening":null}}\n```',
+          }),
+        ),
+      ),
+    });
+
+    await expect(
+      service.classify({
+        systemPrompt: 'system',
+        userPrompt: 'user',
+        structuredOutput: {
+          name: 'analysis_result_payload',
+          schema: structuredPayloadSchema,
+        },
+      }),
+    ).resolves.toEqual({
+      model: 'test-model',
+      promptVersion: 'analysis-structured-output-v2',
+      rawText:
+        '```json\n{"result":"ok","score":1,"details":{"opening":null}}\n```',
+      payload: {
+        result: 'ok',
+        score: 1,
+        details: {
+          opening: null,
+        },
+      },
+    });
+  });
+
+  it('parses a structured classify response wrapped in a plain fence', async () => {
+    const service = createService({
+      create: jest.fn(() =>
+        Promise.resolve(
+          createResponse({
+            status: 'completed',
+            output_text:
+              '```\n{"result":"ok","score":1,"details":{"opening":null}}\n```',
+          }),
+        ),
+      ),
+    });
+
+    await expect(
+      service.classify({
+        systemPrompt: 'system',
+        userPrompt: 'user',
+        structuredOutput: {
+          name: 'analysis_result_payload',
+          schema: structuredPayloadSchema,
+        },
+      }),
+    ).resolves.toEqual({
+      model: 'test-model',
+      promptVersion: 'analysis-structured-output-v2',
+      rawText:
+        '```\n{"result":"ok","score":1,"details":{"opening":null}}\n```',
+      payload: {
+        result: 'ok',
+        score: 1,
+        details: {
+          opening: null,
+        },
+      },
+    });
+  });
+
   it('throws when the structured classify response body is empty', async () => {
     const service = createService({
-      parse: jest.fn(() =>
+      create: jest.fn(() =>
         Promise.resolve(
-          createParsedResponse({
+          createResponse({
             status: 'completed',
             output_text: '   ',
-            output_parsed: null,
           }),
         ),
       ),
@@ -98,12 +190,11 @@ describe('LlmService', () => {
 
   it('throws when the structured classify response is incomplete', async () => {
     const service = createService({
-      parse: jest.fn(() =>
+      create: jest.fn(() =>
         Promise.resolve(
-          createParsedResponse({
+          createResponse({
             status: 'incomplete',
             output_text: '{"result":"partial"}',
-            output_parsed: null,
           }),
         ),
       ),
@@ -126,14 +217,13 @@ describe('LlmService', () => {
     });
   });
 
-  it('throws when the structured classify response has no parsed payload', async () => {
+  it('throws when the structured classify response contains invalid JSON after fence stripping', async () => {
     const service = createService({
-      parse: jest.fn(() =>
+      create: jest.fn(() =>
         Promise.resolve(
-          createParsedResponse({
+          createResponse({
             status: 'completed',
-            output_text: '{"result":"ok","score":1}',
-            output_parsed: null,
+            output_text: '```json\n{not-json\n```',
           }),
         ),
       ),
@@ -150,16 +240,16 @@ describe('LlmService', () => {
       }),
     ).rejects.toMatchObject({
       name: LlmResponseFormatError.name,
-      message: 'LLM returned no parsed structured payload',
-      failureCode: LLM_RESPONSE_FORMAT_FAILURE_CODE.MISSING_PARSED_OUTPUT,
-      rawText: '{"result":"ok","score":1}',
+      message: 'LLM returned invalid JSON in the response body',
+      failureCode: LLM_RESPONSE_FORMAT_FAILURE_CODE.INVALID_JSON,
+      rawText: '```json\n{not-json\n```',
     });
   });
 
   it('bubbles provider rejections for structured-output requests', async () => {
     const error = new Error('Provider rejected structured output');
     const service = createService({
-      parse: jest.fn(() => Promise.reject(error)),
+      create: jest.fn(() => Promise.reject(error)),
     });
 
     await expect(
@@ -208,6 +298,40 @@ describe('LlmService', () => {
     });
   });
 
+  it('parses fenced JSON in the legacy generate flow', async () => {
+    const service = createService({
+      create: jest.fn(() =>
+        Promise.resolve({
+          output_text:
+            '```json\n{"result":"ok","details":{"opening":null},"mistakes":[{"tag":null}]}\n```',
+        }),
+      ),
+    });
+
+    await expect(
+      service.generate({
+        systemPrompt: 'system',
+        userPrompt: 'user',
+      }),
+    ).resolves.toEqual({
+      model: 'test-model',
+      promptVersion: 'v1',
+      rawText:
+        '```json\n{"result":"ok","details":{"opening":null},"mistakes":[{"tag":null}]}\n```',
+      payload: {
+        result: 'ok',
+        details: {
+          opening: null,
+        },
+        mistakes: [
+          {
+            tag: null,
+          },
+        ],
+      },
+    });
+  });
+
   it('throws when the legacy generate flow returns invalid JSON', async () => {
     const service = createService({
       create: jest.fn(() =>
@@ -231,10 +355,7 @@ describe('LlmService', () => {
   });
 });
 
-function createService(overrides?: {
-  create?: jest.Mock;
-  parse?: jest.Mock;
-}): LlmService {
+function createService(overrides?: { create?: jest.Mock }): LlmService {
   const service = new LlmService({
     apiKey: 'test-key',
     baseUrl: 'https://openrouter.example',
@@ -245,7 +366,6 @@ function createService(overrides?: {
     client: {
       responses: {
         create: overrides?.create ?? jest.fn(),
-        parse: overrides?.parse ?? jest.fn(),
       },
     },
   });
@@ -253,10 +373,8 @@ function createService(overrides?: {
   return service;
 }
 
-function createParsedResponse(
-  overrides: Partial<ParsedResponse<unknown>>,
-): ParsedResponse<unknown> {
-  const response: ParsedResponse<unknown> = {
+function createResponse(overrides: Record<string, unknown>) {
+  return {
     id: 'resp_test',
     created_at: 0,
     output_text: '',
@@ -267,7 +385,6 @@ function createParsedResponse(
     model: 'test-model',
     object: 'response',
     output: [],
-    output_parsed: null,
     parallel_tool_calls: false,
     temperature: null,
     tool_choice: 'auto',
@@ -275,6 +392,4 @@ function createParsedResponse(
     top_p: null,
     ...overrides,
   };
-
-  return response;
 }

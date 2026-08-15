@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
+import { zodTextFormat } from 'openai/helpers/zod';
 import OpenAI from 'openai';
 import type {
-  ParsedResponse,
+  Response,
   ResponseCreateParamsNonStreaming,
 } from 'openai/resources/responses/responses';
-import { z } from 'zod';
 import { openrouterConfig } from '../config/index.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import {
@@ -23,8 +23,6 @@ const LLM_RESPONSE_INCOMPLETE_ERROR =
   'LLM returned an incomplete structured response';
 const LLM_RESPONSE_INVALID_JSON_ERROR =
   'LLM returned invalid JSON in the response body';
-const LLM_RESPONSE_MISSING_PARSED_OUTPUT_ERROR =
-  'LLM returned no parsed structured payload';
 const GENERATION_PROMPT_VERSION = 'v1';
 const STRUCTURED_CLASSIFY_PROMPT_VERSION = 'analysis-structured-output-v2';
 
@@ -56,20 +54,16 @@ export class LlmService {
       model: this.model,
       input: this.buildInput(request.systemPrompt, request.userPrompt),
       text: {
-        format: {
-          type: 'json_schema',
-          name: request.structuredOutput.name,
-          schema: z.toJSONSchema(request.structuredOutput.schema, {
-            target: 'draft-07',
-          }),
-          strict: true,
-        },
+        format: zodTextFormat(
+          request.structuredOutput.schema,
+          request.structuredOutput.name,
+        ),
       },
       provider: {
         require_parameters: true,
       },
     };
-    const response = await this.client.responses.parse(structuredRequest);
+    const response = await this.client.responses.create(structuredRequest);
 
     return this.toStructuredResponse(response, promptVersion);
   }
@@ -105,24 +99,10 @@ export class LlmService {
       );
     }
 
-    let payload: Prisma.InputJsonValue;
-
-    try {
-      payload = JSON.parse(rawText) as Prisma.InputJsonValue;
-    } catch {
-      throw new LlmResponseFormatError(
-        LLM_RESPONSE_INVALID_JSON_ERROR,
-        LLM_RESPONSE_FORMAT_FAILURE_CODE.INVALID_JSON,
-        rawText,
-        this.model,
-        promptVersion,
-      );
-    }
-
     return {
       model: this.model,
       promptVersion,
-      payload,
+      payload: this.parseJsonPayload(rawText, promptVersion),
       rawText,
     };
   }
@@ -135,7 +115,7 @@ export class LlmService {
   }
 
   private toStructuredResponse(
-    response: ParsedResponse<unknown>,
+    response: Response,
     promptVersion: string,
   ): LlmResponse {
     const rawText =
@@ -161,21 +141,43 @@ export class LlmService {
       );
     }
 
-    if (response.output_parsed === null) {
+    return {
+      model: this.model,
+      promptVersion,
+      payload: this.parseJsonPayload(rawText, promptVersion),
+      rawText,
+    };
+  }
+
+  private parseJsonPayload(
+    rawText: string,
+    promptVersion: string,
+  ): Prisma.InputJsonValue {
+    const sanitizedText = this.stripOuterJsonFence(rawText);
+
+    try {
+      return JSON.parse(sanitizedText) as Prisma.InputJsonValue;
+    } catch {
       throw new LlmResponseFormatError(
-        LLM_RESPONSE_MISSING_PARSED_OUTPUT_ERROR,
-        LLM_RESPONSE_FORMAT_FAILURE_CODE.MISSING_PARSED_OUTPUT,
+        LLM_RESPONSE_INVALID_JSON_ERROR,
+        LLM_RESPONSE_FORMAT_FAILURE_CODE.INVALID_JSON,
         rawText,
         this.model,
         promptVersion,
       );
     }
+  }
 
-    return {
-      model: this.model,
-      promptVersion,
-      payload: response.output_parsed as Prisma.InputJsonValue,
-      rawText,
-    };
+  private stripOuterJsonFence(rawText: string): string {
+    const trimmedText = rawText.trim();
+    const fencedJsonMatch = trimmedText.match(
+      /^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i,
+    );
+
+    if (!fencedJsonMatch) {
+      return trimmedText;
+    }
+
+    return fencedJsonMatch[1];
   }
 }

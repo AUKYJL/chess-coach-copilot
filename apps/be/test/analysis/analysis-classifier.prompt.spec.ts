@@ -28,18 +28,39 @@ describe('analysis-classifier prompt registry', () => {
       'Analyze only the student side indicated by `studentColor`.',
     );
     expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
-      'Do not invent evaluations, best moves, opening names, or mistake details that are absent from the input.',
+      'Do not invent evaluations, best moves, move facts, or mistake details that are absent from the input.',
     );
     expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
-      'Use `openingName` from `headers.opening` when available; otherwise return null.',
-    );
-    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
-      'Keep `result` aligned with the provided runtime `result` field.',
+      'Return only semantic coaching interpretation; deterministic game facts are assembled by the backend.',
     );
     expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
       'Keep `recommendedFocusPoints` practical, specific, and grounded in the diagnosed habits from the input.',
     );
     expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Return `secondaryWeaknessTags` as an array and use `[]` when there are no credible secondary tags.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Return `mainWeaknessTag` as either one allowed tag or `null` when the evidence does not support a single main tag.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Return `recommendedFocusPoints` as an array and use `[]` when no concrete focus points are justified.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Each item in `mistakes` must reference an existing structured moment by `momentId`.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Do not create new moments, do not return `sourceEvidence`, and do not repeat move or evaluation fields that already exist in the input.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).not.toContain(
+      'Set `confidenceLevel` according to evidence quality.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).not.toContain(
+      'Use `openingName` from `headers.opening` when available; otherwise return null.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).not.toContain(
+      'Keep `result` aligned with the provided runtime `result` field.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).not.toContain(
       'include `sourceEvidence` grounded in the provided structured input.',
     );
     expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).not.toContain(

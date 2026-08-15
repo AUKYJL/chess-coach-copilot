@@ -1,5 +1,4 @@
 import type { Prisma } from '../generated/prisma/client.js';
-
 export const LLM_RESPONSE_VALIDATION_FAILURE_CODE = {
   INVALID_PAYLOAD: 'INVALID_PAYLOAD',
 } as const;
@@ -15,6 +14,7 @@ export class LlmResponseValidationError extends Error {
     readonly parsedPayload: Prisma.InputJsonValue,
     readonly model: string,
     readonly promptVersion: string,
+    readonly validationIssues?: Prisma.InputJsonValue,
   ) {
     super(message);
     this.name = LlmResponseValidationError.name;

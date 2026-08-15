@@ -555,6 +555,7 @@ export class AnalysisProcessor extends WorkerHost {
       return {
         rawText: error.rawText,
         parsedPayload: error.parsedPayload,
+        validationIssues: error.validationIssues,
       };
     }
 
@@ -573,6 +574,7 @@ export class AnalysisProcessor extends WorkerHost {
         llmFailureCode: error.failureCode,
         llmRawTextLength: error.rawText.length,
         llmRawTextPreview: error.rawText.slice(0, LLM_RAW_TEXT_PREVIEW_LIMIT),
+        llmValidationIssues: error.validationIssues,
       };
     }
 

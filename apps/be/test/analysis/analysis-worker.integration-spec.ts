@@ -108,25 +108,12 @@ describe('AnalysisProcessor (integration)', () => {
           Promise.resolve({
             model: 'fake-llm',
             promptVersion: 'test-v1',
-            rawText: JSON.stringify({
-              confidenceLevel: 'HIGH',
-              overallDiagnosis: 'Completed analysis',
-              openingName: 'Test Opening',
-              result: 'WIN',
-              mainWeaknessTag: 'CALCULATION_DEPTH',
-              secondaryWeaknessTags: ['TIME_MANAGEMENT'],
-              recommendedLessonTitle: 'Review tactics',
-              recommendedLessonWhy: 'Missed tactical detail',
-              recommendedFocusPoints: ['Count checks and captures'],
-              mistakes: [],
-            }),
+            rawText: `\`\`\`json
+{"overallDiagnosis":"Completed analysis","mainWeaknessTag":"CALCULATION_DEPTH","recommendedLessonTitle":"Review tactics","recommendedLessonWhy":"Missed tactical detail","recommendedFocusPoints":["Count checks and captures"],"mistakes":[]}
+\`\`\``,
             payload: {
-              confidenceLevel: 'HIGH',
               overallDiagnosis: 'Completed analysis',
-              openingName: 'Test Opening',
-              result: 'WIN',
               mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
-              secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
               recommendedLessonTitle: 'Review tactics',
               recommendedLessonWhy: 'Missed tactical detail',
               recommendedFocusPoints: ['Count checks and captures'],
@@ -237,10 +224,7 @@ describe('AnalysisProcessor (integration)', () => {
             promptVersion: 'test-v1',
             rawText: '',
             payload: {
-              confidenceLevel: 'HIGH',
               overallDiagnosis: 'Completed analysis',
-              openingName: 'Test Opening',
-              result: 'WIN',
               mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
               secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
               recommendedLessonTitle: 'Review tactics',
@@ -623,7 +607,7 @@ describe('AnalysisProcessor (integration)', () => {
     );
   });
 
-  it('marks the job failed and preserves raw structured payload diagnostics when sourceEvidence is invalid in multiple mistakes', async () => {
+  it('marks the job failed and preserves raw structured payload diagnostics when the AI returns unknown momentIds', async () => {
     const rawAnnotatedPgn = readFileSync(
       new URL(
         '../fixtures/pgn/annotated-lichess-with-eval.pgn',
@@ -632,25 +616,19 @@ describe('AnalysisProcessor (integration)', () => {
       'utf8',
     );
     const invalidPayload = {
-      confidenceLevel: 'HIGH',
       overallDiagnosis: 'Invalid analysis payload',
-      result: 'WIN',
       secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
       recommendedFocusPoints: ['Count checks and captures'],
       mistakes: [
         {
-          criticalMomentPly: 12,
-          severity: 'MISTAKE',
+          momentId: 'moment-99',
           category: 'calculation',
-          explanation: 'First invalid source evidence shape.',
-          sourceEvidence: [],
+          explanation: 'First invalid moment reference.',
         },
         {
-          criticalMomentPly: 19,
-          severity: 'MISTAKE',
+          momentId: 'moment-100',
           category: 'time_management',
-          explanation: 'Second invalid source evidence shape.',
-          sourceEvidence: [],
+          explanation: 'Second invalid moment reference.',
         },
       ],
     };
@@ -754,6 +732,16 @@ describe('AnalysisProcessor (integration)', () => {
           outputPayload: {
             rawText,
             parsedPayload: invalidPayload,
+            validationIssues: {
+              issues: [
+                {
+                  path: ['mistakes', '0', 'momentId'],
+                  code: 'custom',
+                  message:
+                    'Unknown momentId "moment-99" referenced by interpretation payload',
+                },
+              ],
+            },
           },
         }),
       ]),
@@ -769,6 +757,149 @@ describe('AnalysisProcessor (integration)', () => {
       stage: 'analysis_failed',
       traceId: job.traceId,
     });
+  });
+
+  it('marks the job failed and preserves semantic validation issues when the AI returns duplicate momentIds', async () => {
+    const rawAnnotatedPgn = readFileSync(
+      new URL(
+        '../fixtures/pgn/annotated-lichess-with-eval.pgn',
+        import.meta.url,
+      ),
+      'utf8',
+    );
+    const invalidPayload = {
+      overallDiagnosis: 'Invalid analysis payload',
+      secondaryWeaknessTags: [WeaknessTag.TIME_MANAGEMENT],
+      recommendedFocusPoints: ['Count checks and captures'],
+      mistakes: [
+        {
+          momentId: 'moment-1',
+          category: 'calculation',
+          explanation: 'First duplicate moment reference.',
+        },
+        {
+          momentId: 'moment-1',
+          category: 'time_management',
+          explanation: 'Second duplicate moment reference.',
+        },
+      ],
+    };
+    const rawText = JSON.stringify(invalidPayload);
+    const prisma = new InMemoryPrismaService();
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          ignoreEnvFile: true,
+          validate: validateEnv,
+          load: [
+            appConfig,
+            databaseConfig,
+            redisConfig,
+            jwtConfig,
+            loggerConfig,
+            openrouterConfig,
+          ],
+        }),
+        PrismaModule,
+        TestingQueueModule,
+        AuthModule,
+        GamesModule,
+        AnalysisModule,
+        AnalysisProcessingModule,
+      ],
+    })
+      .overrideProvider(PrismaService)
+      .useValue(prisma)
+      .overrideProvider(LlmService)
+      .useValue({
+        classify: () =>
+          Promise.resolve({
+            model: 'fake-llm',
+            promptVersion: 'test-v2',
+            rawText,
+            payload: invalidPayload,
+          }),
+      })
+      .compile();
+
+    const jobsRepository = moduleRef.get(AnalysisJobsRepository);
+    const processor = moduleRef.get(AnalysisProcessor);
+    const coach = await prisma.coachAccount.create({
+      data: {
+        email: 'coach-duplicates@example.com',
+        passwordHash: 'hash',
+        displayName: 'Coach',
+      },
+    });
+    const student = await prisma.student.create({
+      data: {
+        coachAccountId: coach.id,
+        displayName: 'Student',
+      },
+    });
+    const game = await prisma.game.create({
+      data: {
+        coachAccountId: coach.id,
+        studentId: student.id,
+        sourceType: 'MANUAL_PGN',
+        sourceLabel: null,
+        studentColor: 'WHITE',
+        rawPgn: rawAnnotatedPgn,
+        normalizedPgnHash: 'hash-duplicates',
+        hasEngineAnnotations: true,
+        annotationCoverage: 'FULL',
+        reducedConfidenceWarning: null,
+      },
+    });
+    const job = await jobsRepository.create({
+      coachAccountId: coach.id,
+      studentId: student.id,
+      gameId: game.id,
+      jobType: 'ANALYSIS',
+      queueName: 'analysis',
+    });
+
+    await processor.processAnalysisJob(job.id);
+
+    const updated = await jobsRepository.findById(job.id);
+    const failedTraces = (await prisma.generationTrace.findMany({
+      where: { analysisJobId: job.id },
+    })) as GenerationTrace[];
+
+    expect(updated?.status).toBe('FAILED');
+    expect(updated?.failureCode).toBe('ANALYSIS_FAILED');
+    expect(updated?.analysis).toBeNull();
+    expect(failedTraces).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          analysisJobId: job.id,
+          failureCode: 'ANALYSIS_FAILED',
+          promptVersion: 'test-v2',
+          model: 'fake-llm',
+          outputPayload: {
+            rawText,
+            parsedPayload: invalidPayload,
+            validationIssues: {
+              issues: [
+                {
+                  path: ['mistakes', '0', 'momentId'],
+                  code: 'custom',
+                  message:
+                    'Duplicate momentId "moment-1" referenced by interpretation payload',
+                },
+                {
+                  path: ['mistakes', '1', 'momentId'],
+                  code: 'custom',
+                  message:
+                    'Duplicate momentId "moment-1" referenced by interpretation payload',
+                },
+              ],
+            },
+          },
+        }),
+      ]),
+    );
   });
 
   it('fails a report generation job with ANALYSIS_SCOPE_MISMATCH when the persisted analysis scope does not match', async () => {
