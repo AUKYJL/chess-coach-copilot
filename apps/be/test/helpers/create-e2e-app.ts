@@ -1,6 +1,7 @@
 import { Global, INestApplication, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { Logger } from 'nestjs-pino';
 import { AuthModule } from '../../src/auth/auth.module.js';
 import { AnalysisModule } from '../../src/analysis/analysis.module.js';
 import { AnalysisProcessingModule } from '../../src/analysis/jobs/analysis-processing.module.js';
@@ -9,6 +10,7 @@ import {
   appConfig,
   databaseConfig,
   jwtConfig,
+  loggerConfig,
   openrouterConfig,
   redisConfig,
   validateEnv,
@@ -46,12 +48,12 @@ class FakeAnalysisJobEnqueuer {
   }> = [];
   nextError: Error | null = null;
 
-  enqueueAnalysisJob(analysisJobId: string) {
-    return this.enqueue({ analysisJobId });
+  enqueueAnalysisJob(analysisJobId: string, traceId: string) {
+    return this.enqueue({ analysisJobId, traceId });
   }
 
-  enqueueGenerationJob(analysisJobId: string) {
-    return this.enqueue({ analysisJobId });
+  enqueueGenerationJob(analysisJobId: string, traceId: string) {
+    return this.enqueue({ analysisJobId, traceId });
   }
 
   private enqueue(data: AnalysisQueueJobData) {
@@ -213,6 +215,7 @@ class TestingQueueModule {}
         databaseConfig,
         redisConfig,
         jwtConfig,
+        loggerConfig,
         openrouterConfig,
       ],
     }),
@@ -253,6 +256,7 @@ export async function createE2eApp(options: CreateE2eAppOptions = {}): Promise<{
     .compile();
 
   const app = moduleRef.createNestApplication();
+  app.useLogger(app.get(Logger));
   configureHttpApp(app, {
     withGlobalPrefix: options.withGlobalPrefix ?? false,
   });

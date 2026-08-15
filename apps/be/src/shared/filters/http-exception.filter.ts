@@ -4,9 +4,10 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
-  Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import type { Logger } from 'nestjs-pino';
+import { resolveRequestId } from '../logging/request-id.util.js';
 
 function hasMessageField(value: object): value is { message?: unknown } {
   return 'message' in value;
@@ -43,7 +44,7 @@ function getErrorMessage(errorResponse: unknown): string | string[] {
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(HttpExceptionFilter.name);
+  constructor(private readonly logger: Logger) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
@@ -58,9 +59,21 @@ export class HttpExceptionFilter implements ExceptionFilter {
       ? exception.getResponse()
       : 'Internal server error';
     const message = getErrorMessage(errorResponse);
+    const traceId = resolveRequestId(request);
 
     if (!isHttpException || status >= 500) {
-      this.logger.error(exception);
+      this.logger.error(
+        {
+          context: HttpExceptionFilter.name,
+          event: 'http_exception',
+          traceId,
+          path: request.url,
+          statusCode: status,
+          errorName: isHttpException ? exception.name : 'InternalServerError',
+          err: exception instanceof Error ? exception : undefined,
+        },
+        'HTTP request failed',
+      );
     }
 
     response.status(status).json({

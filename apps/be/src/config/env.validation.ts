@@ -28,6 +28,33 @@ function validateOptionalPositiveInteger(source: EnvSource, key: string): void {
   }
 }
 
+function validateOptionalBoolean(source: EnvSource, key: string): void {
+  const value = source[key];
+
+  if (value === undefined) {
+    return;
+  }
+
+  if (typeof value !== 'string') {
+    throw new Error(`Environment variable ${key} must be a string`);
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (
+    normalized !== 'true' &&
+    normalized !== 'false' &&
+    normalized !== '1' &&
+    normalized !== '0' &&
+    normalized !== 'yes' &&
+    normalized !== 'no' &&
+    normalized !== 'on' &&
+    normalized !== 'off'
+  ) {
+    throw new Error(`Environment variable ${key} must be a boolean`);
+  }
+}
+
 export function validateEnv(
   config: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -38,6 +65,7 @@ export function validateEnv(
   validateOptionalPositiveInteger(config, 'PORT');
   validateOptionalPositiveInteger(config, 'JWT_ACCESS_TTL_SECONDS');
   validateOptionalPositiveInteger(config, 'JWT_REFRESH_TTL_SECONDS');
+  validateOptionalBoolean(config, 'LOGGER_PRETTY');
   return config;
 }
 

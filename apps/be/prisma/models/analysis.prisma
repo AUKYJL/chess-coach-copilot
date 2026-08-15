@@ -80,6 +80,7 @@ enum MoveColor {
 
 model AnalysisJob {
   id               String            @id @default(uuid())
+  traceId          String            @default(uuid())
   coachAccountId   String
   studentId        String
   gameId           String
@@ -100,15 +101,34 @@ model AnalysisJob {
   student          Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
   game             Game              @relation(fields: [gameId], references: [id], onDelete: Cascade)
   analysis         GameAnalysis?
+  events           AnalysisJobEvent[]
   generationTraces GenerationTrace[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
+  @@index([traceId])
   @@index([coachAccountId])
   @@index([studentId])
   @@index([gameId])
   @@index([gameId, createdAt])
   @@index([studentId, createdAt])
+}
+
+model AnalysisJobEvent {
+  id            String       @id @default(uuid())
+  analysisJobId String?
+  traceId       String
+  stage         String
+  level         String
+  message       String
+  payload       Json?
+  analysisJob   AnalysisJob? @relation(fields: [analysisJobId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+
+  @@index([analysisJobId])
+  @@index([traceId])
+  @@index([analysisJobId, createdAt])
+  @@index([traceId, createdAt])
 }
 
 model GameAnalysis {

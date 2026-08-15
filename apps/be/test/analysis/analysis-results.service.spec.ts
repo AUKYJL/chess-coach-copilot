@@ -9,6 +9,7 @@ import {
   appConfig,
   databaseConfig,
   jwtConfig,
+  loggerConfig,
   openrouterConfig,
   redisConfig,
   validateEnv,
@@ -26,11 +27,11 @@ import { ANALYSIS_JOB_ENQUEUER } from '../../src/queues/queue.constants.js';
 import { InMemoryPrismaService } from '../helpers/in-memory-prisma.js';
 
 class FakeAnalysisJobEnqueuer {
-  enqueueAnalysisJob(analysisJobId: string) {
+  enqueueAnalysisJob(analysisJobId: string, traceId: string) {
     return Promise.resolve({
       id: analysisJobId,
       name: 'process-analysis',
-      data: { analysisJobId },
+      data: { analysisJobId, traceId },
     });
   }
 }
@@ -69,6 +70,7 @@ describe('AnalysisResultsService (integration)', () => {
             databaseConfig,
             redisConfig,
             jwtConfig,
+            loggerConfig,
             openrouterConfig,
           ],
         }),
@@ -128,6 +130,7 @@ describe('AnalysisResultsService (integration)', () => {
       {
         job: {
           id: analysisJob.id,
+          traceId: analysisJob.traceId,
           coachAccountId: coach.id,
           studentId: student.id,
           gameId: game.id,
@@ -144,6 +147,7 @@ describe('AnalysisResultsService (integration)', () => {
       await analysisResultsService.persistCompletedAnalysis({
         job: {
           id: analysisJob.id,
+          traceId: analysisJob.traceId,
           coachAccountId: coach.id,
           studentId: student.id,
           gameId: game.id,

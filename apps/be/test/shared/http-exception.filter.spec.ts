@@ -1,10 +1,11 @@
 import { jest } from '@jest/globals';
 import { ArgumentsHost, BadRequestException } from '@nestjs/common';
+import type { Logger } from 'nestjs-pino';
 import { HttpExceptionFilter } from '../../src/shared/filters/http-exception.filter.js';
 
 describe('HttpExceptionFilter', () => {
   it('returns a string validation message as-is', () => {
-    const filter = new HttpExceptionFilter();
+    const filter = new HttpExceptionFilter(createLogger());
     const response = createResponse();
 
     filter.catch(
@@ -21,7 +22,7 @@ describe('HttpExceptionFilter', () => {
   });
 
   it('returns a string array validation message as-is', () => {
-    const filter = new HttpExceptionFilter();
+    const filter = new HttpExceptionFilter(createLogger());
     const response = createResponse();
 
     filter.catch(
@@ -45,6 +46,12 @@ function createResponse() {
     status: jest.fn().mockReturnThis(),
     json: jest.fn(),
   };
+}
+
+function createLogger() {
+  return {
+    error: jest.fn(),
+  } as unknown as Logger;
 }
 
 function createArgumentsHost(response: ReturnType<typeof createResponse>) {

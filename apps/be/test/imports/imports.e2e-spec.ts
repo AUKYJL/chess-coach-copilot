@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { INestApplication } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import request from 'supertest';
@@ -10,11 +11,13 @@ type TestServer = Parameters<typeof request>[0];
 describe('ImportsController (e2e)', () => {
   let app: INestApplication;
   let prisma: InMemoryPrismaService;
+  let fakeQueue: Awaited<ReturnType<typeof createE2eApp>>['fakeQueue'];
 
   beforeEach(async () => {
     const fixture = await createE2eApp();
     app = fixture.app;
     prisma = fixture.prisma;
+    fakeQueue = fixture.fakeQueue;
   });
 
   afterEach(async () => {
@@ -48,6 +51,29 @@ describe('ImportsController (e2e)', () => {
       isDuplicate: false,
       annotationCoverage: 'FULL',
     });
+    expect(response.headers['x-request-id']).toEqual(expect.any(String));
+
+    const persistedJob = await prisma.analysisJob.findUnique({
+      where: { id: response.body.id as string },
+    });
+    const persistedEvents = await prisma.analysisJobEvent.findMany({
+      where: { analysisJobId: response.body.id as string },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    expect(persistedJob?.traceId).toBe(response.headers['x-request-id']);
+    expect(fakeQueue.jobs[0]?.data).toMatchObject({
+      analysisJobId: response.body.id,
+      traceId: response.headers['x-request-id'],
+    });
+    expect(persistedEvents.map((event) => event?.stage)).toEqual([
+      'import_started',
+      'import_pgn_parsed',
+      'import_game_created',
+      'analysis_job_created',
+      'analysis_job_enqueue_started',
+      'analysis_job_enqueued',
+    ]);
 
     const gamesResponse = await request(getServer(app))
       .get(`/students/${studentId}/games`)
@@ -128,6 +154,53 @@ describe('ImportsController (e2e)', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .send(payload)
       .expect(422);
+  });
+
+  it('keeps the import flow successful when analysis job event persistence is unavailable', async () => {
+    const { accessToken, studentId } = await registerCoachAndStudent(app);
+    const rawPgn = readFileSync(
+      new URL(
+        '../fixtures/pgn/annotated-lichess-with-eval.pgn',
+        import.meta.url,
+      ),
+      'utf8',
+    );
+    const createSpy = jest
+      .spyOn(prisma.analysisJobEvent, 'create')
+      .mockRejectedValue(new Error('events offline'));
+    const updateSpy = jest
+      .spyOn(prisma.analysisJobEvent, 'updateMany')
+      .mockRejectedValue(new Error('events offline'));
+
+    const response = await request(getServer(app))
+      .post(`/students/${studentId}/imports/pgn`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        studentColor: 'WHITE',
+        sourceLabel: 'Annotated export',
+        rawPgn,
+      })
+      .expect(201);
+
+    const persistedJob = await prisma.analysisJob.findUnique({
+      where: { id: response.body.id as string },
+    });
+    const persistedEvents = await prisma.analysisJobEvent.findMany({
+      where: { traceId: response.headers['x-request-id'] },
+    });
+
+    expect(createSpy).toHaveBeenCalled();
+    expect(updateSpy).toHaveBeenCalled();
+    expect(persistedJob).toMatchObject({
+      id: response.body.id,
+      status: 'PENDING',
+      traceId: response.headers['x-request-id'],
+    });
+    expect(fakeQueue.jobs[0]?.data).toMatchObject({
+      analysisJobId: response.body.id,
+      traceId: response.headers['x-request-id'],
+    });
+    expect(persistedEvents).toEqual([]);
   });
 
   it('paginates games by DB cursor and filters by latest job status only', async () => {

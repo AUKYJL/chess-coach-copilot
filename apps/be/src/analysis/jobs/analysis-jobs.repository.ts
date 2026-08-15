@@ -15,6 +15,7 @@ export class AnalysisJobsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   create(data: {
+    traceId?: string;
     coachAccountId: string;
     studentId: string;
     gameId: string;

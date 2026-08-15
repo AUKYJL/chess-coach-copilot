@@ -5,6 +5,8 @@ import {
   ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import { PinoLogger } from 'nestjs-pino';
 import {
   AnalysisJobStatus,
   AnalysisJobType,
@@ -16,6 +18,7 @@ import {
 } from '../../queues/queue.constants.js';
 import type { AnalysisJobEnqueuer } from '../../queues/queue.service.js';
 import { AnalysisJobResponse } from '../dto/analysis-job.response.js';
+import { AnalysisJobEventsService } from './analysis-job-events.service.js';
 import {
   mapAnalysisJobResponse,
   type AnalysisJobResponseRow,
@@ -25,12 +28,17 @@ import { AnalysisJobsRepository } from './analysis-jobs.repository.js';
 @Injectable()
 export class AnalysisJobsService {
   constructor(
+    private readonly logger: PinoLogger,
     private readonly analysisJobsRepository: AnalysisJobsRepository,
+    private readonly analysisJobEventsService: AnalysisJobEventsService,
     @Inject(ANALYSIS_JOB_ENQUEUER)
     private readonly analysisJobEnqueuer: AnalysisJobEnqueuer,
-  ) {}
+  ) {
+    this.logger.setContext(AnalysisJobsService.name);
+  }
 
   async createAndEnqueueAnalysisJob(data: {
+    traceId: string;
     coachAccountId: string;
     studentId: string;
     gameId: string;
@@ -40,10 +48,84 @@ export class AnalysisJobsService {
       jobType: AnalysisJobType.ANALYSIS,
       queueName: ANALYSIS_QUEUE_NAME,
     });
-
-    return this.enqueueCreatedJob(job.id, () =>
-      this.analysisJobEnqueuer.enqueueAnalysisJob(job.id),
+    await this.analysisJobEventsService.attachTraceToJobBestEffort(
+      data.traceId,
+      job.id,
     );
+    this.logger.info(
+      {
+        event: 'analysis_job_created',
+        traceId: data.traceId,
+        analysisJobId: job.id,
+        studentId: data.studentId,
+        gameId: data.gameId,
+        queueName: ANALYSIS_QUEUE_NAME,
+        jobType: job.jobType,
+      },
+      'Analysis job created',
+    );
+    await this.analysisJobEventsService.recordBestEffort({
+      analysisJobId: job.id,
+      traceId: data.traceId,
+      stage: 'analysis_job_created',
+      level: 'info',
+      message: 'Analysis job created',
+      payload: {
+        studentId: data.studentId,
+        gameId: data.gameId,
+        queueName: ANALYSIS_QUEUE_NAME,
+        jobType: job.jobType,
+      },
+    });
+    this.logger.info(
+      {
+        event: 'analysis_job_enqueue_started',
+        traceId: data.traceId,
+        analysisJobId: job.id,
+        queueName: ANALYSIS_QUEUE_NAME,
+      },
+      'Analysis job enqueue started',
+    );
+    await this.analysisJobEventsService.recordBestEffort({
+      analysisJobId: job.id,
+      traceId: data.traceId,
+      stage: 'analysis_job_enqueue_started',
+      level: 'info',
+      message: 'Analysis job enqueue started',
+      payload: {
+        queueName: ANALYSIS_QUEUE_NAME,
+      },
+    });
+
+    const { job: persistedJob, queueJob } = await this.enqueueCreatedJob(
+      job.id,
+      data.traceId,
+      () => this.analysisJobEnqueuer.enqueueAnalysisJob(job.id, data.traceId),
+    );
+
+    this.logger.info(
+      {
+        event: 'analysis_job_enqueued',
+        traceId: data.traceId,
+        analysisJobId: persistedJob.id,
+        queueName: ANALYSIS_QUEUE_NAME,
+        bullJobId: this.getQueueJobId(queueJob),
+      },
+      'Analysis job enqueued',
+    );
+    await this.analysisJobEventsService.recordBestEffort({
+      analysisJobId: persistedJob.id,
+      traceId: data.traceId,
+      stage: 'analysis_job_enqueued',
+      level: 'info',
+      message: 'Analysis job enqueued',
+      payload: {
+        queueName: ANALYSIS_QUEUE_NAME,
+        bullJobId: this.getQueueJobId(queueJob),
+      },
+    });
+
+    return persistedJob;
   }
 
   async createAndEnqueueGenerationJob(data: {
@@ -53,15 +135,22 @@ export class AnalysisJobsService {
     jobType: AnalysisJobType;
     sourceAnalysisId?: string;
     reportAudience?: ReportAudience;
+    traceId?: string;
   }) {
+    const traceId = data.traceId ?? randomUUID();
     const job = await this.analysisJobsRepository.create({
       ...data,
+      traceId,
       queueName: ANALYSIS_QUEUE_NAME,
     });
 
-    return this.enqueueCreatedJob(job.id, () =>
-      this.analysisJobEnqueuer.enqueueGenerationJob(job.id),
+    const { job: persistedJob } = await this.enqueueCreatedJob(
+      job.id,
+      traceId,
+      () => this.analysisJobEnqueuer.enqueueGenerationJob(job.id, traceId),
     );
+
+    return persistedJob;
   }
 
   async getJob(jobId: string, coachAccountId: string) {
@@ -140,15 +229,32 @@ export class AnalysisJobsService {
 
     try {
       if (updatedJob.jobType === AnalysisJobType.ANALYSIS) {
-        await this.analysisJobEnqueuer.enqueueAnalysisJob(updatedJob.id);
+        await this.analysisJobEnqueuer.enqueueAnalysisJob(
+          updatedJob.id,
+          updatedJob.traceId,
+        );
       } else {
-        await this.analysisJobEnqueuer.enqueueGenerationJob(updatedJob.id);
+        await this.analysisJobEnqueuer.enqueueGenerationJob(
+          updatedJob.id,
+          updatedJob.traceId,
+        );
       }
     } catch (error) {
       await this.analysisJobsRepository.markFailed(updatedJob.id, {
         failureCode: 'QUEUE_ENQUEUE_FAILED',
         failureMessage: this.toFailureMessage(error),
       });
+      this.logger.error(
+        {
+          event: 'analysis_job_enqueue_failed',
+          traceId: updatedJob.traceId,
+          analysisJobId: updatedJob.id,
+          failureCode: 'QUEUE_ENQUEUE_FAILED',
+          failureMessage: this.toFailureMessage(error),
+          err: error instanceof Error ? error : undefined,
+        },
+        'Analysis job retry enqueue failed',
+      );
 
       throw new ServiceUnavailableException(
         'Analysis job queue is temporarily unavailable',
@@ -158,13 +264,41 @@ export class AnalysisJobsService {
     return this.getJobResponse(updatedJob.id, coachAccountId);
   }
 
-  private async enqueueCreatedJob<T>(jobId: string, enqueue: () => Promise<T>) {
+  private async enqueueCreatedJob<T>(
+    jobId: string,
+    traceId: string,
+    enqueue: () => Promise<T>,
+  ) {
+    let queueJob: T;
+
     try {
-      await enqueue();
+      queueJob = await enqueue();
     } catch (error) {
       await this.analysisJobsRepository.markFailed(jobId, {
         failureCode: 'QUEUE_ENQUEUE_FAILED',
         failureMessage: this.toFailureMessage(error),
+      });
+      this.logger.error(
+        {
+          event: 'analysis_job_enqueue_failed',
+          traceId,
+          analysisJobId: jobId,
+          failureCode: 'QUEUE_ENQUEUE_FAILED',
+          failureMessage: this.toFailureMessage(error),
+          err: error instanceof Error ? error : undefined,
+        },
+        'Analysis job enqueue failed',
+      );
+      await this.analysisJobEventsService.recordBestEffort({
+        analysisJobId: jobId,
+        traceId,
+        stage: 'analysis_job_enqueue_failed',
+        level: 'error',
+        message: 'Analysis job queue is temporarily unavailable',
+        payload: {
+          failureCode: 'QUEUE_ENQUEUE_FAILED',
+          failureMessage: this.toFailureMessage(error),
+        },
       });
 
       throw new ServiceUnavailableException(
@@ -178,11 +312,28 @@ export class AnalysisJobsService {
       throw new NotFoundException('Analysis job not found');
     }
 
-    return job;
+    return {
+      job,
+      queueJob: queueJob!,
+    };
   }
 
   private toFailureMessage(error: unknown) {
     return error instanceof Error ? error.message : 'Queue enqueue failed';
+  }
+
+  private getQueueJobId(queueJob: unknown) {
+    if (typeof queueJob !== 'object' || queueJob === null) {
+      return null;
+    }
+
+    if (!('id' in queueJob)) {
+      return null;
+    }
+
+    const { id } = queueJob;
+
+    return typeof id === 'string' || typeof id === 'number' ? String(id) : null;
   }
 
   private toJobResponse(job: AnalysisJobResponseRow): AnalysisJobResponse {

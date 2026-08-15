@@ -1,4 +1,8 @@
 import { jest } from '@jest/globals';
+import {
+  LLM_RESPONSE_FORMAT_FAILURE_CODE,
+  LlmResponseFormatError,
+} from '../../src/llm/index.js';
 import { LlmService } from '../../src/llm/llm.service.js';
 
 describe('LlmService', () => {
@@ -21,6 +25,35 @@ describe('LlmService', () => {
     });
   });
 
+  it('parses a successful JSON response with null fields', async () => {
+    const service = createServiceWithResponse(
+      '{"result":"ok","details":{"opening":null},"mistakes":[{"tag":null}]}',
+    );
+
+    await expect(
+      service.classify({
+        systemPrompt: 'system',
+        userPrompt: 'user',
+      }),
+    ).resolves.toEqual({
+      model: 'test-model',
+      promptVersion: 'v1',
+      rawText:
+        '{"result":"ok","details":{"opening":null},"mistakes":[{"tag":null}]}',
+      payload: {
+        result: 'ok',
+        details: {
+          opening: null,
+        },
+        mistakes: [
+          {
+            tag: null,
+          },
+        ],
+      },
+    });
+  });
+
   it('throws when the LLM returns an empty response body', async () => {
     const service = createServiceWithResponse('   ');
 
@@ -29,7 +62,12 @@ describe('LlmService', () => {
         systemPrompt: 'system',
         userPrompt: 'user',
       }),
-    ).rejects.toThrow('LLM returned an empty response body');
+    ).rejects.toMatchObject({
+      name: LlmResponseFormatError.name,
+      message: 'LLM returned an empty response body',
+      failureCode: LLM_RESPONSE_FORMAT_FAILURE_CODE.EMPTY_RESPONSE,
+      rawText: '   ',
+    });
   });
 
   it('throws when the LLM returns invalid JSON', async () => {
@@ -40,7 +78,12 @@ describe('LlmService', () => {
         systemPrompt: 'system',
         userPrompt: 'user',
       }),
-    ).rejects.toThrow('LLM returned invalid JSON in the response body');
+    ).rejects.toMatchObject({
+      name: LlmResponseFormatError.name,
+      message: 'LLM returned invalid JSON in the response body',
+      failureCode: LLM_RESPONSE_FORMAT_FAILURE_CODE.INVALID_JSON,
+      rawText: '{not-json',
+    });
   });
 });
 

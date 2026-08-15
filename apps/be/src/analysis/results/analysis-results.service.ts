@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { MoveColor } from '../../generated/prisma/client.js';
 import type { ClassifiedAnalysisResult } from '../classification/analysis-classifier.service.js';
@@ -9,13 +10,17 @@ import { AnalysisResultsRepository } from './analysis-results.repository.js';
 @Injectable()
 export class AnalysisResultsService {
   constructor(
+    private readonly logger: PinoLogger,
     private readonly analysisResultsRepository: AnalysisResultsRepository,
     private readonly generationTraceService: GenerationTraceService,
-  ) {}
+  ) {
+    this.logger.setContext(AnalysisResultsService.name);
+  }
 
   async persistCompletedAnalysis(data: {
     job: {
       id: string;
+      traceId: string;
       coachAccountId: string;
       studentId: string;
       gameId: string;
@@ -84,6 +89,16 @@ export class AnalysisResultsService {
       inputPayload: data.classifiedResult.inputPayload,
       outputPayload: data.classifiedResult.rawOutput,
     });
+
+    this.logger.info(
+      {
+        event: 'analysis_result_persisted',
+        traceId: data.job.traceId,
+        analysisJobId: data.job.id,
+        analysisId: analysis.id,
+      },
+      'Analysis result persisted',
+    );
 
     return analysis;
   }

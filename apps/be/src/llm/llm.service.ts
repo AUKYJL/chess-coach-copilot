@@ -4,6 +4,10 @@ import OpenAI from 'openai';
 import { openrouterConfig } from '../config/index.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import {
+  LLM_RESPONSE_FORMAT_FAILURE_CODE,
+  LlmResponseFormatError,
+} from './llm-response-format.error.js';
+import {
   LlmClassificationRequest,
   LlmGenerationRequest,
   LlmResponse,
@@ -12,26 +16,6 @@ import {
 const LLM_RESPONSE_EMPTY_ERROR = 'LLM returned an empty response body';
 const LLM_RESPONSE_INVALID_JSON_ERROR =
   'LLM returned invalid JSON in the response body';
-
-function isInputJsonValue(value: unknown): value is Prisma.InputJsonValue {
-  if (
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
-  ) {
-    return true;
-  }
-
-  if (Array.isArray(value)) {
-    return value.every((item) => isInputJsonValue(item));
-  }
-
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  return Object.values(value).every((item) => isInputJsonValue(item));
-}
 
 @Injectable()
 export class LlmService {
@@ -71,22 +55,27 @@ export class LlmService {
       ],
     });
 
-    const rawText = completion.output_text;
+    const rawText =
+      typeof completion.output_text === 'string' ? completion.output_text : '';
 
     if (rawText.trim().length === 0) {
-      throw new Error(LLM_RESPONSE_EMPTY_ERROR);
+      throw new LlmResponseFormatError(
+        LLM_RESPONSE_EMPTY_ERROR,
+        LLM_RESPONSE_FORMAT_FAILURE_CODE.EMPTY_RESPONSE,
+        rawText,
+      );
     }
 
-    let payload: unknown;
+    let payload: Prisma.InputJsonValue;
 
     try {
-      payload = JSON.parse(rawText);
+      payload = JSON.parse(rawText) as Prisma.InputJsonValue;
     } catch {
-      throw new Error(LLM_RESPONSE_INVALID_JSON_ERROR);
-    }
-
-    if (!isInputJsonValue(payload)) {
-      throw new Error(LLM_RESPONSE_INVALID_JSON_ERROR);
+      throw new LlmResponseFormatError(
+        LLM_RESPONSE_INVALID_JSON_ERROR,
+        LLM_RESPONSE_FORMAT_FAILURE_CODE.INVALID_JSON,
+        rawText,
+      );
     }
 
     return {

@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -7,9 +7,11 @@ import {
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { JwtAccessGuard } from '../auth/guards/jwt-access.guard.js';
 import { CurrentCoach } from '../shared/decorators/current-coach.decorator.js';
 import { CoachStudentAccessGuard } from '../shared/guards/coach-student-access.guard.js';
+import { resolveRequestId } from '../shared/logging/request-id.util.js';
 import {
   swaggerParamExamples,
   swaggerRequestExamples,
@@ -42,7 +44,13 @@ export class ImportsController {
     @CurrentCoach() coach: AuthenticatedCoach,
     @Param('studentId') studentId: string,
     @Body() dto: ImportPgnDto,
+    @Req() request: Request,
   ) {
-    return this.importsService.importPgn(studentId, coach.coachAccountId, dto);
+    return this.importsService.importPgn(
+      studentId,
+      coach.coachAccountId,
+      dto,
+      resolveRequestId(request),
+    );
   }
 }

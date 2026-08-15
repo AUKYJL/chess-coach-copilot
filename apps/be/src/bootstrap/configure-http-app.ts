@@ -1,6 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
+import { Logger } from 'nestjs-pino';
 import { appConfig } from '../config/index.js';
 import { HttpExceptionFilter } from '../shared/filters/http-exception.filter.js';
 
@@ -32,5 +33,5 @@ export function configureHttpApp(
     origin: applicationConfiguration.corsOrigins,
     credentials: true,
   });
-  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalFilters(new HttpExceptionFilter(app.get(Logger)));
 }

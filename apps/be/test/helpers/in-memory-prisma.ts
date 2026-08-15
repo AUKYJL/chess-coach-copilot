@@ -89,6 +89,7 @@ type GameRecord = {
 
 type AnalysisJobRecord = {
   id: string;
+  traceId: string;
   coachAccountId: string;
   studentId: string;
   gameId: string;
@@ -107,6 +108,17 @@ type AnalysisJobRecord = {
   lastRetriedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+};
+
+type AnalysisJobEventRecord = {
+  id: string;
+  analysisJobId: string | null;
+  traceId: string;
+  stage: string;
+  level: string;
+  message: string;
+  payload: Record<string, unknown> | null;
+  createdAt: Date;
 };
 
 type GameAnalysisRecord = {
@@ -304,6 +316,18 @@ function sortGamesByImportedCreatedAndIdDesc<TRecord extends GameRecord[]>(
   });
 }
 
+function createMonotonicDate(previous?: { createdAt: Date }): Date {
+  const now = Date.now();
+
+  if (!previous) {
+    return new Date(now);
+  }
+
+  return previous.createdAt.getTime() >= now
+    ? new Date(previous.createdAt.getTime() + 1)
+    : new Date(now);
+}
+
 function applyCursorAndTake<TRecord extends { id: string }>(
   items: TRecord[],
   args?: {
@@ -344,6 +368,7 @@ export class InMemoryPrismaService {
   private readonly externalAccounts: ExternalAccountRecord[] = [];
   private readonly games: GameRecord[] = [];
   private readonly analysisJobs: AnalysisJobRecord[] = [];
+  private readonly analysisJobEvents: AnalysisJobEventRecord[] = [];
   private readonly analyses: GameAnalysisRecord[] = [];
   private readonly criticalMoments: CriticalMomentRecord[] = [];
   private readonly mistakes: MistakeRecord[] = [];
@@ -879,6 +904,7 @@ export class InMemoryPrismaService {
   analysisJob = {
     create: async (args: {
       data: {
+        traceId?: string;
         coachAccountId: string;
         studentId: string;
         gameId: string;
@@ -891,6 +917,7 @@ export class InMemoryPrismaService {
       const now = new Date();
       const record: AnalysisJobRecord = {
         id: randomUUID(),
+        traceId: args.data.traceId ?? randomUUID(),
         coachAccountId: args.data.coachAccountId,
         studentId: args.data.studentId,
         gameId: args.data.gameId,
@@ -1065,6 +1092,93 @@ export class InMemoryPrismaService {
 
         assignDefined(record, args.data);
         record.updatedAt = new Date();
+        count += 1;
+      }
+
+      return { count };
+    },
+  };
+
+  analysisJobEvent = {
+    create: async (args: {
+      data: Omit<AnalysisJobEventRecord, 'id' | 'createdAt'>;
+    }) => {
+      const previousEvent =
+        this.analysisJobEvents[this.analysisJobEvents.length - 1];
+      const record: AnalysisJobEventRecord = {
+        id: randomUUID(),
+        createdAt: createMonotonicDate(previousEvent),
+        ...args.data,
+      };
+
+      this.analysisJobEvents.push(record);
+
+      return structuredClone(record);
+    },
+    findMany: async (args?: {
+      where?: {
+        analysisJobId?: string | null;
+        traceId?: string;
+        stage?: string;
+      };
+      orderBy?:
+        | { createdAt: 'asc' | 'desc' }
+        | Array<{ createdAt?: 'asc' | 'desc'; id?: 'asc' | 'desc' }>;
+      select?: SelectMap;
+    }) => {
+      const ordered =
+        args?.orderBy &&
+        !Array.isArray(args.orderBy) &&
+        args.orderBy.createdAt === 'asc'
+          ? [...this.analysisJobEvents].sort(
+              (left, right) =>
+                left.createdAt.getTime() - right.createdAt.getTime(),
+            )
+          : sortByCreatedAtAndIdDesc(this.analysisJobEvents);
+
+      return ordered
+        .filter((item) => {
+          if (
+            args?.where?.analysisJobId !== undefined &&
+            item.analysisJobId !== args.where.analysisJobId
+          ) {
+            return false;
+          }
+
+          if (args?.where?.traceId && item.traceId !== args.where.traceId) {
+            return false;
+          }
+
+          if (args?.where?.stage && item.stage !== args.where.stage) {
+            return false;
+          }
+
+          return true;
+        })
+        .map((item) => applySelect(item, args?.select));
+    },
+    updateMany: async (args: {
+      where: {
+        analysisJobId?: string | null;
+        traceId?: string;
+      };
+      data: Partial<AnalysisJobEventRecord>;
+    }) => {
+      let count = 0;
+
+      for (const event of this.analysisJobEvents) {
+        if (
+          args.where.analysisJobId !== undefined &&
+          event.analysisJobId !== args.where.analysisJobId
+        ) {
+          continue;
+        }
+
+        if (args.where.traceId && event.traceId !== args.where.traceId) {
+          continue;
+        }
+
+        assignDefined(event, args.data);
         count += 1;
       }
 
@@ -1512,7 +1626,8 @@ export class InMemoryPrismaService {
     create: async (args: {
       data: Omit<GenerationTraceRecord, 'id' | 'createdAt' | 'updatedAt'>;
     }) => {
-      const now = new Date();
+      const previousTrace = this.generationTraces[this.generationTraces.length - 1];
+      const now = createMonotonicDate(previousTrace);
       const record: GenerationTraceRecord = {
         id: randomUUID(),
         createdAt: now,

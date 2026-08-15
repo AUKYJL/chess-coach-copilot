@@ -1,12 +1,15 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import type { Job } from 'bullmq';
+import { PinoLogger } from 'nestjs-pino';
 import {
   AnalysisJobStatus,
   AnalysisJobType,
   ReportAudience,
+  type Prisma,
 } from '../../generated/prisma/client.js';
 import { HomeworkService } from '../../homework/homework.service.js';
+import { isLlmResponseFormatError } from '../../llm/index.js';
 import { ProgressService } from '../../progress/progress.service.js';
 import {
   ANALYSIS_JOB_NAME,
@@ -18,6 +21,7 @@ import { AnalysisClassifierService } from '../classification/analysis-classifier
 import { GenerationTraceService } from '../classification/generation-trace.service.js';
 import { PgnPreparationService } from '../preparation/pgn-preparation.service.js';
 import { AnalysisResultsService } from '../results/analysis-results.service.js';
+import { AnalysisJobEventsService } from './analysis-job-events.service.js';
 import { AnalysisJobsRepository } from './analysis-jobs.repository.js';
 import { JobProcessingError } from './job-processing.error.js';
 
@@ -25,11 +29,15 @@ type PersistedAnalysisJob = NonNullable<
   Awaited<ReturnType<AnalysisJobsRepository['findById']>>
 >;
 
+const LLM_RAW_TEXT_PREVIEW_LIMIT = 2_000;
+
 @Injectable()
 @Processor(ANALYSIS_QUEUE_NAME)
 export class AnalysisProcessor extends WorkerHost {
   constructor(
+    private readonly logger: PinoLogger,
     private readonly analysisJobsRepository: AnalysisJobsRepository,
+    private readonly analysisJobEventsService: AnalysisJobEventsService,
     private readonly pgnPreparationService: PgnPreparationService,
     private readonly analysisClassifierService: AnalysisClassifierService,
     private readonly analysisResultsService: AnalysisResultsService,
@@ -39,6 +47,7 @@ export class AnalysisProcessor extends WorkerHost {
     private readonly progressService: ProgressService,
   ) {
     super();
+    this.logger.setContext(AnalysisProcessor.name);
   }
 
   async process(job: Job<AnalysisQueueJobData>): Promise<void> {
@@ -51,15 +60,47 @@ export class AnalysisProcessor extends WorkerHost {
 
   async processPersistedJob(jobData: AnalysisQueueJobData): Promise<void> {
     const analysisJobId = jobData.analysisJobId;
+    const payloadTraceId = jobData.traceId;
+
+    this.logger.info(
+      {
+        event: 'analysis_worker_job_received',
+        traceId: payloadTraceId,
+        analysisJobId,
+      },
+      'Analysis worker received a job',
+    );
     const analysisJob =
       await this.analysisJobsRepository.findById(analysisJobId);
 
     if (!analysisJob) {
+      this.logger.warn(
+        {
+          event: 'analysis_job_missing',
+          traceId: payloadTraceId,
+          analysisJobId,
+        },
+        'Persisted analysis job was not found',
+      );
       return;
     }
 
+    const traceId = payloadTraceId || analysisJob.traceId;
+
+    await this.analysisJobEventsService.recordBestEffort({
+      analysisJobId,
+      traceId,
+      stage: 'analysis_worker_job_received',
+      level: 'info',
+      message: 'Analysis worker received a job',
+    });
+
     if (analysisJob.jobType === AnalysisJobType.ANALYSIS) {
-      await this.processAnalysisJob(analysisJobId, analysisJob.game.rawPgn);
+      await this.processAnalysisJob(
+        analysisJobId,
+        traceId,
+        analysisJob.game.rawPgn,
+      );
       return;
     }
 
@@ -68,6 +109,7 @@ export class AnalysisProcessor extends WorkerHost {
 
   async processAnalysisJob(
     analysisJobId: string,
+    traceIdOverride?: string,
     rawPgnOverride?: string,
   ): Promise<void> {
     const analysisJob =
@@ -76,6 +118,10 @@ export class AnalysisProcessor extends WorkerHost {
     if (!analysisJob) {
       return;
     }
+
+    const traceId = traceIdOverride || analysisJob.traceId;
+    const startedAt = Date.now();
+    let stage = 'analysis_status_parsing_started';
 
     try {
       const parsingTransition =
@@ -93,11 +139,32 @@ export class AnalysisProcessor extends WorkerHost {
         return;
       }
 
+      this.logger.info(
+        {
+          event: 'analysis_status_parsing_started',
+          traceId,
+          analysisJobId,
+          status: AnalysisJobStatus.PARSING,
+        },
+        'Analysis parsing started',
+      );
+      await this.analysisJobEventsService.recordBestEffort({
+        analysisJobId,
+        traceId,
+        stage,
+        level: 'info',
+        message: 'Analysis parsing started',
+        payload: {
+          status: AnalysisJobStatus.PARSING,
+        },
+      });
+
       const { parsedPgn, extractedContext } =
         this.pgnPreparationService.parseForAnalysis(
           rawPgnOverride ?? analysisJob.game.rawPgn,
           analysisJob.game.studentColor,
         );
+      stage = 'analysis_status_extracting_annotations';
 
       await this.analysisJobsRepository.transitionStatus(
         analysisJobId,
@@ -107,6 +174,26 @@ export class AnalysisProcessor extends WorkerHost {
           progressPercent: 45,
         },
       );
+      this.logger.info(
+        {
+          event: 'analysis_status_extracting_annotations',
+          traceId,
+          analysisJobId,
+          status: AnalysisJobStatus.EXTRACTING_ANNOTATIONS,
+        },
+        'Annotation extraction started',
+      );
+      await this.analysisJobEventsService.recordBestEffort({
+        analysisJobId,
+        traceId,
+        stage,
+        level: 'info',
+        message: 'Annotation extraction started',
+        payload: {
+          status: AnalysisJobStatus.EXTRACTING_ANNOTATIONS,
+        },
+      });
+      stage = 'analysis_status_classification_started';
 
       await this.analysisJobsRepository.transitionStatus(
         analysisJobId,
@@ -116,22 +203,43 @@ export class AnalysisProcessor extends WorkerHost {
           progressPercent: 75,
         },
       );
+      this.logger.info(
+        {
+          event: 'analysis_status_classification_started',
+          traceId,
+          analysisJobId,
+          status: AnalysisJobStatus.CLASSIFICATION,
+        },
+        'Analysis classification started',
+      );
+      await this.analysisJobEventsService.recordBestEffort({
+        analysisJobId,
+        traceId,
+        stage,
+        level: 'info',
+        message: 'Analysis classification started',
+        payload: {
+          status: AnalysisJobStatus.CLASSIFICATION,
+        },
+      });
 
       const classifiedResult = await this.analysisClassifierService.classify(
         parsedPgn,
         extractedContext,
       );
 
-      await this.analysisResultsService.persistCompletedAnalysis({
-        job: {
-          id: analysisJob.id,
-          coachAccountId: analysisJob.coachAccountId,
-          studentId: analysisJob.studentId,
-          gameId: analysisJob.gameId,
-        },
-        extractedContext,
-        classifiedResult,
-      });
+      const persistedAnalysis =
+        await this.analysisResultsService.persistCompletedAnalysis({
+          job: {
+            id: analysisJob.id,
+            traceId,
+            coachAccountId: analysisJob.coachAccountId,
+            studentId: analysisJob.studentId,
+            gameId: analysisJob.gameId,
+          },
+          extractedContext,
+          classifiedResult,
+        });
 
       await this.analysisJobsRepository.transitionStatus(
         analysisJobId,
@@ -144,6 +252,53 @@ export class AnalysisProcessor extends WorkerHost {
           failureMessage: null,
         },
       );
+      this.logger.info(
+        {
+          event: 'analysis_classification_succeeded',
+          traceId,
+          analysisJobId,
+          confidenceLevel: classifiedResult.payload.confidenceLevel,
+          mistakeCount: classifiedResult.payload.mistakes.length,
+          criticalMomentCount: extractedContext.moments.length,
+          elapsedMs: Date.now() - startedAt,
+        },
+        'Analysis classification succeeded',
+      );
+      await this.analysisJobEventsService.recordBestEffort({
+        analysisJobId,
+        traceId,
+        stage: 'analysis_classification_succeeded',
+        level: 'info',
+        message: 'Analysis classification succeeded',
+        payload: {
+          analysisId: persistedAnalysis.id,
+          confidenceLevel: classifiedResult.payload.confidenceLevel,
+          mistakeCount: classifiedResult.payload.mistakes.length,
+          criticalMomentCount: extractedContext.moments.length,
+          elapsedMs: Date.now() - startedAt,
+        },
+      });
+      this.logger.info(
+        {
+          event: 'analysis_completed',
+          traceId,
+          analysisJobId,
+          status: AnalysisJobStatus.COMPLETED,
+          elapsedMs: Date.now() - startedAt,
+        },
+        'Analysis completed',
+      );
+      await this.analysisJobEventsService.recordBestEffort({
+        analysisJobId,
+        traceId,
+        stage: 'analysis_completed',
+        level: 'info',
+        message: 'Analysis completed',
+        payload: {
+          status: AnalysisJobStatus.COMPLETED,
+          elapsedMs: Date.now() - startedAt,
+        },
+      });
     } catch (error) {
       const failureMessage =
         error instanceof Error ? error.message : 'Unknown analysis failure';
@@ -164,14 +319,42 @@ export class AnalysisProcessor extends WorkerHost {
           failureMessage,
         },
       );
+      this.logger.error(
+        {
+          event: 'analysis_failed',
+          traceId,
+          analysisJobId,
+          failureCode: 'ANALYSIS_FAILED',
+          failureMessage,
+          stage,
+          elapsedMs: Date.now() - startedAt,
+          ...this.getLlmFailureLogFields(error),
+          err: error instanceof Error ? error : undefined,
+        },
+        'Analysis processing failed',
+      );
+      await this.analysisJobEventsService.recordBestEffort({
+        analysisJobId,
+        traceId,
+        stage: 'analysis_failed',
+        level: 'error',
+        message: 'Analysis processing failed',
+        payload: {
+          failureCode: 'ANALYSIS_FAILED',
+          failureMessage,
+          stage,
+          elapsedMs: Date.now() - startedAt,
+        },
+      });
 
       await this.generationTraceService.persistFailure({
         coachAccountId: analysisJob.coachAccountId,
         analysisJobId: analysisJob.id,
         inputPayload: {
-          rawPgn: analysisJob.game.rawPgn,
+          analysisJobId: analysisJob.id,
+          traceId,
         },
-        outputPayload: {},
+        outputPayload: this.toFailureOutputPayload(error),
         failureCode: 'ANALYSIS_FAILED',
         failureMessage,
       });
@@ -271,6 +454,19 @@ export class AnalysisProcessor extends WorkerHost {
         },
       );
 
+      this.logger.error(
+        {
+          event: 'generation_failed',
+          traceId: analysisJob.traceId,
+          analysisJobId,
+          failureCode,
+          failureMessage,
+          ...this.getLlmFailureLogFields(error),
+          err: error instanceof Error ? error : undefined,
+        },
+        'Generation processing failed',
+      );
+
       await this.generationTraceService.persistFailure({
         coachAccountId: analysisJob.coachAccountId,
         analysisJobId: analysisJob.id,
@@ -278,7 +474,7 @@ export class AnalysisProcessor extends WorkerHost {
         model: 'generation-processor',
         analysisId: analysisJob.sourceAnalysisId ?? undefined,
         inputPayload: this.toGenerationTraceInput(analysisJob),
-        outputPayload: {},
+        outputPayload: this.toFailureOutputPayload(error),
         failureCode,
         failureMessage,
       });
@@ -345,6 +541,28 @@ export class AnalysisProcessor extends WorkerHost {
       gameId: job.gameId,
       sourceAnalysisId: job.sourceAnalysisId,
       reportAudience: job.reportAudience,
+    };
+  }
+
+  private toFailureOutputPayload(error: unknown): Prisma.InputJsonValue {
+    if (!isLlmResponseFormatError(error)) {
+      return {};
+    }
+
+    return {
+      rawText: error.rawText,
+    };
+  }
+
+  private getLlmFailureLogFields(error: unknown) {
+    if (!isLlmResponseFormatError(error)) {
+      return {};
+    }
+
+    return {
+      llmFailureCode: error.failureCode,
+      llmRawTextLength: error.rawText.length,
+      llmRawTextPreview: error.rawText.slice(0, LLM_RAW_TEXT_PREVIEW_LIMIT),
     };
   }
 }

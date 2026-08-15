@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import {
@@ -331,6 +332,8 @@ describe('Analysis jobs (e2e)', () => {
     const createdJob = (await prisma.analysisJob.findFirst({
       where: { coachAccountId: coach!.id },
     })) as {
+      id: string;
+      traceId: string;
       status: AnalysisJobStatus;
       failureCode: string | null;
       failureMessage: string | null;
@@ -345,6 +348,76 @@ describe('Analysis jobs (e2e)', () => {
       progressPercent: 100,
     });
     expect(createdJob?.completedAt).not.toBeNull();
+
+    const events = await prisma.analysisJobEvent.findMany({
+      where: { analysisJobId: createdJob!.id },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    expect(events[events.length - 1]).toMatchObject({
+      traceId: createdJob?.traceId,
+      stage: 'analysis_job_enqueue_failed',
+      level: 'error',
+    });
+  });
+
+  it('keeps enqueue failure semantics when event persistence is unavailable', async () => {
+    const server = getServer(app);
+    const coachEmail = `queue-failure-best-effort-${Math.random()}@example.com`;
+    const accessToken = await registerCoach(app, coachEmail);
+    const studentResponse = await request(server)
+      .post('/students')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        displayName: 'Student',
+      })
+      .expect(201);
+    const createSpy = jest
+      .spyOn(prisma.analysisJobEvent, 'create')
+      .mockRejectedValue(new Error('events offline'));
+    const updateSpy = jest
+      .spyOn(prisma.analysisJobEvent, 'updateMany')
+      .mockRejectedValue(new Error('events offline'));
+
+    fakeQueue.nextError = new Error('queue offline');
+
+    await request(server)
+      .post(`/students/${studentResponse.body.id as string}/imports/pgn`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        studentColor: 'WHITE',
+        rawPgn: `[Event "Training"]\n[Result "1-0"]\n\n1. e4 { [%eval 0.2] } e5 1-0`,
+      })
+      .expect(503);
+
+    const coach = (await prisma.coachAccount.findUnique({
+      where: { email: coachEmail },
+    })) as { id: string } | null;
+    const createdJob = (await prisma.analysisJob.findFirst({
+      where: { coachAccountId: coach!.id },
+    })) as {
+      id: string;
+      traceId: string;
+      status: AnalysisJobStatus;
+      failureCode: string | null;
+      failureMessage: string | null;
+      completedAt: Date | null;
+      progressPercent: number | null;
+    } | null;
+    const events = await prisma.analysisJobEvent.findMany({
+      where: { traceId: createdJob!.traceId },
+    });
+
+    expect(createSpy).toHaveBeenCalled();
+    expect(updateSpy).toHaveBeenCalled();
+    expect(createdJob).toMatchObject({
+      status: AnalysisJobStatus.FAILED,
+      failureCode: 'QUEUE_ENQUEUE_FAILED',
+      failureMessage: 'queue offline',
+      progressPercent: 100,
+    });
+    expect(createdJob?.completedAt).not.toBeNull();
+    expect(events).toEqual([]);
   });
 
   it('paginates jobs by createdAt/id and returns the latest generation trace', async () => {
