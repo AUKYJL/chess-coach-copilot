@@ -3,6 +3,7 @@ import type {
   GameAnalysisCriticalMomentViewModel,
   GameAnalysisHeaderViewModel,
   GameAnalysisPageViewModel,
+  GameAnalysisReportGenerationViewModel,
   GameAnalysisReplayMoveViewModel,
   GameAnalysisSummaryStatViewModel,
   SemanticTone,
@@ -415,6 +416,7 @@ export function mapGameAnalysisHeader(args: {
 export function mapGameAnalysisPage(args: {
   analysis: AnalysisDetailsResponse;
   game: GameDetailsResponse;
+  reportGeneration: GameAnalysisReportGenerationViewModel | null;
 }): GameAnalysisPageViewModel {
   return {
     header: mapGameAnalysisHeader({
@@ -423,6 +425,7 @@ export function mapGameAnalysisPage(args: {
       statusTone: "success",
     }),
     orientation: args.game.studentColor === "BLACK" ? "black" : "white",
+    reportGeneration: args.reportGeneration,
     replay: {
       initialFen: args.analysis.replay.initialFen,
       moveCount: args.analysis.replay.moveCount,

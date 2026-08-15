@@ -1,5 +1,6 @@
 import {
   AnalysisJobStatus,
+  AnalysisJobType,
   Prisma,
   type GameResult,
   type StudentColor,
@@ -31,6 +32,9 @@ export const GAME_CARD_SELECT = {
   plyCount: true,
   importedAt: true,
   analysisJobs: {
+    where: {
+      jobType: AnalysisJobType.ANALYSIS,
+    },
     take: 1,
     orderBy: LATEST_ANALYSIS_JOB_ORDER_BY,
     select: {

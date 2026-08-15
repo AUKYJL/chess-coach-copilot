@@ -1,6 +1,7 @@
 import type {
   ConfidenceLevel,
   GameResult,
+  MistakeReviewStatus,
   MomentSeverity,
   WeaknessTag,
 } from '../../generated/prisma/client.js';
@@ -31,5 +32,7 @@ export interface SavedAnalysisInput {
     category: string;
     explanation: string;
     suggestedFix: string | null;
+    reviewStatus: MistakeReviewStatus;
+    coachNote: string | null;
   }>;
 }

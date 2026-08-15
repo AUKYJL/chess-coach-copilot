@@ -14,3 +14,12 @@ export type GameDetailsResponse = RecentGameResponse & {
 
 export type AnalysisDetailsResponse =
   paths["/api/analysis/{analysisId}"]["get"]["responses"][200]["content"]["application/json"];
+
+export type AnalysisJobListResponse =
+  paths["/api/analysis/jobs"]["get"]["responses"][200]["content"]["application/json"];
+
+export type AnalysisJobResponse =
+  paths["/api/analysis/jobs/{jobId}"]["get"]["responses"][200]["content"]["application/json"];
+
+export type ReportResponse =
+  paths["/api/reports/{reportId}"]["get"]["responses"][200]["content"]["application/json"];

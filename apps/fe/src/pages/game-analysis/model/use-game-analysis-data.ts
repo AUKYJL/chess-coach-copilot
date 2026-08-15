@@ -1,9 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { $api } from "@/shared/api";
 
-import type { GameDetailsResponse } from "./api-types";
+import type { AnalysisJobResponse, GameDetailsResponse } from "./api-types";
 import {
   mapGameAnalysisHeader,
   mapGameAnalysisPage,
@@ -11,10 +11,19 @@ import {
 } from "./mappers";
 import type {
   GameAnalysisPageViewModel,
+  GameAnalysisReportAudience,
+  GameAnalysisReportGenerationViewModel,
   GameAnalysisReviewStatus,
 } from "./view-model";
 
 const EMPTY_UUID = "00000000-0000-0000-0000-000000000000";
+const REPORT_GENERATION_IN_PROGRESS_STATUSES = [
+  "PENDING",
+  "PARSING",
+  "EXTRACTING_ANNOTATIONS",
+  "CLASSIFICATION",
+  "GENERATING_OUTPUT",
+] as const;
 
 type UseGameAnalysisDataOptions = {
   gameId: string;
@@ -28,10 +37,13 @@ type SubmitMomentReviewInput = {
 };
 
 type QueryActions = {
+  generateReport: (audience: GameAnalysisReportAudience) => Promise<void>;
   gameHeader: GameAnalysisPageViewModel["header"] | null;
+  reportGeneration: GameAnalysisReportGenerationViewModel | null;
   isRetryingAnalysis: boolean;
   isSavingReview: boolean;
   onRetryAnalysis: () => Promise<void>;
+  retryReportGeneration: () => Promise<void>;
   retryPage: () => Promise<void>;
   reviewErrorMessage: string | null;
   submitMomentReview: (input: SubmitMomentReviewInput) => Promise<void>;
@@ -81,15 +93,100 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function isReportJobInProgress(
+  status: AnalysisJobResponse["status"] | null | undefined,
+): boolean {
+  return status
+    ? REPORT_GENERATION_IN_PROGRESS_STATUSES.some(
+        (inProgressStatus) => inProgressStatus === status,
+      )
+    : false;
+}
+
+function formatReportAudienceLabel(
+  audience: GameAnalysisReportAudience | AnalysisJobResponse["reportAudience"],
+): string {
+  return audience === "PARENT" ? "Отчет для родителя" : "Отчет для тренера";
+}
+
+function formatReportJobStatusLabel(
+  status: AnalysisJobResponse["status"],
+  progressPercent?: number | null,
+): string {
+  const baseLabel = (() => {
+    switch (status) {
+      case "PENDING":
+        return "Запрос в очереди";
+      case "PARSING":
+        return "Читаем партию";
+      case "EXTRACTING_ANNOTATIONS":
+        return "Собираем контекст";
+      case "CLASSIFICATION":
+        return "Структурируем отчет";
+      case "GENERATING_OUTPUT":
+        return "Пишем отчет";
+      case "COMPLETED":
+        return "Отчет готов";
+      case "FAILED":
+        return "Генерация не удалась";
+      default:
+        return "Статус неизвестен";
+    }
+  })();
+
+  if (
+    progressPercent !== undefined &&
+    progressPercent !== null &&
+    isReportJobInProgress(status)
+  ) {
+    return `${baseLabel} · ${progressPercent}%`;
+  }
+
+  return baseLabel;
+}
+
+function isJobForAnalysis(
+  job: AnalysisJobResponse | null | undefined,
+  analysisId: string | null,
+): job is AnalysisJobResponse {
+  return analysisId !== null && job?.sourceAnalysisId === analysisId;
+}
+
+function getRecoveredReportJob(args: {
+  analysisId: string | null;
+  jobs: AnalysisJobResponse[];
+}): AnalysisJobResponse | null {
+  if (args.analysisId === null) {
+    return null;
+  }
+
+  const matchingJobs = args.jobs.filter(
+    (job) => job.sourceAnalysisId === args.analysisId,
+  );
+
+  if (matchingJobs.length === 0) {
+    return null;
+  }
+
+  return matchingJobs.toSorted(
+    (leftJob, rightJob) =>
+      Date.parse(rightJob.createdAt) - Date.parse(leftJob.createdAt),
+  )[0];
+}
+
 export function useGameAnalysisData({
   gameId,
   studentId,
 }: UseGameAnalysisDataOptions): GameAnalysisQueryResult {
   const queryClient = useQueryClient();
+  const [isRefreshingPage, setIsRefreshingPage] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
   const [reviewErrorMessage, setReviewErrorMessage] = useState<string | null>(
     null,
   );
+  const [reportGenerationErrorMessage, setReportGenerationErrorMessage] =
+    useState<string | null>(null);
+  const [reportJob, setReportJob] = useState<AnalysisJobResponse | null>(null);
   const hasGameId = gameId.length > 0;
   const gameParams = {
     params: {
@@ -132,17 +229,134 @@ export function useGameAnalysisData({
     "post",
     "/api/analysis/jobs/{jobId}/retry",
   );
+  const generateReportMutation = $api.useMutation(
+    "post",
+    "/api/analysis/{analysisId}/reports/generate",
+  );
+  const retryReportMutation = $api.useMutation(
+    "post",
+    "/api/analysis/jobs/{jobId}/retry",
+  );
   const reviewMutation = $api.useMutation(
     "patch",
     "/api/analysis/mistakes/{mistakeId}/review",
   );
+  const reportJobsParams = useMemo(
+    () => ({
+      params: {
+        query: {
+          gameId: gameId || undefined,
+          jobType: "REPORT_GENERATION" as const,
+          limit: 20,
+        },
+      },
+    }),
+    [gameId],
+  );
+  const reportJobsQuery = $api.useQuery(
+    "get",
+    "/api/analysis/jobs",
+    reportJobsParams,
+    {
+      enabled: hasGameId && latestAnalysisId !== null,
+    },
+  );
+  const recoveredReportJob = getRecoveredReportJob({
+    analysisId: latestAnalysisId,
+    jobs: reportJobsQuery.data?.items ?? [],
+  });
+  const localReportJob = isJobForAnalysis(reportJob, latestAnalysisId)
+    ? reportJob
+    : null;
+  const trackedReportJobId =
+    localReportJob?.id ?? recoveredReportJob?.id ?? null;
+  const reportJobStatusParams = useMemo(
+    () => ({
+      params: {
+        path: {
+          jobId: trackedReportJobId ?? EMPTY_UUID,
+        },
+      },
+    }),
+    [trackedReportJobId],
+  );
+  const reportJobStatusQuery = $api.useQuery(
+    "get",
+    "/api/analysis/jobs/{jobId}",
+    reportJobStatusParams,
+    {
+      enabled: trackedReportJobId !== null,
+      refetchInterval: (query) => {
+        const currentJob = query.state.data;
+        const currentStatus =
+          currentJob?.status ?? reportJob?.status ?? recoveredReportJob?.status;
+
+        return isReportJobInProgress(currentStatus) ? 2000 : false;
+      },
+    },
+  );
+  const trackedReportJob = isJobForAnalysis(
+    reportJobStatusQuery.data,
+    latestAnalysisId,
+  )
+    ? reportJobStatusQuery.data
+    : null;
+  const currentReportJob =
+    trackedReportJob ?? localReportJob ?? recoveredReportJob ?? null;
+  const generatedReportId =
+    currentReportJob?.status === "COMPLETED" ? currentReportJob.reportId : null;
+  const reportParams = useMemo(
+    () => ({
+      params: {
+        path: {
+          reportId: generatedReportId ?? EMPTY_UUID,
+        },
+      },
+    }),
+    [generatedReportId],
+  );
+  const reportQuery = $api.useQuery(
+    "get",
+    "/api/reports/{reportId}",
+    reportParams,
+    {
+      enabled: generatedReportId !== null,
+    },
+  );
+
+  useEffect(() => {
+    setReportJob(null);
+    setReportGenerationErrorMessage(null);
+  }, [latestAnalysisId]);
+
+  useEffect(() => {
+    if (reportJobStatusQuery.data) {
+      setReportJob(reportJobStatusQuery.data);
+    }
+  }, [reportJobStatusQuery.data]);
 
   const retryPage = async () => {
     setRetryError(null);
-    await gameQuery.refetch();
+    setIsRefreshingPage(true);
 
-    if (latestAnalysisId !== null) {
-      await analysisQuery.refetch();
+    try {
+      const refetches: Promise<unknown>[] = [gameQuery.refetch()];
+
+      if (latestAnalysisId !== null) {
+        refetches.push(analysisQuery.refetch(), reportJobsQuery.refetch());
+      }
+
+      if (trackedReportJobId !== null) {
+        refetches.push(reportJobStatusQuery.refetch());
+      }
+
+      if (generatedReportId !== null) {
+        refetches.push(reportQuery.refetch());
+      }
+
+      await Promise.all(refetches);
+    } finally {
+      setIsRefreshingPage(false);
     }
   };
 
@@ -165,6 +379,59 @@ export function useGameAnalysisData({
     } catch (error) {
       setRetryError(
         getErrorMessage(error, "Не удалось перезапустить анализ партии."),
+      );
+    }
+  };
+
+  const generateReport = async (audience: GameAnalysisReportAudience) => {
+    if (!latestAnalysisId) {
+      return;
+    }
+
+    setReportGenerationErrorMessage(null);
+
+    try {
+      const createdJob = await generateReportMutation.mutateAsync({
+        params: {
+          path: {
+            analysisId: latestAnalysisId,
+          },
+        },
+        body: {
+          audience,
+        },
+      });
+
+      setReportJob(createdJob);
+      await reportJobsQuery.refetch();
+    } catch (error) {
+      setReportGenerationErrorMessage(
+        getErrorMessage(error, "Не удалось запустить генерацию отчета."),
+      );
+    }
+  };
+
+  const retryReportGeneration = async () => {
+    if (!currentReportJob?.id || currentReportJob.status !== "FAILED") {
+      return;
+    }
+
+    setReportGenerationErrorMessage(null);
+
+    try {
+      const retriedJob = await retryReportMutation.mutateAsync({
+        params: {
+          path: {
+            jobId: currentReportJob.id,
+          },
+        },
+      });
+
+      setReportJob(retriedJob);
+      await reportJobsQuery.refetch();
+    } catch (error) {
+      setReportGenerationErrorMessage(
+        getErrorMessage(error, "Не удалось перезапустить генерацию отчета."),
       );
     }
   };
@@ -201,11 +468,151 @@ export function useGameAnalysisData({
     }
   };
 
+  const reportGeneration = (() => {
+    if (latestAnalysisId === null && currentReportJob === null) {
+      return null;
+    }
+
+    const isBusy =
+      generateReportMutation.isPending ||
+      retryReportMutation.isPending ||
+      isReportJobInProgress(currentReportJob?.status);
+    const audienceLabel =
+      currentReportJob?.reportAudience === null
+        ? null
+        : formatReportAudienceLabel(
+            currentReportJob?.reportAudience ?? "COACH",
+          );
+    const status = (() => {
+      if (currentReportJob === null) {
+        return null;
+      }
+
+      if (isReportJobInProgress(currentReportJob.status)) {
+        return {
+          action: {
+            kind: "none" as const,
+            label: null,
+          },
+          state: "pending" as const,
+          tone: "warning" as const,
+          label: "В работе",
+          title: audienceLabel
+            ? `${audienceLabel} формируется`
+            : "Формируем отчет",
+          description: `${formatReportJobStatusLabel(currentReportJob.status, currentReportJob.progressPercent)}. Новые запросы будут доступны после завершения текущей генерации.`,
+          reportId: null,
+          reportTitle: null,
+        };
+      }
+
+      if (currentReportJob.status === "FAILED") {
+        return {
+          action: {
+            kind: "retry-generation" as const,
+            label: "Повторить",
+          },
+          state: "failed" as const,
+          tone: "danger" as const,
+          label: "Ошибка",
+          title: audienceLabel
+            ? `${audienceLabel} не сформирован`
+            : "Не удалось сформировать отчет",
+          description:
+            currentReportJob.failureMessage ||
+            "Мы не смогли завершить генерацию отчета.",
+          reportId: null,
+          reportTitle: null,
+        };
+      }
+
+      if (currentReportJob.status !== "COMPLETED") {
+        return null;
+      }
+
+      if (!currentReportJob.reportId) {
+        return {
+          action: {
+            kind: "none" as const,
+            label: null,
+          },
+          state: "failed" as const,
+          tone: "danger" as const,
+          label: "Ошибка",
+          title: "Отчет завершился без результата",
+          description:
+            "Генерация завершилась, но сервер не вернул идентификатор отчета.",
+          reportId: null,
+          reportTitle: null,
+        };
+      }
+
+      if (reportQuery.isPending) {
+        return {
+          action: {
+            kind: "none" as const,
+            label: null,
+          },
+          state: "pending" as const,
+          tone: "warning" as const,
+          label: "Загружаем",
+          title: "Отчет готов, загружаем детали",
+          description: `Получили результат генерации. Загружаем карточку отчета ${currentReportJob.reportId}.`,
+          reportId: currentReportJob.reportId,
+          reportTitle: null,
+        };
+      }
+
+      if (reportQuery.isError || !reportQuery.data) {
+        return {
+          action: {
+            kind: "refresh-report" as const,
+            label: "Обновить",
+          },
+          state: "failed" as const,
+          tone: "danger" as const,
+          label: "Ошибка",
+          title: "Отчет сформирован, но детали недоступны",
+          description: `Сервер вернул id ${currentReportJob.reportId}, но загрузить сам отчет не удалось.`,
+          reportId: currentReportJob.reportId,
+          reportTitle: null,
+        };
+      }
+
+      return {
+        action: {
+          kind: "none" as const,
+          label: null,
+        },
+        state: "success" as const,
+        tone: "success" as const,
+        label: "Готов",
+        title: reportQuery.data.title,
+        description: `${formatReportAudienceLabel(reportQuery.data.audience)} готов. ID отчета: ${reportQuery.data.id}.`,
+        reportId: reportQuery.data.id,
+        reportTitle: reportQuery.data.title,
+      };
+    })();
+
+    return {
+      activeJobId: currentReportJob?.id ?? null,
+      errorMessage: reportGenerationErrorMessage,
+      isActionPending:
+        retryReportMutation.isPending ||
+        (status?.action.kind === "refresh-report" && isRefreshingPage),
+      isDisabled: latestAnalysisId === null || isBusy,
+      status,
+    };
+  })();
+
   const queryActions: QueryActions = {
+    generateReport,
     gameHeader: null,
+    reportGeneration,
     isRetryingAnalysis: retryAnalysisMutation.isPending,
     isSavingReview: reviewMutation.isPending,
     onRetryAnalysis,
+    retryReportGeneration,
     retryPage,
     reviewErrorMessage,
     submitMomentReview,
@@ -285,6 +692,7 @@ export function useGameAnalysisData({
     const page = mapGameAnalysisPage({
       game: gameData,
       analysis: analysisQuery.data,
+      reportGeneration,
     });
 
     return {

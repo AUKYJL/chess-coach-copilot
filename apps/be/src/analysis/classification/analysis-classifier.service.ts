@@ -169,11 +169,7 @@ export class AnalysisClassifierService {
       return {
         issues: [
           {
-            path: [
-              'mistakes',
-              String(error.details.mistakeIndex),
-              'momentId',
-            ],
+            path: ['mistakes', String(error.details.mistakeIndex), 'momentId'],
             code: 'custom',
             message: `Unknown momentId "${error.details.momentId}" referenced by interpretation payload`,
           },

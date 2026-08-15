@@ -7,9 +7,18 @@ import {
   PARENT_REPORT_PROMPT,
   PROGRESS_ANALYSIS_PROMPT,
 } from './analysis-classifier.prompt.js';
-import { validateGeneratedHomeworkPayload } from './generated-homework.schema.js';
-import { validateGeneratedProgressPayload } from './generated-progress.schema.js';
-import { validateGeneratedReportPayload } from './generated-report.schema.js';
+import {
+  generatedHomeworkPayloadSchema,
+  validateGeneratedHomeworkPayload,
+} from './generated-homework.schema.js';
+import {
+  generatedProgressPayloadSchema,
+  validateGeneratedProgressPayload,
+} from './generated-progress.schema.js';
+import {
+  generatedReportPayloadSchema,
+  validateGeneratedReportPayload,
+} from './generated-report.schema.js';
 import type { SavedAnalysisInput } from './saved-analysis-input.type.js';
 
 export interface GeneratedReportArtifact {
@@ -50,12 +59,16 @@ export class SavedOutputGenerationService {
       audience: data.audience,
       analysis: this.toInputJsonObject(data.analysis),
     };
-    const llmResponse = await this.llmService.generate({
+    const llmResponse = await this.llmService.generateStructured({
       systemPrompt:
         data.audience === ReportAudience.PARENT
           ? PARENT_REPORT_PROMPT
           : COACH_REPORT_PROMPT,
       userPrompt: JSON.stringify(inputPayload),
+      structuredOutput: {
+        name: 'generated_report_payload',
+        schema: generatedReportPayloadSchema,
+      },
     });
     const payload = validateGeneratedReportPayload(llmResponse.payload);
 
@@ -66,7 +79,6 @@ export class SavedOutputGenerationService {
         highlights: payload.highlights,
         lessonFocus: payload.lessonFocus,
         nextSteps: payload.nextSteps,
-        ...(payload.metadata ? { metadata: payload.metadata } : {}),
       },
       promptVersion: llmResponse.promptVersion,
       model: llmResponse.model,
@@ -81,9 +93,13 @@ export class SavedOutputGenerationService {
     const inputPayload: Prisma.InputJsonObject = {
       analysis: this.toInputJsonObject(data.analysis),
     };
-    const llmResponse = await this.llmService.generate({
+    const llmResponse = await this.llmService.generateStructured({
       systemPrompt: HOMEWORK_PROMPT,
       userPrompt: JSON.stringify(inputPayload),
+      structuredOutput: {
+        name: 'generated_homework_payload',
+        schema: generatedHomeworkPayloadSchema,
+      },
     });
     const payload = validateGeneratedHomeworkPayload(llmResponse.payload);
 
@@ -94,7 +110,6 @@ export class SavedOutputGenerationService {
         exercises: payload.exercises,
         focusPoints: payload.focusPoints,
         notes: payload.notes,
-        ...(payload.metadata ? { metadata: payload.metadata } : {}),
       },
       promptVersion: llmResponse.promptVersion,
       model: llmResponse.model,
@@ -113,9 +128,13 @@ export class SavedOutputGenerationService {
         this.toInputJsonObject(analysis),
       ),
     };
-    const llmResponse = await this.llmService.generate({
+    const llmResponse = await this.llmService.generateStructured({
       systemPrompt: PROGRESS_ANALYSIS_PROMPT,
       userPrompt: JSON.stringify(inputPayload),
+      structuredOutput: {
+        name: 'generated_progress_payload',
+        schema: generatedProgressPayloadSchema,
+      },
     });
     const payload = validateGeneratedProgressPayload(llmResponse.payload);
 

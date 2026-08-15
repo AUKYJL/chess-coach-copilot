@@ -112,6 +112,14 @@ class FakeLlmService {
   }
 
   generate(request: { userPrompt: string }) {
+    return Promise.resolve({
+      model: 'fake-llm',
+      promptVersion: 'test-v1',
+      rawText: `# Generated text output\n\nInput chars: ${request.userPrompt.length}`,
+    });
+  }
+
+  generateStructured(request: { userPrompt: string }) {
     const parsed = JSON.parse(request.userPrompt) as {
       audience?: string;
       analysis?: {

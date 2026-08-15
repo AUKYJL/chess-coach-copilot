@@ -6,6 +6,7 @@ import type {
   Response,
   ResponseCreateParamsNonStreaming,
 } from 'openai/resources/responses/responses';
+import type { ZodType } from 'zod';
 import { openrouterConfig } from '../config/index.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import {
@@ -13,9 +14,15 @@ import {
   LlmResponseFormatError,
 } from './llm-response-format.error.js';
 import {
+  LLM_RESPONSE_VALIDATION_FAILURE_CODE,
+  LlmResponseValidationError,
+} from './llm-response-validation.error.js';
+import {
   LlmClassificationRequest,
   LlmGenerationRequest,
+  LlmRawTextResponse,
   LlmResponse,
+  LlmStructuredGenerationRequest,
 } from './llm.types.js';
 
 const LLM_RESPONSE_EMPTY_ERROR = 'LLM returned an empty response body';
@@ -23,6 +30,8 @@ const LLM_RESPONSE_INCOMPLETE_ERROR =
   'LLM returned an incomplete structured response';
 const LLM_RESPONSE_INVALID_JSON_ERROR =
   'LLM returned invalid JSON in the response body';
+const LLM_RESPONSE_INVALID_STRUCTURED_PAYLOAD_ERROR =
+  'LLM returned a payload incompatible with the structured output schema';
 const GENERATION_PROMPT_VERSION = 'v1';
 const STRUCTURED_CLASSIFY_PROMPT_VERSION = 'analysis-structured-output-v2';
 
@@ -45,30 +54,10 @@ export class LlmService {
   }
 
   async classify(request: LlmClassificationRequest): Promise<LlmResponse> {
-    const promptVersion = STRUCTURED_CLASSIFY_PROMPT_VERSION;
-    const structuredRequest: ResponseCreateParamsNonStreaming & {
-      provider: {
-        require_parameters: true;
-      };
-    } = {
-      model: this.model,
-      input: this.buildInput(request.systemPrompt, request.userPrompt),
-      text: {
-        format: zodTextFormat(
-          request.structuredOutput.schema,
-          request.structuredOutput.name,
-        ),
-      },
-      provider: {
-        require_parameters: true,
-      },
-    };
-    const response = await this.client.responses.create(structuredRequest);
-
-    return this.toStructuredResponse(response, promptVersion);
+    return this.completeStructured(request, STRUCTURED_CLASSIFY_PROMPT_VERSION);
   }
 
-  async generate(request: LlmGenerationRequest): Promise<LlmResponse> {
+  async generate(request: LlmGenerationRequest): Promise<LlmRawTextResponse> {
     return this.complete(
       request.systemPrompt,
       request.userPrompt,
@@ -76,35 +65,51 @@ export class LlmService {
     );
   }
 
+  async generateStructured(
+    request: LlmStructuredGenerationRequest,
+  ): Promise<LlmResponse> {
+    return this.completeStructured(request, GENERATION_PROMPT_VERSION);
+  }
+
   private async complete(
     systemPrompt: string,
     userPrompt: string,
     promptVersion: string,
-  ): Promise<LlmResponse> {
+  ): Promise<LlmRawTextResponse> {
     const completion = await this.client.responses.create({
       model: this.model,
       input: this.buildInput(systemPrompt, userPrompt),
     });
 
-    const rawText =
-      typeof completion.output_text === 'string' ? completion.output_text : '';
-
-    if (rawText.trim().length === 0) {
-      throw new LlmResponseFormatError(
-        LLM_RESPONSE_EMPTY_ERROR,
-        LLM_RESPONSE_FORMAT_FAILURE_CODE.EMPTY_RESPONSE,
-        rawText,
-        this.model,
-        promptVersion,
-      );
-    }
+    const rawText = this.assertNonEmptyRawText(
+      completion.output_text,
+      promptVersion,
+    );
 
     return {
       model: this.model,
       promptVersion,
-      payload: this.parseJsonPayload(rawText, promptVersion),
       rawText,
     };
+  }
+
+  private async completeStructured(
+    request: {
+      systemPrompt: string;
+      userPrompt: string;
+      structuredOutput: LlmClassificationRequest['structuredOutput'];
+    },
+    promptVersion: string,
+  ): Promise<LlmResponse> {
+    const response = await this.client.responses.create(
+      this.buildStructuredRequest(request),
+    );
+
+    return this.toStructuredResponse(
+      response,
+      request.structuredOutput.schema,
+      promptVersion,
+    );
   }
 
   private buildInput(systemPrompt: string, userPrompt: string) {
@@ -116,36 +121,71 @@ export class LlmService {
 
   private toStructuredResponse(
     response: Response,
+    schema: ZodType,
     promptVersion: string,
   ): LlmResponse {
-    const rawText =
-      typeof response.output_text === 'string' ? response.output_text : '';
-
     if (response.status === 'incomplete') {
       throw new LlmResponseFormatError(
         LLM_RESPONSE_INCOMPLETE_ERROR,
         LLM_RESPONSE_FORMAT_FAILURE_CODE.INCOMPLETE_RESPONSE,
-        rawText,
+        typeof response.output_text === 'string' ? response.output_text : '',
         this.model,
         promptVersion,
       );
     }
 
-    if (rawText.trim().length === 0) {
-      throw new LlmResponseFormatError(
-        LLM_RESPONSE_EMPTY_ERROR,
-        LLM_RESPONSE_FORMAT_FAILURE_CODE.EMPTY_RESPONSE,
+    const rawText = this.assertNonEmptyRawText(
+      response.output_text,
+      promptVersion,
+    );
+    const payload = this.parseJsonPayload(rawText, promptVersion);
+    const validationResult = schema.safeParse(payload);
+
+    if (!validationResult.success) {
+      throw new LlmResponseValidationError(
+        LLM_RESPONSE_INVALID_STRUCTURED_PAYLOAD_ERROR,
+        LLM_RESPONSE_VALIDATION_FAILURE_CODE.INVALID_PAYLOAD,
         rawText,
+        payload,
         this.model,
         promptVersion,
+        {
+          issues: validationResult.error.issues.map((issue) => ({
+            path: issue.path.map((segment) => String(segment)),
+            code: issue.code,
+            message: issue.message,
+          })),
+        },
       );
     }
 
     return {
       model: this.model,
       promptVersion,
-      payload: this.parseJsonPayload(rawText, promptVersion),
+      payload: validationResult.data as Prisma.InputJsonValue,
       rawText,
+    };
+  }
+
+  private buildStructuredRequest(
+    request: LlmClassificationRequest | LlmStructuredGenerationRequest,
+  ): ResponseCreateParamsNonStreaming & {
+    provider: {
+      require_parameters: true;
+    };
+  } {
+    return {
+      model: this.model,
+      input: this.buildInput(request.systemPrompt, request.userPrompt),
+      text: {
+        format: zodTextFormat(
+          request.structuredOutput.schema,
+          request.structuredOutput.name,
+        ),
+      },
+      provider: {
+        require_parameters: true,
+      },
     };
   }
 
@@ -179,5 +219,24 @@ export class LlmService {
     }
 
     return fencedJsonMatch[1];
+  }
+
+  private assertNonEmptyRawText(
+    outputText: Response['output_text'],
+    promptVersion: string,
+  ): string {
+    const rawText = typeof outputText === 'string' ? outputText : '';
+
+    if (rawText.trim().length === 0) {
+      throw new LlmResponseFormatError(
+        LLM_RESPONSE_EMPTY_ERROR,
+        LLM_RESPONSE_FORMAT_FAILURE_CODE.EMPTY_RESPONSE,
+        rawText,
+        this.model,
+        promptVersion,
+      );
+    }
+
+    return rawText;
   }
 }

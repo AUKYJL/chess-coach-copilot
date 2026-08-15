@@ -1847,6 +1847,9 @@ export class InMemoryPrismaService {
     if (select.analysisJobs) {
       const analysisJobsSelect = select.analysisJobs as {
         take?: number;
+        where?: {
+          jobType?: AnalysisJobType;
+        };
         select: {
           id?: boolean;
           status?: boolean;
@@ -1855,7 +1858,20 @@ export class InMemoryPrismaService {
       };
 
       result.analysisJobs = sortByCreatedAtAndIdDesc(
-        this.analysisJobs.filter((item) => item.gameId === record.id),
+        this.analysisJobs.filter((item) => {
+          if (item.gameId !== record.id) {
+            return false;
+          }
+
+          if (
+            analysisJobsSelect.where?.jobType &&
+            item.jobType !== analysisJobsSelect.where.jobType
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
       )
         .slice(0, analysisJobsSelect.take)
         .map((item) => ({

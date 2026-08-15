@@ -1,6 +1,14 @@
 export { useGameAnalysisData } from "./use-game-analysis-data";
-export type { AnalysisDetailsResponse, GameDetailsResponse } from "./api-types";
 export type {
+  AnalysisDetailsResponse,
+  AnalysisJobListResponse,
+  AnalysisJobResponse,
+  GameDetailsResponse,
+  ReportResponse,
+} from "./api-types";
+export type {
+  GameAnalysisReportAudience,
+  GameAnalysisReportGenerationViewModel,
   GameAnalysisCriticalMomentViewModel,
   GameAnalysisHeaderViewModel,
   GameAnalysisPageViewModel,

@@ -23,6 +23,8 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
     gameId,
     studentId,
   });
+  const headerReportGeneration =
+    query.page?.reportGeneration ?? query.reportGeneration;
   const [positionMode, setPositionMode] = useState<"after" | "before">(
     "before",
   );
@@ -78,7 +80,13 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
     return (
       <div className="space-y-4">
         {query.gameHeader ? (
-          <GameAnalysisHeader header={query.gameHeader} />
+          <GameAnalysisHeader
+            header={query.gameHeader}
+            onGenerateReport={query.generateReport}
+            onRefreshReport={query.retryPage}
+            onRetryReportGeneration={query.retryReportGeneration}
+            reportGeneration={headerReportGeneration}
+          />
         ) : null}
         <GameAnalysisStateCard
           actionLabel="Повторить"
@@ -95,7 +103,13 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
     return (
       <div className="space-y-4">
         {query.gameHeader ? (
-          <GameAnalysisHeader header={query.gameHeader} />
+          <GameAnalysisHeader
+            header={query.gameHeader}
+            onGenerateReport={query.generateReport}
+            onRefreshReport={query.retryPage}
+            onRetryReportGeneration={query.retryReportGeneration}
+            reportGeneration={headerReportGeneration}
+          />
         ) : null}
         <GameAnalysisStateCard
           description={query.statusDescription}
@@ -110,7 +124,13 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
     return (
       <div className="space-y-4">
         {query.gameHeader ? (
-          <GameAnalysisHeader header={query.gameHeader} />
+          <GameAnalysisHeader
+            header={query.gameHeader}
+            onGenerateReport={query.generateReport}
+            onRefreshReport={query.retryPage}
+            onRetryReportGeneration={query.retryReportGeneration}
+            reportGeneration={headerReportGeneration}
+          />
         ) : null}
         <GameAnalysisStateCard
           actionLabel="Повторить анализ"
@@ -130,7 +150,13 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
     return (
       <div className="space-y-4">
         {query.gameHeader ? (
-          <GameAnalysisHeader header={query.gameHeader} />
+          <GameAnalysisHeader
+            header={query.gameHeader}
+            onGenerateReport={query.generateReport}
+            onRefreshReport={query.retryPage}
+            onRetryReportGeneration={query.retryReportGeneration}
+            reportGeneration={headerReportGeneration}
+          />
         ) : null}
         <GameAnalysisStateCard
           actionLabel="Обновить"
@@ -144,7 +170,13 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
 
   return (
     <div className="space-y-4 md:space-y-5">
-      <GameAnalysisHeader header={query.page.header} />
+      <GameAnalysisHeader
+        header={query.page.header}
+        onGenerateReport={query.generateReport}
+        onRefreshReport={query.retryPage}
+        onRetryReportGeneration={query.retryReportGeneration}
+        reportGeneration={query.page.reportGeneration}
+      />
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,0.88fr)_minmax(320px,0.96fr)] xl:items-start">
         <div className="min-w-0">

@@ -769,6 +769,50 @@ export interface components {
             /** @example maksim_sokolov_2012 */
             username: string;
         };
+        AnalysisJobResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            gameId: string;
+            /** Format: uuid */
+            studentId: string;
+            /** @enum {string} */
+            jobType: "ANALYSIS" | "REPORT_GENERATION" | "HOMEWORK_GENERATION" | "PROGRESS_GENERATION";
+            /** @enum {string} */
+            status: "PENDING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED";
+            /** Format: uuid */
+            sourceAnalysisId: string | null;
+            /** @enum {string|null} */
+            reportAudience: "COACH" | "PARENT" | null;
+            attemptCount: number;
+            maxAttempts: number;
+            progressPercent: number | null;
+            isDuplicate: boolean;
+            /** @enum {string} */
+            annotationCoverage: "FULL" | "PARTIAL" | "NONE";
+            reducedConfidenceWarning: string | null;
+            failureCode: string | null;
+            failureMessage: string | null;
+            /** Format: uuid */
+            analysisId: string | null;
+            /** Format: uuid */
+            reportId: string | null;
+            /** Format: uuid */
+            homeworkId: string | null;
+            /** Format: uuid */
+            progressSnapshotId: string | null;
+            /** Format: date-time */
+            completedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AnalysisJobListResponse: {
+            items: components["schemas"]["AnalysisJobResponse"][];
+            /** Format: uuid */
+            nextCursor: string | null;
+        };
         AnalysisReplayMoveResponse: {
             ply: number;
             fullMoveNumber: number;
@@ -921,6 +965,31 @@ export interface components {
              * @enum {string}
              */
             audience: "COACH" | "PARENT";
+        };
+        ReportResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            coachAccountId: string;
+            /** Format: uuid */
+            studentId: string;
+            /** Format: uuid */
+            analysisId: string;
+            title: string;
+            /** @enum {string} */
+            audience: "COACH" | "PARENT";
+            content: {
+                [key: string]: unknown;
+            };
+            promptVersion: string;
+            model: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ReportListResponse: {
+            items: components["schemas"]["ReportResponse"][];
         };
         ReportUpdateDto: {
             /** @example Coach report: Italian Game review */
@@ -1449,7 +1518,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AnalysisJobListResponse"];
+                };
             };
         };
     };
@@ -1468,7 +1539,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AnalysisJobResponse"];
+                };
             };
         };
     };
@@ -1487,7 +1560,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AnalysisJobResponse"];
+                };
             };
         };
     };
@@ -1598,15 +1673,17 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AnalysisJobResponse"];
+                };
             };
         };
     };
     ReportsController_list: {
         parameters: {
-            query: {
-                studentId: string;
-                analysisId: string;
+            query?: {
+                studentId?: string;
+                analysisId?: string;
             };
             header?: never;
             path?: never;
@@ -1618,7 +1695,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ReportListResponse"];
+                };
             };
         };
     };
@@ -1637,7 +1716,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ReportResponse"];
+                };
             };
         };
     };
@@ -1679,7 +1760,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ReportResponse"];
+                };
             };
         };
     };

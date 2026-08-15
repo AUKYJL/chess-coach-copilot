@@ -8,10 +8,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAccessGuard } from '../../auth/guards/jwt-access.guard.js';
 import { CurrentCoach } from '../../shared/decorators/current-coach.decorator.js';
 import type { AuthenticatedCoach } from '../../shared/types/authenticated-coach.type.js';
+import { AnalysisJobListResponse } from '../dto/analysis-job-list.response.js';
+import { AnalysisJobResponse } from '../dto/analysis-job.response.js';
 import { ListAnalysisJobsQueryDto } from '../dto/list-analysis-jobs.query.js';
 import { AnalysisJobsService } from './analysis-jobs.service.js';
 
@@ -23,6 +25,7 @@ export class AnalysisJobsController {
   constructor(private readonly analysisJobsService: AnalysisJobsService) {}
 
   @Get()
+  @ApiOkResponse({ type: AnalysisJobListResponse })
   list(
     @CurrentCoach() coach: AuthenticatedCoach,
     @Query() query: ListAnalysisJobsQueryDto,
@@ -39,6 +42,7 @@ export class AnalysisJobsController {
   }
 
   @Get(':jobId')
+  @ApiOkResponse({ type: AnalysisJobResponse })
   getStatus(
     @CurrentCoach() coach: AuthenticatedCoach,
     @Param('jobId') jobId: string,
@@ -48,6 +52,7 @@ export class AnalysisJobsController {
 
   @HttpCode(HttpStatus.OK)
   @Post(':jobId/retry')
+  @ApiOkResponse({ type: AnalysisJobResponse })
   retry(
     @CurrentCoach() coach: AuthenticatedCoach,
     @Param('jobId') jobId: string,

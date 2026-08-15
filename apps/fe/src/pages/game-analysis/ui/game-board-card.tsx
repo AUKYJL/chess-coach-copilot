@@ -1,4 +1,5 @@
 import { RefreshCcw } from "lucide-react";
+import { useEffect, useState } from "react";
 import { ChessBoard, JSChessEngine, type SquarePos } from "react-chessboard-ui";
 
 import {
@@ -25,8 +26,41 @@ const BOARD_CONFIG = {
   lightSquareClassName: "bg-[#f4efe7]",
   pieceSizePercent: 88,
   showMovesTrail: false,
-  squareSize: 42,
   squareHighlightClassName: "shadow-[inset_0_0_0_3px_rgba(31,77,122,0.18)]",
+};
+const BOARD_DARK_SQUARE_COLOR = "#C9B6A5";
+const BOARD_COORDINATE_FILES = [
+  "a",
+  "b",
+  "c",
+  "d",
+  "e",
+  "f",
+  "g",
+  "h",
+] as const;
+const BOARD_COORDINATE_RANKS = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+] as const;
+const BOARD_LIGHT_SQUARE_COLOR = "#F4EFE7";
+const COMPACT_BOARD_SQUARE_SIZE_PX = 28;
+const MOBILE_BOARD_SQUARE_SIZE_PX = 32;
+const DESKTOP_BOARD_SQUARE_SIZE_PX = 39;
+const MOBILE_VIEWPORT_MIN_WIDTH_PX = 360;
+const DESKTOP_VIEWPORT_MIN_WIDTH_PX = 640;
+
+type BoardSizing = {
+  boardSize: number;
+  coordinateFontSize: number;
+  coordinateInset: number;
+  squareSize: number;
 };
 
 type BoardArrow = {
@@ -36,6 +70,47 @@ type BoardArrow = {
 };
 
 function noop() {}
+
+function getBoardSizing(viewportWidth: number): BoardSizing {
+  if (viewportWidth < MOBILE_VIEWPORT_MIN_WIDTH_PX) {
+    return {
+      squareSize: COMPACT_BOARD_SQUARE_SIZE_PX,
+      boardSize: COMPACT_BOARD_SQUARE_SIZE_PX * 8,
+      coordinateFontSize: 10,
+      coordinateInset: 2,
+    };
+  }
+
+  if (viewportWidth < DESKTOP_VIEWPORT_MIN_WIDTH_PX) {
+    return {
+      squareSize: MOBILE_BOARD_SQUARE_SIZE_PX,
+      boardSize: MOBILE_BOARD_SQUARE_SIZE_PX * 8,
+      coordinateFontSize: 10,
+      coordinateInset: 3,
+    };
+  }
+
+  return {
+    squareSize: DESKTOP_BOARD_SQUARE_SIZE_PX,
+    boardSize: DESKTOP_BOARD_SQUARE_SIZE_PX * 8,
+    coordinateFontSize: 11,
+    coordinateInset: 4,
+  };
+}
+
+function getInitialBoardSizing(): BoardSizing {
+  if (typeof window === "undefined") {
+    return getBoardSizing(DESKTOP_VIEWPORT_MIN_WIDTH_PX);
+  }
+
+  return getBoardSizing(window.innerWidth);
+}
+
+function getCoordinateTextColor(rowIndex: number, columnIndex: number): string {
+  const isLightSquare = (rowIndex + columnIndex) % 2 === 0;
+
+  return isLightSquare ? BOARD_DARK_SQUARE_COLOR : BOARD_LIGHT_SQUARE_COLOR;
+}
 
 function squareToPosition(square: string): SquarePos | null {
   if (!/^[a-h][1-8]$/i.test(square)) {
@@ -112,6 +187,45 @@ export function GameBoardCard({
   const arrows = [actualArrow, bestArrow].filter(
     (arrow): arrow is BoardArrow => arrow !== null,
   );
+  const displayedFiles = boardReversed
+    ? BOARD_COORDINATE_FILES.toReversed()
+    : BOARD_COORDINATE_FILES;
+  const displayedRanks = boardReversed
+    ? BOARD_COORDINATE_RANKS
+    : BOARD_COORDINATE_RANKS.toReversed();
+  const [boardSizing, setBoardSizing] = useState(getInitialBoardSizing);
+
+  useEffect(() => {
+    const desktopMediaQuery = window.matchMedia(
+      `(min-width: ${DESKTOP_VIEWPORT_MIN_WIDTH_PX}px)`,
+    );
+    const mobileMediaQuery = window.matchMedia(
+      `(min-width: ${MOBILE_VIEWPORT_MIN_WIDTH_PX}px)`,
+    );
+
+    const updateBoardSizing = () => {
+      const nextBoardSizing = desktopMediaQuery.matches
+        ? getBoardSizing(DESKTOP_VIEWPORT_MIN_WIDTH_PX)
+        : mobileMediaQuery.matches
+          ? getBoardSizing(MOBILE_VIEWPORT_MIN_WIDTH_PX)
+          : getBoardSizing(0);
+
+      setBoardSizing((currentBoardSizing) =>
+        currentBoardSizing.squareSize === nextBoardSizing.squareSize
+          ? currentBoardSizing
+          : nextBoardSizing,
+      );
+    };
+
+    updateBoardSizing();
+    desktopMediaQuery.addEventListener("change", updateBoardSizing);
+    mobileMediaQuery.addEventListener("change", updateBoardSizing);
+
+    return () => {
+      desktopMediaQuery.removeEventListener("change", updateBoardSizing);
+      mobileMediaQuery.removeEventListener("change", updateBoardSizing);
+    };
+  }, []);
 
   return (
     <Card>
@@ -143,21 +257,78 @@ export function GameBoardCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="overflow-x-auto">
-          <div className="min-w-[336px]">
-            <ChessBoard
-              FEN={fen}
-              arrows={arrows}
-              config={BOARD_CONFIG}
-              onChange={noop}
-              onEndGame={noop}
-              reversed={boardReversed}
-              toggleTurn={false}
-              viewOnly
-            />
+        <div className="mx-auto w-fit">
+          <div
+            className="relative mx-auto"
+            style={{
+              height: boardSizing.boardSize,
+              width: boardSizing.boardSize,
+            }}
+          >
+            <div style={{ width: boardSizing.boardSize }}>
+              <ChessBoard
+                FEN={fen}
+                arrows={arrows}
+                key={boardSizing.squareSize}
+                config={{
+                  ...BOARD_CONFIG,
+                  squareSize: boardSizing.squareSize,
+                }}
+                onChange={noop}
+                onEndGame={noop}
+                reversed={boardReversed}
+                toggleTurn={false}
+                viewOnly
+              />
+            </div>
+            <div
+              className="pointer-events-none absolute inset-0 grid"
+              style={{
+                gridTemplateColumns: "repeat(8, minmax(0, 1fr))",
+                gridTemplateRows: "repeat(8, minmax(0, 1fr))",
+              }}
+            >
+              {Array.from({ length: 64 }, (_, index) => {
+                const rowIndex = Math.floor(index / 8);
+                const columnIndex = index % 8;
+                const file = rowIndex === 7 ? displayedFiles[columnIndex] : null;
+                const rank =
+                  columnIndex === 7 ? displayedRanks[rowIndex] : null;
+
+                return (
+                  <div key={`${rowIndex}-${columnIndex}`} className="relative">
+                    {file ? (
+                      <span
+                        className="absolute font-medium leading-none"
+                        style={{
+                          bottom: boardSizing.coordinateInset,
+                          color: getCoordinateTextColor(rowIndex, columnIndex),
+                          fontSize: boardSizing.coordinateFontSize,
+                          left: boardSizing.coordinateInset,
+                        }}
+                      >
+                        {file}
+                      </span>
+                    ) : null}
+                    {rank ? (
+                      <span
+                        className="absolute font-medium leading-none"
+                        style={{
+                          color: getCoordinateTextColor(rowIndex, columnIndex),
+                          fontSize: boardSizing.coordinateFontSize,
+                          right: boardSizing.coordinateInset,
+                          top: boardSizing.coordinateInset,
+                        }}
+                      >
+                        {rank}
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-
         <div className="flex flex-wrap items-center gap-2">
           <Button
             onClick={() => onPositionModeChange("before")}

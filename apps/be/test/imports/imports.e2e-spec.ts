@@ -2,7 +2,12 @@ import { jest } from '@jest/globals';
 import { INestApplication } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import request from 'supertest';
-import { AnalysisJobStatus } from '../../src/generated/prisma/client.js';
+import {
+  AnalysisJobStatus,
+  AnalysisJobType,
+  ReportAudience,
+  WeaknessTag,
+} from '../../src/generated/prisma/client.js';
 import { createE2eApp } from '../helpers/create-e2e-app.js';
 import { InMemoryPrismaService } from '../helpers/in-memory-prisma.js';
 
@@ -381,6 +386,131 @@ describe('ImportsController (e2e)', () => {
         latestAnalysisJobStatus: AnalysisJobStatus.FAILED,
       }),
     ]);
+  });
+
+  it('keeps latestAnalysis fields pinned to the latest analysis job when newer report jobs exist', async () => {
+    const { accessToken, studentId } = await registerCoachAndStudent(app);
+    const coach = (await prisma.coachAccount.findUnique({
+      where: { email: 'coach@example.com' },
+    })) as { id: string } | null;
+
+    expect(coach).toBeTruthy();
+
+    const game = await prisma.game.create({
+      data: {
+        coachAccountId: coach!.id,
+        studentId,
+        sourceType: 'MANUAL_PGN',
+        sourceLabel: 'Analysis with report',
+        studentColor: 'WHITE',
+        event: 'Training',
+        site: 'Lichess',
+        whitePlayerName: 'Student',
+        blackPlayerName: 'Opponent',
+        openingHeader: 'Italian Game',
+        ecoCode: 'C50',
+        rawResult: '1-0',
+        derivedResult: 'WIN',
+        plyCount: 42,
+        rawPgn: '[Event "Training"]',
+        normalizedPgnHash: 'analysis-with-report-hash',
+        hasEngineAnnotations: true,
+        annotationCoverage: 'FULL',
+        reducedConfidenceWarning: null,
+      },
+    });
+    const analysisJob = await prisma.analysisJob.create({
+      data: {
+        coachAccountId: coach!.id,
+        studentId,
+        gameId: game.id,
+        jobType: AnalysisJobType.ANALYSIS,
+        queueName: 'analysis',
+      },
+    });
+
+    await prisma.analysisJob.update({
+      where: { id: analysisJob.id },
+      data: {
+        status: AnalysisJobStatus.COMPLETED,
+        progressPercent: 100,
+        startedAt: new Date('2026-08-08T10:00:00.000Z'),
+        completedAt: new Date('2026-08-08T10:05:00.000Z'),
+        createdAt: new Date('2026-08-08T10:00:00.000Z'),
+      },
+    });
+
+    const analysis = await prisma.gameAnalysis.create({
+      data: {
+        coachAccountId: coach!.id,
+        studentId,
+        gameId: game.id,
+        analysisJobId: analysisJob.id,
+        confidenceLevel: 'HIGH',
+        overallDiagnosis: 'Saved completed analysis',
+        openingName: 'Italian Game',
+        result: 'WIN',
+        mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
+        secondaryWeaknessTags: [],
+        recommendedLessonTitle: 'Candidate move discipline',
+        recommendedLessonWhy: 'Missed forcing sequence',
+        recommendedFocusPoints: ['Check forcing moves first'],
+        rawExtractedContext: {
+          annotationCoverage: 'FULL',
+          reducedConfidenceWarning: null,
+        },
+        rawAnalysisJson: {
+          source: 'seeded-e2e',
+        },
+      },
+    });
+    const reportJob = await prisma.analysisJob.create({
+      data: {
+        coachAccountId: coach!.id,
+        studentId,
+        gameId: game.id,
+        jobType: AnalysisJobType.REPORT_GENERATION,
+        queueName: 'analysis',
+        sourceAnalysisId: analysis.id,
+        reportAudience: ReportAudience.COACH,
+      },
+    });
+
+    await prisma.analysisJob.update({
+      where: { id: reportJob.id },
+      data: {
+        status: AnalysisJobStatus.PENDING,
+        createdAt: new Date('2026-08-08T11:00:00.000Z'),
+      },
+    });
+
+    const gameDetailResponse = await request(getServer(app))
+      .get(`/games/${game.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(gameDetailResponse.body).toMatchObject({
+      id: game.id,
+      latestAnalysisJobId: analysisJob.id,
+      latestAnalysisJobStatus: AnalysisJobStatus.COMPLETED,
+      latestAnalysisId: analysis.id,
+    });
+
+    const filteredResponse = await request(getServer(app))
+      .get(`/students/${studentId}/games?analysisStatus=COMPLETED`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(filteredResponse.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: game.id,
+          latestAnalysisJobId: analysisJob.id,
+          latestAnalysisJobStatus: AnalysisJobStatus.COMPLETED,
+          latestAnalysisId: analysis.id,
+        }),
+      ]),
+    );
   });
 });
 

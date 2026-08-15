@@ -27,6 +27,8 @@ type AnalysisWithRelations = {
     category: string;
     explanation: string;
     suggestedFix: string | null;
+    reviewStatus: SavedAnalysisInput['mistakes'][number]['reviewStatus'];
+    coachNote: string | null;
   }>;
 };
 
@@ -59,6 +61,8 @@ export class SavedAnalysisInputMapper {
         category: item.category,
         explanation: item.explanation,
         suggestedFix: item.suggestedFix,
+        reviewStatus: item.reviewStatus,
+        coachNote: item.coachNote,
       })),
     };
   }

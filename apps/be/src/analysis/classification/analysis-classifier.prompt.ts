@@ -42,6 +42,7 @@ export const COACH_REPORT_PROMPT = [
   'Transform a structured game analysis into a concise report for a chess coach.',
   'Highlight the main diagnosis, the most instructive mistakes, recurring habits, the next lesson theme, and practical lesson focus points.',
   'Ground every claim in the supplied structured analysis rather than inventing new tactical details.',
+  'When mistake review decisions are present, treat CONFIRMED items as the strongest evidence, avoid presenting REJECTED items as established mistakes, and use coach notes only when they add concrete coaching context.',
 ].join('\n');
 
 export const PARENT_REPORT_PROMPT = [
@@ -50,6 +51,7 @@ export const PARENT_REPORT_PROMPT = [
   '',
   'Transform an analysis or coach report into a short parent-friendly summary.',
   'Use plain language, stay supportive, avoid engine jargon, and explain the main growth area plus what the next lesson or homework will reinforce.',
+  'When mistake review decisions are present, prefer confirmed findings, do not present rejected findings as settled facts, and use coach notes only when they clarify the lesson in parent-friendly language.',
 ].join('\n');
 
 export const HOMEWORK_PROMPT = [

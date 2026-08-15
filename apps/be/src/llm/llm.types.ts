@@ -1,13 +1,15 @@
 import type { Prisma } from '../generated/prisma/client.js';
 import type { ZodType } from 'zod';
 
+export interface LlmStructuredOutputDefinition {
+  name: string;
+  schema: ZodType;
+}
+
 export interface LlmClassificationRequest {
   systemPrompt: string;
   userPrompt: string;
-  structuredOutput: {
-    name: string;
-    schema: ZodType;
-  };
+  structuredOutput: LlmStructuredOutputDefinition;
 }
 
 export interface LlmGenerationRequest {
@@ -15,9 +17,20 @@ export interface LlmGenerationRequest {
   userPrompt: string;
 }
 
-export interface LlmResponse {
+export interface LlmStructuredGenerationRequest extends LlmGenerationRequest {
+  structuredOutput: LlmStructuredOutputDefinition;
+}
+
+export interface LlmRawTextResponse {
+  model: string;
+  promptVersion: string;
+  rawText: string;
+}
+
+export interface LlmStructuredResponse extends LlmRawTextResponse {
   model: string;
   promptVersion: string;
   payload: Prisma.InputJsonValue;
-  rawText: string;
 }
+
+export type LlmResponse = LlmStructuredResponse;

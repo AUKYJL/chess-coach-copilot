@@ -564,6 +564,10 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisJobListResponse"
       security: &a8
         - bearer: []
       tags: &a9
@@ -580,6 +584,10 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisJobResponse"
       security: *a8
       tags: *a9
   /api/analysis/jobs/{jobId}/retry:
@@ -594,6 +602,10 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisJobResponse"
       security: *a8
       tags: *a9
   /api/analysis:
@@ -721,6 +733,10 @@ paths:
       responses:
         "201":
           description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisJobResponse"
       security: &a12
         - bearer: []
       tags: &a13
@@ -730,18 +746,24 @@ paths:
       operationId: ReportsController_list
       parameters:
         - name: studentId
-          required: true
+          required: false
           in: query
           schema:
+            format: uuid
             type: string
         - name: analysisId
-          required: true
+          required: false
           in: query
           schema:
+            format: uuid
             type: string
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportListResponse"
       security: *a12
       tags: *a13
   /api/reports/{reportId}:
@@ -756,6 +778,10 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportResponse"
       security: *a12
       tags: *a13
     patch:
@@ -775,6 +801,10 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportResponse"
       security: *a12
       tags: *a13
     delete:
@@ -1738,6 +1768,132 @@ components:
       required:
         - platform
         - username
+    AnalysisJobResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        gameId:
+          type: string
+          format: uuid
+        studentId:
+          type: string
+          format: uuid
+        jobType:
+          type: string
+          enum:
+            - ANALYSIS
+            - REPORT_GENERATION
+            - HOMEWORK_GENERATION
+            - PROGRESS_GENERATION
+        status:
+          type: string
+          enum:
+            - PENDING
+            - PARSING
+            - EXTRACTING_ANNOTATIONS
+            - CLASSIFICATION
+            - GENERATING_OUTPUT
+            - COMPLETED
+            - FAILED
+        sourceAnalysisId:
+          type: string
+          format: uuid
+          nullable: true
+        reportAudience:
+          type: string
+          enum:
+            - COACH
+            - PARENT
+          nullable: true
+        attemptCount:
+          type: number
+        maxAttempts:
+          type: number
+        progressPercent:
+          type: number
+          nullable: true
+        isDuplicate:
+          type: boolean
+        annotationCoverage:
+          type: string
+          enum:
+            - FULL
+            - PARTIAL
+            - NONE
+        reducedConfidenceWarning:
+          type: string
+          nullable: true
+        failureCode:
+          type: string
+          nullable: true
+        failureMessage:
+          type: string
+          nullable: true
+        analysisId:
+          type: string
+          format: uuid
+          nullable: true
+        reportId:
+          type: string
+          format: uuid
+          nullable: true
+        homeworkId:
+          type: string
+          format: uuid
+          nullable: true
+        progressSnapshotId:
+          type: string
+          format: uuid
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - gameId
+        - studentId
+        - jobType
+        - status
+        - sourceAnalysisId
+        - reportAudience
+        - attemptCount
+        - maxAttempts
+        - progressPercent
+        - isDuplicate
+        - annotationCoverage
+        - reducedConfidenceWarning
+        - failureCode
+        - failureMessage
+        - analysisId
+        - reportId
+        - homeworkId
+        - progressSnapshotId
+        - completedAt
+        - createdAt
+        - updatedAt
+    AnalysisJobListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalysisJobResponse"
+        nextCursor:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+        - items
+        - nextCursor
     AnalysisReplayMoveResponse:
       type: object
       properties:
@@ -2199,6 +2355,62 @@ components:
           example: COACH
       required:
         - audience
+    ReportResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        coachAccountId:
+          type: string
+          format: uuid
+        studentId:
+          type: string
+          format: uuid
+        analysisId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        audience:
+          type: string
+          enum:
+            - COACH
+            - PARENT
+        content:
+          type: object
+          additionalProperties: true
+        promptVersion:
+          type: string
+        model:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - coachAccountId
+        - studentId
+        - analysisId
+        - title
+        - audience
+        - content
+        - promptVersion
+        - model
+        - createdAt
+        - updatedAt
+    ReportListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportResponse"
+      required:
+        - items
     ReportUpdateDto:
       type: object
       properties:
