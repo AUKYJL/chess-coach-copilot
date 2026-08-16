@@ -1,4 +1,4 @@
-import { RefreshCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ChessBoard, JSChessEngine, type SquarePos } from "react-chessboard-ui";
 
@@ -153,9 +153,11 @@ function toArrowCoords(args: {
 type GameBoardCardProps = {
   boardReversed: boolean;
   initialFen: string;
+  isNextDisabled: boolean;
+  isPreviousDisabled: boolean;
   onFlipBoard: () => void;
-  onPositionModeChange: (mode: "after" | "before") => void;
-  positionMode: "after" | "before";
+  onGoToNext: () => void;
+  onGoToPrevious: () => void;
   selectedMoment: GameAnalysisCriticalMomentViewModel | null;
   selectedMove: GameAnalysisReplayMoveViewModel | null;
 };
@@ -163,17 +165,15 @@ type GameBoardCardProps = {
 export function GameBoardCard({
   boardReversed,
   initialFen,
+  isNextDisabled,
+  isPreviousDisabled,
   onFlipBoard,
-  onPositionModeChange,
-  positionMode,
+  onGoToNext,
+  onGoToPrevious,
   selectedMoment,
   selectedMove,
 }: GameBoardCardProps) {
-  const fen = selectedMove
-    ? positionMode === "before"
-      ? selectedMove.beforeFen
-      : selectedMove.afterFen
-    : initialFen;
+  const fen = selectedMove ? selectedMove.afterFen : initialFen;
   const actualArrow = toArrowCoords({
     move: selectedMove?.actualMove ?? null,
     reversed: boardReversed,
@@ -291,7 +291,8 @@ export function GameBoardCard({
               {Array.from({ length: 64 }, (_, index) => {
                 const rowIndex = Math.floor(index / 8);
                 const columnIndex = index % 8;
-                const file = rowIndex === 7 ? displayedFiles[columnIndex] : null;
+                const file =
+                  rowIndex === 7 ? displayedFiles[columnIndex] : null;
                 const rank =
                   columnIndex === 7 ? displayedRanks[rowIndex] : null;
 
@@ -299,7 +300,7 @@ export function GameBoardCard({
                   <div key={`${rowIndex}-${columnIndex}`} className="relative">
                     {file ? (
                       <span
-                        className="absolute font-medium leading-none"
+                        className="absolute leading-none font-medium"
                         style={{
                           bottom: boardSizing.coordinateInset,
                           color: getCoordinateTextColor(rowIndex, columnIndex),
@@ -312,7 +313,7 @@ export function GameBoardCard({
                     ) : null}
                     {rank ? (
                       <span
-                        className="absolute font-medium leading-none"
+                        className="absolute leading-none font-medium"
                         style={{
                           color: getCoordinateTextColor(rowIndex, columnIndex),
                           fontSize: boardSizing.coordinateFontSize,
@@ -329,28 +330,15 @@ export function GameBoardCard({
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <Button
-            onClick={() => onPositionModeChange("before")}
-            size={BUTTON_SIZE.SM}
-            variant={
-              positionMode === "before"
-                ? BUTTON_VARIANT.DEFAULT
-                : BUTTON_VARIANT.OUTLINE
-            }
+            aria-label="Предыдущий ход"
+            disabled={isPreviousDisabled}
+            onClick={onGoToPrevious}
+            size={BUTTON_SIZE.ICON}
+            variant={BUTTON_VARIANT.OUTLINE}
           >
-            До хода
-          </Button>
-          <Button
-            onClick={() => onPositionModeChange("after")}
-            size={BUTTON_SIZE.SM}
-            variant={
-              positionMode === "after"
-                ? BUTTON_VARIANT.DEFAULT
-                : BUTTON_VARIANT.OUTLINE
-            }
-          >
-            После хода
+            <ChevronLeft className="size-4" />
           </Button>
           <Button
             onClick={onFlipBoard}
@@ -359,6 +347,15 @@ export function GameBoardCard({
           >
             <RefreshCcw className="size-4" />
             Перевернуть доску
+          </Button>
+          <Button
+            aria-label="Следующий ход"
+            disabled={isNextDisabled}
+            onClick={onGoToNext}
+            size={BUTTON_SIZE.ICON}
+            variant={BUTTON_VARIANT.OUTLINE}
+          >
+            <ChevronRight className="size-4" />
           </Button>
         </div>
       </CardContent>

@@ -1,4 +1,3 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { cn } from "@/shared/lib/cn";
@@ -11,7 +10,6 @@ import {
   TYPOGRAPHY_VARIANT,
   Typography,
 } from "@/shared/ui";
-import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
 import type {
   GameAnalysisCriticalMomentViewModel,
@@ -114,15 +112,6 @@ export function ReplayMovesPanel({
   const rows = buildReplayRows(moves);
   const selectedMove =
     moves.find((move) => move.ply === selectedPly) ?? moves[0] ?? null;
-  const selectedMoveIndex = selectedMove
-    ? moves.findIndex((move) => move.ply === selectedMove.ply)
-    : -1;
-  const previousMove =
-    selectedMoveIndex > 0 ? moves[selectedMoveIndex - 1] : null;
-  const nextMove =
-    selectedMoveIndex >= 0 && selectedMoveIndex < moves.length - 1
-      ? moves[selectedMoveIndex + 1]
-      : null;
 
   useEffect(() => {
     if (selectedPly === null) {
@@ -150,35 +139,6 @@ export function ReplayMovesPanel({
                 : "Выберите ход, чтобы синхронизировать доску и детали."}
             </Typography>
           </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Button
-            disabled={!previousMove}
-            onClick={() => {
-              if (previousMove) {
-                onSelectPly(previousMove.ply);
-              }
-            }}
-            size={BUTTON_SIZE.SM}
-            variant={BUTTON_VARIANT.OUTLINE}
-          >
-            <ChevronLeft className="size-4" />
-            Назад
-          </Button>
-          <Button
-            disabled={!nextMove}
-            onClick={() => {
-              if (nextMove) {
-                onSelectPly(nextMove.ply);
-              }
-            }}
-            size={BUTTON_SIZE.SM}
-            variant={BUTTON_VARIANT.OUTLINE}
-          >
-            Вперед
-            <ChevronRight className="size-4" />
-          </Button>
         </div>
       </CardHeader>
 

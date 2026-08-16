@@ -1,6 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import { useGameAnalysisData } from "./model";
+import {
+  type ReplayNavigationAction,
+  getReplayNavigationAction,
+} from "./model/replay-keyboard-shortcuts";
 import {
   CriticalMomentDetails,
   CriticalMomentsPanel,
@@ -18,6 +22,17 @@ type GameAnalysisPageProps = {
   studentId: string;
 };
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return (
+    target.isContentEditable ||
+    Boolean(target.closest("input, textarea, select"))
+  );
+}
+
 export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
   const query = useGameAnalysisData({
     gameId,
@@ -25,17 +40,15 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
   });
   const headerReportGeneration =
     query.page?.reportGeneration ?? query.reportGeneration;
-  const [positionMode, setPositionMode] = useState<"after" | "before">(
-    "before",
-  );
   const [selectedPly, setSelectedPly] = useState<number | null>(null);
   const [boardReversed, setBoardReversed] = useState(false);
+  const replayMoves = query.page?.replay.moves ?? [];
   const effectiveSelectedPly = (() => {
     if (!query.page) {
       return null;
     }
 
-    const hasSelectedMove = query.page.replay.moves.some(
+    const hasSelectedMove = replayMoves.some(
       (move) => move.ply === selectedPly,
     );
 
@@ -43,20 +56,68 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
       return selectedPly;
     }
 
-    return (
-      query.page.criticalMoments[0]?.ply ??
-      query.page.replay.moves[0]?.ply ??
-      null
-    );
+    return query.page.criticalMoments[0]?.ply ?? replayMoves[0]?.ply ?? null;
   })();
+  const selectedMoveIndex =
+    effectiveSelectedPly === null
+      ? -1
+      : replayMoves.findIndex((move) => move.ply === effectiveSelectedPly);
   const selectedMove =
-    query.page?.replay.moves.find(
-      (move) => move.ply === effectiveSelectedPly,
-    ) ?? null;
+    selectedMoveIndex >= 0 ? replayMoves[selectedMoveIndex] : null;
   const selectedMoment =
     query.page?.criticalMoments.find(
       (moment) => moment.ply === effectiveSelectedPly,
     ) ?? null;
+  const firstMove = replayMoves[0] ?? null;
+  const lastMove = replayMoves.at(-1) ?? null;
+  const previousMove =
+    selectedMoveIndex > 0 ? replayMoves[selectedMoveIndex - 1] : null;
+  const nextMove =
+    selectedMoveIndex >= 0 && selectedMoveIndex < replayMoves.length - 1
+      ? replayMoves[selectedMoveIndex + 1]
+      : null;
+
+  const goToStart = () => {
+    if (firstMove) {
+      setSelectedPly(firstMove.ply);
+    }
+  };
+
+  const goToEnd = () => {
+    if (lastMove) {
+      setSelectedPly(lastMove.ply);
+    }
+  };
+
+  const goToPrevious = () => {
+    if (previousMove) {
+      setSelectedPly(previousMove.ply);
+    }
+  };
+
+  const goToNext = () => {
+    if (nextMove) {
+      setSelectedPly(nextMove.ply);
+    }
+  };
+  const handleReplayNavigation = useEffectEvent(
+    (navigationAction: ReplayNavigationAction) => {
+      switch (navigationAction) {
+        case "start":
+          goToStart();
+          return;
+        case "end":
+          goToEnd();
+          return;
+        case "previous":
+          goToPrevious();
+          return;
+        case "next":
+          goToNext();
+          return;
+      }
+    },
+  );
 
   useEffect(() => {
     if (selectedPly !== effectiveSelectedPly) {
@@ -65,12 +126,39 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
   }, [effectiveSelectedPly, selectedPly]);
 
   useEffect(() => {
-    setPositionMode("before");
-  }, [gameId]);
-
-  useEffect(() => {
     setBoardReversed(query.page?.orientation === "black");
   }, [gameId, query.page?.orientation]);
+
+  useEffect(() => {
+    if (!query.page || replayMoves.length === 0) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+
+      const navigationAction = getReplayNavigationAction(event);
+
+      if (!navigationAction) {
+        return;
+      }
+
+      event.preventDefault();
+      handleReplayNavigation(navigationAction);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [query.page, replayMoves.length]);
 
   if (query.state === "loading") {
     return <GameAnalysisSkeleton />;
@@ -203,11 +291,13 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
           <GameBoardCard
             boardReversed={boardReversed}
             initialFen={query.page.replay.initialFen}
+            isNextDisabled={!nextMove}
+            isPreviousDisabled={!previousMove}
             onFlipBoard={() =>
               setBoardReversed((currentValue) => !currentValue)
             }
-            onPositionModeChange={setPositionMode}
-            positionMode={positionMode}
+            onGoToNext={goToNext}
+            onGoToPrevious={goToPrevious}
             selectedMoment={selectedMoment}
             selectedMove={selectedMove}
           />
