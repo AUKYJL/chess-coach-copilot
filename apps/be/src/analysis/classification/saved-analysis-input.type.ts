@@ -30,6 +30,8 @@ export interface SavedAnalysisInput {
   mistakes: Array<{
     severity: MomentSeverity;
     category: string;
+    mainTag: WeaknessTag | null;
+    secondaryTags: WeaknessTag[];
     explanation: string;
     suggestedFix: string | null;
     reviewStatus: MistakeReviewStatus;

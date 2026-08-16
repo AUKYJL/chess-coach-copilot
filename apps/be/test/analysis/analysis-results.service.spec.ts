@@ -177,6 +177,11 @@ describe('AnalysisResultsService (integration)', () => {
     const [savedMistake] = savedAnalysis?.mistakes ?? [];
 
     expect(savedMistake?.criticalMomentId).toBe(savedCriticalMoment?.id);
+    expect(savedMistake?.mainTag).toBe(WeaknessTag.CALCULATION_DEPTH);
+    expect(savedMistake?.secondaryTags).toEqual([
+      WeaknessTag.MISSED_OPPONENT_THREAT,
+      WeaknessTag.TIME_MANAGEMENT,
+    ]);
 
     const traces = await prisma.generationTrace.findMany({
       where: { analysisJobId: analysisJob.id },
@@ -254,6 +259,11 @@ function buildClassifiedResult(
           criticalMomentPly,
           severity: MomentSeverity.MISTAKE,
           category: 'calculation',
+          mainTag: WeaknessTag.CALCULATION_DEPTH,
+          secondaryTags: [
+            WeaknessTag.MISSED_OPPONENT_THREAT,
+            WeaknessTag.TIME_MANAGEMENT,
+          ],
           explanation: 'Missed the best continuation.',
           suggestedFix: 'Calculate checks first.',
           sourceEvidence: { line: 'test' },

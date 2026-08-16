@@ -262,6 +262,8 @@ function createSavedAnalysis(): SavedAnalysisInput {
       {
         severity: MomentSeverity.MISTAKE,
         category: 'calculation_depth',
+        mainTag: WeaknessTag.CALCULATION_DEPTH,
+        secondaryTags: [WeaknessTag.MISSED_OPPONENT_THREAT],
         explanation: 'Missed a forcing move.',
         suggestedFix: 'Check forcing moves first.',
         reviewStatus: MistakeReviewStatus.CONFIRMED,

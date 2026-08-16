@@ -25,6 +25,8 @@ describe('validateAnalysisResultPayload', () => {
             criticalMomentPly: 18,
             severity: MomentSeverity.MISTAKE,
             category: 'calculation_depth',
+            mainTag: WeaknessTag.CALCULATION_DEPTH,
+            secondaryTags: [WeaknessTag.MISSED_OPPONENT_THREAT],
             explanation: 'The move ignored the opponent tactical reply.',
             suggestedFix: 'List the forcing replies before committing.',
             sourceEvidence: {
@@ -139,6 +141,8 @@ describe('validateAnalysisResultPayload', () => {
             criticalMomentPly: '18',
             severity: 'MISTAKE',
             category: '',
+            mainTag: null,
+            secondaryTags: [],
             explanation: 'Explanation',
             sourceEvidence: {},
           },
@@ -160,8 +164,34 @@ describe('validateAnalysisResultPayload', () => {
             criticalMomentPly: 12,
             severity: MomentSeverity.INACCURACY,
             category: 'time_management',
+            mainTag: WeaknessTag.TIME_MANAGEMENT,
+            secondaryTags: [],
             explanation: 'Explanation',
             sourceEvidence: ['invalid'],
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
+  it('rejects invalid mistake tag enums', () => {
+    expect(() =>
+      validateAnalysisResultPayload({
+        confidenceLevel: ConfidenceLevel.HIGH,
+        overallDiagnosis: 'Diagnosis',
+        result: GameResult.WIN,
+        mainWeaknessTag: WeaknessTag.CALCULATION_DEPTH,
+        secondaryWeaknessTags: [],
+        recommendedFocusPoints: [],
+        mistakes: [
+          {
+            criticalMomentPly: 18,
+            severity: MomentSeverity.MISTAKE,
+            category: 'calculation_depth',
+            mainTag: 'calculation_depth',
+            secondaryTags: ['time-management'],
+            explanation: 'Explanation',
+            sourceEvidence: {},
           },
         ],
       }),

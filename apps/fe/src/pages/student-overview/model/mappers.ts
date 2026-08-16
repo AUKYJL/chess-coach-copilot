@@ -14,13 +14,8 @@ import type {
   StudentOverviewResources,
   StudentOverviewViewModel,
 } from "./index";
+import { formatWeaknessTag } from "@/shared/lib/format-weakness-tag";
 import { getPerformanceDirectionTone, getSeverityTone } from "./semantic-tones";
-
-const weaknessLabels: Record<string, string> = {
-  MISSED_OPPONENT_THREAT: "Пропущенные угрозы соперника",
-  CALCULATION_DEPTH: "Поверхностный расчёт",
-  KING_SAFETY: "Безопасность короля",
-};
 
 const jobStatusLabels: Record<string, string> = {
   PENDING: "Ожидание",
@@ -109,14 +104,6 @@ function directionToLabel(direction: PerformanceDirection) {
     default:
       return "Нет данных";
   }
-}
-
-function humanizeWeaknessTag(value: string | null) {
-  if (!value) {
-    return "Недостаточно данных";
-  }
-
-  return weaknessLabels[value] ?? titleCase(value);
 }
 
 function humanizeSeverity(value: string) {
@@ -445,7 +432,7 @@ export function mapStudentOverviewViewModel(
   const analyzedGamesCount = getAnalyzedGamesCount(resources);
   const performanceTrend = mapPerformanceTrendToViewModel(resources);
   const progressLabel = performanceTrend.directionLabel;
-  const mainWeaknessLabel = humanizeWeaknessTag(
+  const mainWeaknessLabel = formatWeaknessTag(
     analysisProfile?.mainWeaknessTag ?? null,
   );
 
@@ -518,7 +505,7 @@ export function mapStudentOverviewViewModel(
     weaknessProfile: {
       mainWeakness: mainWeaknessLabel,
       tagCounts: (analysisProfile?.tagCounts ?? []).map((item) => ({
-        label: humanizeWeaknessTag(item.tag),
+        label: formatWeaknessTag(item.tag),
         count: item.count,
       })),
       severitySummary: (analysisProfile?.severityCounts ?? []).map((item) => ({

@@ -2,15 +2,7 @@ import { ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ChessBoard, JSChessEngine, type SquarePos } from "react-chessboard-ui";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  TYPOGRAPHY_COLOR,
-  TYPOGRAPHY_VARIANT,
-  Typography,
-} from "@/shared/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui";
 import { BUTTON_SIZE, BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
 import type {
@@ -55,6 +47,7 @@ const MOBILE_BOARD_SQUARE_SIZE_PX = 32;
 const DESKTOP_BOARD_SQUARE_SIZE_PX = 39;
 const MOBILE_VIEWPORT_MIN_WIDTH_PX = 360;
 const DESKTOP_VIEWPORT_MIN_WIDTH_PX = 640;
+const SELECTED_MOVE_ROW_HEIGHT_PX = 26;
 
 type BoardSizing = {
   boardSize: number;
@@ -231,27 +224,16 @@ export function GameBoardCard({
     <Card>
       <CardHeader className="gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-2">
-            <CardTitle>
-              {selectedMove?.moveLabel ?? "Начальная позиция"}
-            </CardTitle>
+          <div
+            className="flex flex-wrap items-center gap-2"
+            style={{ minHeight: SELECTED_MOVE_ROW_HEIGHT_PX }}
+          >
+            <CardTitle>{selectedMove?.moveLabel ?? "Начальная позиция"}</CardTitle>
             {selectedMoment ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <ToneBadge
-                  label={selectedMoment.severityLabel}
-                  tone={selectedMoment.severityTone}
-                />
-                {selectedMoment.category ? (
-                  <ToneBadge label={selectedMoment.category} tone="neutral" />
-                ) : null}
-              </div>
-            ) : selectedMove ? (
-              <Typography
-                color={TYPOGRAPHY_COLOR.SECONDARY}
-                variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
-              >
-                Обычный ход без выделенного критического момента.
-              </Typography>
+              <ToneBadge
+                label={selectedMoment.severityLabel}
+                tone={selectedMoment.severityTone}
+              />
             ) : null}
           </div>
         </div>

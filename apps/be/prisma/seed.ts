@@ -358,6 +358,8 @@ function buildMistakeRow(args: {
   createdAt: string;
   severity: MomentSeverity;
   category: string;
+  mainTag?: WeaknessTag | null;
+  secondaryTags?: WeaknessTag[];
   explanation: string;
   suggestedFix: string | null;
 }): Prisma.MistakeCreateManyInput {
@@ -369,6 +371,8 @@ function buildMistakeRow(args: {
     criticalMomentId: args.criticalMomentId,
     severity: args.severity,
     category: args.category,
+    mainTag: args.mainTag ?? null,
+    secondaryTags: args.secondaryTags ?? [],
     explanation: args.explanation,
     suggestedFix: args.suggestedFix,
     sourceEvidence: jsonObject({
@@ -1847,6 +1851,11 @@ function buildDataset(coachAccountId: string): SeedDataset {
       createdAt: '2026-06-18T09:12:20.000Z',
       severity: MomentSeverity.BLUNDER,
       category: 'king_safety',
+      mainTag: WeaknessTag.KING_SAFETY,
+      secondaryTags: [
+        WeaknessTag.DELAYED_CASTLING,
+        WeaknessTag.MISSED_OPPONENT_THREAT,
+      ],
       explanation:
         'Opened the center before castling and allowed a direct attack.',
       suggestedFix:
@@ -1890,6 +1899,8 @@ function buildDataset(coachAccountId: string): SeedDataset {
       createdAt: '2026-07-02T12:13:20.000Z',
       severity: MomentSeverity.BLUNDER,
       category: 'time_management',
+      mainTag: WeaknessTag.TIME_MANAGEMENT,
+      secondaryTags: [WeaknessTag.PAWN_STRUCTURE, WeaknessTag.TUNNEL_VISION],
       explanation: 'Clock pressure led to a rushed central break.',
       suggestedFix:
         'Spend one extra check cycle before structural commitments.',
@@ -1922,6 +1933,8 @@ function buildDataset(coachAccountId: string): SeedDataset {
       createdAt: '2026-07-18T15:11:20.000Z',
       severity: MomentSeverity.BLUNDER,
       category: 'calculation',
+      mainTag: WeaknessTag.CALCULATION_DEPTH,
+      secondaryTags: [WeaknessTag.MISSED_FORK, WeaknessTag.OPENING_STRATEGY],
       explanation:
         'The first idea was correct, but the follow-up was undercalculated.',
       suggestedFix: 'Look one reply deeper in forcing positions.',
@@ -2016,6 +2029,8 @@ function buildDataset(coachAccountId: string): SeedDataset {
       createdAt: '2026-08-08T17:10:20.000Z',
       severity: MomentSeverity.BLUNDER,
       category: 'missed_opponent_threat',
+      mainTag: WeaknessTag.MISSED_OPPONENT_THREAT,
+      secondaryTags: [WeaknessTag.EARLY_QUEEN, WeaknessTag.TUNNEL_VISION],
       explanation: 'The move order allowed unnecessary tactical counterplay.',
       suggestedFix:
         'Check the opponent forcing resource before every queen move.',

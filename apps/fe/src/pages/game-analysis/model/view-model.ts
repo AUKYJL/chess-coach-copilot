@@ -66,6 +66,7 @@ export type GameAnalysisCriticalMomentViewModel = {
   severityTone: SemanticTone;
   suggestedFix: string | null;
   summary: string | null;
+  weaknessTags: string[];
 };
 
 export type GameAnalysisReportCardViewModel = {

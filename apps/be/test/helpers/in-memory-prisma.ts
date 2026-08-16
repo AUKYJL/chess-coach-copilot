@@ -177,6 +177,8 @@ type MistakeRecord = {
   reviewStatus: MistakeReviewStatus;
   coachNote: string | null;
   category: string;
+  mainTag: WeaknessTag | null;
+  secondaryTags: WeaknessTag[];
   explanation: string;
   suggestedFix: string | null;
   sourceEvidence: Record<string, unknown>;
@@ -1453,9 +1455,20 @@ export class InMemoryPrismaService {
       data: Array<
         Omit<
           MistakeRecord,
-          'id' | 'createdAt' | 'updatedAt' | 'reviewStatus' | 'coachNote'
+          | 'id'
+          | 'createdAt'
+          | 'updatedAt'
+          | 'reviewStatus'
+          | 'coachNote'
+          | 'mainTag'
+          | 'secondaryTags'
         > &
-          Partial<Pick<MistakeRecord, 'reviewStatus' | 'coachNote'>>
+          Partial<
+            Pick<
+              MistakeRecord,
+              'reviewStatus' | 'coachNote' | 'mainTag' | 'secondaryTags'
+            >
+          >
       >;
     }) => {
       const now = new Date();
@@ -1466,6 +1479,8 @@ export class InMemoryPrismaService {
           updatedAt: now,
           reviewStatus: item.reviewStatus ?? MistakeReviewStatus.UNREVIEWED,
           coachNote: item.coachNote ?? null,
+          mainTag: item.mainTag ?? null,
+          secondaryTags: item.secondaryTags ?? [],
           ...item,
         });
       }

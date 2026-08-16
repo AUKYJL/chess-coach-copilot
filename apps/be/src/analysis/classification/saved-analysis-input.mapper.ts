@@ -25,6 +25,8 @@ type AnalysisWithRelations = {
   mistakes: Array<{
     severity: SavedAnalysisInput['mistakes'][number]['severity'];
     category: string;
+    mainTag: SavedAnalysisInput['mistakes'][number]['mainTag'];
+    secondaryTags: SavedAnalysisInput['mistakes'][number]['secondaryTags'];
     explanation: string;
     suggestedFix: string | null;
     reviewStatus: SavedAnalysisInput['mistakes'][number]['reviewStatus'];
@@ -59,6 +61,8 @@ export class SavedAnalysisInputMapper {
       mistakes: analysis.mistakes.map((item) => ({
         severity: item.severity,
         category: item.category,
+        mainTag: item.mainTag,
+        secondaryTags: item.secondaryTags,
         explanation: item.explanation,
         suggestedFix: item.suggestedFix,
         reviewStatus: item.reviewStatus,

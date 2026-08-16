@@ -8,6 +8,7 @@ import type {
   GameAnalysisSummaryStatViewModel,
   SemanticTone,
 } from "./view-model";
+import { formatWeaknessTag } from "@/shared/lib/format-weakness-tag";
 
 type PositionEvaluation =
   | {
@@ -251,6 +252,54 @@ function humanizeCategory(category: string | null): string | null {
     : null;
 }
 
+function getWeaknessTags(
+  moment: AnalysisDetailsResponse["criticalMoments"][number],
+): string[] {
+  const seenLabels = new Set<string>();
+  const labels: string[] = [];
+  const pushLabel = (label: string | null) => {
+    if (!label) {
+      return;
+    }
+
+    const normalizedLabel = label.trim();
+
+    if (!normalizedLabel || seenLabels.has(normalizedLabel)) {
+      return;
+    }
+
+    seenLabels.add(normalizedLabel);
+    labels.push(normalizedLabel);
+  };
+
+  const severityLabel = formatSeverityLabel(moment.severity);
+  const mistake = moment.mistake;
+
+  if (mistake?.mainTag) {
+    pushLabel(formatWeaknessTag(mistake.mainTag));
+  }
+
+  for (const tag of mistake?.secondaryTags ?? []) {
+    const label = formatWeaknessTag(tag);
+
+    if (label === severityLabel) {
+      continue;
+    }
+
+    pushLabel(label);
+  }
+
+  if (labels.length === 0) {
+    const fallbackLabel = humanizeCategory(mistake?.category ?? null);
+
+    if (fallbackLabel !== severityLabel) {
+      pushLabel(fallbackLabel);
+    }
+  }
+
+  return labels;
+}
+
 function parseBestMoveArrow(
   bestMove: string | null,
 ): { from: string; to: string } | null {
@@ -353,6 +402,7 @@ function mapCriticalMoment(
   const evaluationBefore = parseEvaluation(moment.evaluationBefore);
   const evaluationAfter = parseEvaluation(moment.evaluationAfter);
   const category = humanizeCategory(moment.mistake?.category ?? null);
+  const weaknessTags = getWeaknessTags(moment);
   const summary = moment.comments[0] ?? category;
 
   return {
@@ -388,6 +438,7 @@ function mapCriticalMoment(
     ),
     explanation: moment.mistake?.explanation ?? summary,
     suggestedFix: moment.mistake?.suggestedFix ?? null,
+    weaknessTags,
   };
 }
 

@@ -9,6 +9,8 @@ const nullableWeaknessTagSchema = weaknessTagValueSchema.nullable();
 export const analysisInterpretationMistakeSchema = z.object({
   momentId: nonEmptyStringSchema,
   category: nonEmptyStringSchema,
+  mainTag: nullableWeaknessTagSchema.optional().default(null),
+  secondaryTags: z.array(weaknessTagValueSchema).optional().default([]),
   explanation: nonEmptyStringSchema,
   suggestedFix: optionalNullableStringSchema,
 });

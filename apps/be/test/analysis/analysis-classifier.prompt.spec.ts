@@ -43,6 +43,15 @@ describe('analysis-classifier prompt registry', () => {
       'Return `mainWeaknessTag` as either one allowed tag or `null` when the evidence does not support a single main tag.',
     );
     expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Each item in `mistakes` must return `mainTag` as one allowed tag or `null` when the evidence does not support a single tag for that mistake.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Each item in `mistakes` must return `secondaryTags` as an array of allowed tags and use `[]` when there are no credible secondary tags for that mistake.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
+      'Do not invent free-form values for `mistakes[].mainTag` or `mistakes[].secondaryTags`; use only the allowed weakness tags.',
+    );
+    expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(
       'Return `recommendedFocusPoints` as an array and use `[]` when no concrete focus points are justified.',
     );
     expect(ANALYSIS_PROMPTS_BY_MODE.json_analysis).toContain(

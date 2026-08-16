@@ -36,6 +36,8 @@ describe('SavedAnalysisInputMapper', () => {
         {
           severity: MomentSeverity.MISTAKE,
           category: 'calculation_depth',
+          mainTag: WeaknessTag.CALCULATION_DEPTH,
+          secondaryTags: [WeaknessTag.MISSED_OPPONENT_THREAT],
           explanation: 'Missed a forcing move.',
           suggestedFix: 'Check forcing moves first.',
           reviewStatus: MistakeReviewStatus.CONFIRMED,
@@ -46,6 +48,8 @@ describe('SavedAnalysisInputMapper', () => {
 
     expect(input.mistakes).toEqual([
       expect.objectContaining({
+        mainTag: WeaknessTag.CALCULATION_DEPTH,
+        secondaryTags: [WeaknessTag.MISSED_OPPONENT_THREAT],
         reviewStatus: MistakeReviewStatus.CONFIRMED,
         coachNote: 'Coach note: calculate checks first.',
       }),

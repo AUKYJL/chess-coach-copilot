@@ -33,6 +33,8 @@ export const analysisResultMistakeSchema = z.object({
   criticalMomentPly: z.number().int().positive().nullable().optional(),
   severity: z.nativeEnum(MomentSeverity),
   category: nonEmptyStringSchema,
+  mainTag: nullableWeaknessTagSchema,
+  secondaryTags: z.array(weaknessTagValueSchema),
   explanation: nonEmptyStringSchema,
   suggestedFix: optionalNullableStringSchema,
   sourceEvidence: sourceEvidenceSchema,

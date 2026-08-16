@@ -1,3 +1,6 @@
+import type { ReactNode } from "react";
+
+import { cn } from "@/shared/lib/cn";
 import { Badge } from "@/shared/ui";
 
 import type { SemanticTone } from "../model";
@@ -16,10 +19,21 @@ function getToneClasses(tone: SemanticTone): string {
 }
 
 type ToneBadgeProps = {
-  label: string;
+  children?: ReactNode;
+  className?: string;
+  label?: string;
   tone: SemanticTone;
 };
 
-export function ToneBadge({ label, tone }: ToneBadgeProps) {
-  return <Badge className={getToneClasses(tone)}>{label}</Badge>;
+export function ToneBadge({
+  children,
+  className,
+  label,
+  tone,
+}: ToneBadgeProps) {
+  return (
+    <Badge className={cn(getToneClasses(tone), className)}>
+      {children ?? label}
+    </Badge>
+  );
 }

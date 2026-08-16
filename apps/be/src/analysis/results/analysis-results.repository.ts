@@ -52,6 +52,8 @@ export class AnalysisResultsRepository {
       criticalMomentPly: number | null;
       severity: MomentSeverity;
       category: string;
+      mainTag: WeaknessTag | null;
+      secondaryTags: WeaknessTag[];
       explanation: string;
       suggestedFix: string | null;
       sourceEvidence: Prisma.InputJsonValue;
@@ -156,6 +158,8 @@ export class AnalysisResultsRepository {
                 : (momentIdsByPly.get(item.criticalMomentPly) ?? null),
             severity: item.severity,
             category: item.category,
+            mainTag: item.mainTag,
+            secondaryTags: item.secondaryTags,
             explanation: item.explanation,
             suggestedFix: item.suggestedFix,
             sourceEvidence: item.sourceEvidence,

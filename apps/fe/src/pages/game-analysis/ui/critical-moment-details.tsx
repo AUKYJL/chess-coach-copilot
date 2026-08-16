@@ -137,10 +137,12 @@ export function CriticalMomentDetails({
               tone={moment.severityTone}
             />
           </div>
-          {moment.category ? (
-            <Typography variant={TYPOGRAPHY_VARIANT.BODY_SMALL}>
-              {moment.category}
-            </Typography>
+          {moment.weaknessTags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {moment.weaknessTags.map((tag) => (
+                <ToneBadge key={tag} label={tag} tone="neutral" />
+              ))}
+            </div>
           ) : null}
         </div>
       </CardHeader>

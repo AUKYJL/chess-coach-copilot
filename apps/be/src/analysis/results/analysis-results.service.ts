@@ -73,6 +73,8 @@ export class AnalysisResultsService {
           criticalMomentPly: mistake.criticalMomentPly ?? null,
           severity: mistake.severity,
           category: mistake.category,
+          mainTag: mistake.mainTag ?? null,
+          secondaryTags: mistake.secondaryTags,
           explanation: mistake.explanation,
           suggestedFix: mistake.suggestedFix ?? null,
           sourceEvidence: mistake.sourceEvidence,

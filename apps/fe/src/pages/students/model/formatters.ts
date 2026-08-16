@@ -1,10 +1,5 @@
 import type { StudentListItem } from "./api-types";
-
-const weaknessLabels: Record<string, string> = {
-  MISSED_OPPONENT_THREAT: "Пропущенные угрозы соперника",
-  CALCULATION_DEPTH: "Поверхностный расчёт",
-  KING_SAFETY: "Безопасность короля",
-};
+import { formatWeaknessTag as formatSharedWeaknessTag } from "@/shared/lib/format-weakness-tag";
 
 const shortDateFormatter = new Intl.DateTimeFormat("ru-RU", {
   month: "short",
@@ -37,18 +32,7 @@ export function formatAnalyzedGames(value: number) {
 }
 
 export function formatWeaknessTag(value: StudentListItem["mainWeaknessTag"]) {
-  if (!value) {
-    return "Недостаточно данных";
-  }
-
-  return (
-    weaknessLabels[value] ??
-    value
-      .toLowerCase()
-      .split("_")
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(" ")
-  );
+  return formatSharedWeaknessTag(value);
 }
 
 export function formatLastAnalysis(value: string | null) {

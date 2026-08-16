@@ -211,6 +211,8 @@ model Mistake {
   reviewStatus     MistakeReviewStatus @default(UNREVIEWED)
   coachNote        String?
   category         String
+  mainTag          WeaknessTag?
+  secondaryTags    WeaknessTag[]       @default([])
   explanation      String
   suggestedFix     String?
   sourceEvidence   Json

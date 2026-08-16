@@ -171,6 +171,12 @@ export class AnalysisMistakeResponse {
   @ApiProperty()
   category: string;
 
+  @ApiProperty({ enum: WeaknessTag, nullable: true })
+  mainTag: WeaknessTag | null;
+
+  @ApiProperty({ enum: WeaknessTag, isArray: true })
+  secondaryTags: WeaknessTag[];
+
   @ApiProperty()
   explanation: string;
 
