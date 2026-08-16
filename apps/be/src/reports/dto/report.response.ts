@@ -1,5 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ReportAudience } from '../../generated/prisma/client.js';
+import { ReportAudience, ReportSource } from '../../generated/prisma/client.js';
+
+class ReportContentResponse {
+  @ApiProperty()
+  text: string;
+}
 
 export class ReportResponse {
   @ApiProperty({ format: 'uuid' })
@@ -12,7 +17,10 @@ export class ReportResponse {
   studentId: string;
 
   @ApiProperty({ format: 'uuid' })
-  analysisId: string;
+  gameId: string;
+
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  analysisId: string | null;
 
   @ApiProperty()
   title: string;
@@ -20,14 +28,17 @@ export class ReportResponse {
   @ApiProperty({ enum: ReportAudience })
   audience: ReportAudience;
 
-  @ApiProperty({ type: 'object', additionalProperties: true })
-  content: Record<string, unknown>;
+  @ApiProperty({ enum: ReportSource })
+  source: ReportSource;
 
-  @ApiProperty()
-  promptVersion: string;
+  @ApiProperty({ type: () => ReportContentResponse })
+  content: ReportContentResponse;
 
-  @ApiProperty()
-  model: string;
+  @ApiProperty({ type: String, nullable: true })
+  promptVersion: string | null;
+
+  @ApiProperty({ type: String, nullable: true })
+  model: string | null;
 
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt: Date;

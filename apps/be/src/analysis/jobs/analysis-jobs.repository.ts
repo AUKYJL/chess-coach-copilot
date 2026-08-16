@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import {
   AnalysisJobStatus,
+  AnalysisJobType,
   ReportAudience,
-  type AnalysisJobType,
 } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import {
@@ -25,6 +25,32 @@ export class AnalysisJobsRepository {
     reportAudience?: ReportAudience | null;
   }) {
     return this.prisma.analysisJob.create({ data });
+  }
+
+  findLatestOwnedActiveGenerationJob(args: {
+    coachAccountId: string;
+    gameId: string;
+    reportAudience: ReportAudience;
+  }) {
+    return this.prisma.analysisJob.findFirst({
+      where: {
+        coachAccountId: args.coachAccountId,
+        gameId: args.gameId,
+        jobType: AnalysisJobType.REPORT_GENERATION,
+        reportAudience: args.reportAudience,
+        status: {
+          in: [
+            AnalysisJobStatus.PENDING,
+            AnalysisJobStatus.PARSING,
+            AnalysisJobStatus.EXTRACTING_ANNOTATIONS,
+            AnalysisJobStatus.CLASSIFICATION,
+            AnalysisJobStatus.GENERATING_OUTPUT,
+          ],
+        },
+      },
+      select: ANALYSIS_JOB_RESPONSE_SELECT,
+      orderBy: ANALYSIS_JOB_LIST_ORDER_BY,
+    });
   }
 
   findOwnedJob(jobId: string, coachAccountId: string) {

@@ -757,6 +757,20 @@ paths:
           schema:
             format: uuid
             type: string
+        - name: gameId
+          required: false
+          in: query
+          schema:
+            format: uuid
+            type: string
+        - name: audience
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - COACH
+              - PARENT
       responses:
         "200":
           description: ""
@@ -2355,6 +2369,13 @@ components:
           example: COACH
       required:
         - audience
+    ReportContentResponse:
+      type: object
+      properties:
+        text:
+          type: string
+      required:
+        - text
     ReportResponse:
       type: object
       properties:
@@ -2367,9 +2388,13 @@ components:
         studentId:
           type: string
           format: uuid
+        gameId:
+          type: string
+          format: uuid
         analysisId:
           type: string
           format: uuid
+          nullable: true
         title:
           type: string
         audience:
@@ -2377,13 +2402,19 @@ components:
           enum:
             - COACH
             - PARENT
+        source:
+          type: string
+          enum:
+            - AI
+            - MANUAL
         content:
-          type: object
-          additionalProperties: true
+          $ref: "#/components/schemas/ReportContentResponse"
         promptVersion:
           type: string
+          nullable: true
         model:
           type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -2394,9 +2425,11 @@ components:
         - id
         - coachAccountId
         - studentId
+        - gameId
         - analysisId
         - title
         - audience
+        - source
         - content
         - promptVersion
         - model
@@ -2411,6 +2444,14 @@ components:
             $ref: "#/components/schemas/ReportResponse"
       required:
         - items
+    ReportContentUpdateDto:
+      type: object
+      properties:
+        text:
+          type: string
+          example: |-
+            Резюме
+            Сильная дебютная подготовка, но в тактике были поспешные решения.
     ReportUpdateDto:
       type: object
       properties:
@@ -2418,16 +2459,14 @@ components:
           type: string
           example: "Coach report: Italian Game review"
         content:
-          type: object
           example:
-            summary: Middlegame planning improved, but tactical checks were rushed.
-            highlights:
-              - Better opening recall
-              - Missed forcing continuation on move 18
-            lessonFocus:
-              - Candidate move discipline
-            nextSteps:
-              - Review forcing-move checklist
+            text: >-
+              Резюме
+
+              Миттельшпиль читался лучше, но форсирующие ходы проверялись не
+              всегда.
+          allOf:
+            - $ref: "#/components/schemas/ReportContentUpdateDto"
     HomeworkUpdateDto:
       type: object
       properties:

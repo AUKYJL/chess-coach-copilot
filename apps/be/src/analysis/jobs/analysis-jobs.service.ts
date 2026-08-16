@@ -153,6 +153,14 @@ export class AnalysisJobsService {
     return persistedJob;
   }
 
+  async findLatestOwnedActiveGenerationJob(args: {
+    coachAccountId: string;
+    gameId: string;
+    reportAudience: ReportAudience;
+  }) {
+    return this.analysisJobsRepository.findLatestOwnedActiveGenerationJob(args);
+  }
+
   async getJob(jobId: string, coachAccountId: string) {
     const job = await this.analysisJobsRepository.findOwnedJob(
       jobId,

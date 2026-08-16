@@ -2,8 +2,6 @@ export type SemanticTone = "danger" | "neutral" | "success" | "warning";
 
 export type GameAnalysisReviewStatus = "CONFIRMED" | "REJECTED" | "UNREVIEWED";
 export type GameAnalysisReportAudience = "COACH" | "PARENT";
-export type GameAnalysisReportGenerationActionKind =
-  "none" | "refresh-report" | "retry-generation";
 
 export type GameAnalysisHeaderViewModel = {
   breadcrumbs: string[];
@@ -70,33 +68,62 @@ export type GameAnalysisCriticalMomentViewModel = {
   summary: string | null;
 };
 
-export type GameAnalysisReportGenerationStatusViewModel = {
-  action: {
-    kind: GameAnalysisReportGenerationActionKind;
-    label: string | null;
-  };
+export type GameAnalysisReportCardViewModel = {
+  audience: GameAnalysisReportAudience;
+  audienceLabel: string;
   description: string;
-  label: string;
+  inlineError: string | null;
+  isManual: boolean;
+  primaryAction: GameAnalysisReportCardActionViewModel | null;
   reportId: string | null;
-  reportTitle: string | null;
-  state: "failed" | "pending" | "success";
+  secondaryAction: GameAnalysisReportCardActionViewModel | null;
+  state: "failed" | "idle" | "loading" | "pending" | "ready";
+  statusLabel: string;
   title: string;
   tone: SemanticTone;
+  updatedAtLabel: string | null;
+};
+
+export type GameAnalysisReportCardActionViewModel = {
+  disabled: boolean;
+  isLoading: boolean;
+  kind: "generate" | "open" | "regenerate" | "retry";
+  label: string;
+};
+
+export type GameAnalysisReportEditorViewModel = {
+  audienceLabel: string;
+  errorMessage: string | null;
+  gameLabel: string;
+  isDirty: boolean;
+  isSaveDisabled: boolean;
+  isSaving: boolean;
+  reportId: string;
+  successMessage: string | null;
+  text: string;
+  title: string;
+  updatedAtLabel: string;
+};
+
+export type GameAnalysisReportConfirmationViewModel = {
+  confirmLabel: string;
+  description: string;
+  isPending: boolean;
+  kind: "discard-editor" | "regenerate";
+  title: string;
 };
 
 export type GameAnalysisReportGenerationViewModel = {
-  activeJobId: string | null;
-  errorMessage: string | null;
-  isActionPending: boolean;
-  isDisabled: boolean;
-  status: GameAnalysisReportGenerationStatusViewModel | null;
+  cards: GameAnalysisReportCardViewModel[];
+  confirmation: GameAnalysisReportConfirmationViewModel | null;
+  editor: GameAnalysisReportEditorViewModel | null;
 };
 
 export type GameAnalysisPageViewModel = {
   criticalMoments: GameAnalysisCriticalMomentViewModel[];
   header: GameAnalysisHeaderViewModel;
   orientation: "black" | "white";
-  reportGeneration: GameAnalysisReportGenerationViewModel | null;
+  reportGeneration: GameAnalysisReportGenerationViewModel;
   replay: {
     initialFen: string;
     moveCount: number;

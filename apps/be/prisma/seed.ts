@@ -384,6 +384,7 @@ function buildReportRow(args: {
   id: string;
   coachAccountId: string;
   studentId: string;
+  gameId: string;
   analysisId: string;
   title: string;
   audience: ReportAudience;
@@ -400,6 +401,7 @@ function buildReportRow(args: {
     id: args.id,
     coachAccountId: args.coachAccountId,
     studentId: args.studentId,
+    gameId: args.gameId,
     analysisId: args.analysisId,
     title: args.title,
     audience: args.audience,
@@ -2057,6 +2059,7 @@ function buildDataset(coachAccountId: string): SeedDataset {
       id: 'seed-report-anna-coach',
       coachAccountId,
       studentId: studentIds.anna,
+      gameId: gameIds.anna5,
       analysisId: analysisIds.anna5,
       title: 'Coach report: Sicilian conversion check',
       audience: ReportAudience.COACH,
@@ -2084,6 +2087,7 @@ function buildDataset(coachAccountId: string): SeedDataset {
       id: 'seed-report-anna-parent',
       coachAccountId,
       studentId: studentIds.anna,
+      gameId: gameIds.anna4,
       analysisId: analysisIds.anna4,
       title: 'Parent report: steady tactical progress',
       audience: ReportAudience.PARENT,
@@ -2107,6 +2111,7 @@ function buildDataset(coachAccountId: string): SeedDataset {
       id: 'seed-report-fedor-coach',
       coachAccountId,
       studentId: studentIds.fedor,
+      gameId: gameIds.fedor3,
       analysisId: analysisIds.fedor3,
       title: 'Coach report: archived summer block wrap-up',
       audience: ReportAudience.COACH,

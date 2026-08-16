@@ -3,6 +3,7 @@ import request from 'supertest';
 import {
   AnalysisJobStatus,
   ReportAudience,
+  ReportSource,
 } from '../../src/generated/prisma/client.js';
 import { AnalysisProcessor } from '../../src/analysis/jobs/analysis.processor.js';
 import { createE2eApp } from '../helpers/create-e2e-app.js';
@@ -25,9 +26,10 @@ describe('ReportsController (e2e)', () => {
     await app.close();
   });
 
-  it('uses job-backed report generation and supports draft CRUD', async () => {
+  it('keeps one logical report per game and audience while preserving revision history', async () => {
     const fixture = await createCompletedAnalysisFixture({ app, prisma });
     const analysisId = fixture.analyses[0].id;
+    const gameId = fixture.analyses[0].gameId;
     const server = getServer(app);
 
     const queuedResponse = await request(server)
@@ -42,7 +44,7 @@ describe('ReportsController (e2e)', () => {
     });
 
     const queuedList = await request(server)
-      .get(`/reports?analysisId=${analysisId}`)
+      .get(`/reports?gameId=${gameId}`)
       .set('Authorization', `Bearer ${fixture.accessToken}`)
       .expect(200);
 
@@ -59,7 +61,7 @@ describe('ReportsController (e2e)', () => {
     expect(statusResponse.body.status).toBe(AnalysisJobStatus.COMPLETED);
 
     const generatedList = await request(server)
-      .get(`/reports?analysisId=${analysisId}`)
+      .get(`/reports?gameId=${gameId}&audience=${ReportAudience.COACH}`)
       .set('Authorization', `Bearer ${fixture.accessToken}`)
       .expect(200);
 
@@ -73,34 +75,88 @@ describe('ReportsController (e2e)', () => {
 
     expect(generatedReport.body).toMatchObject({
       id: report.id,
+      gameId,
       analysisId,
       studentId: fixture.studentId,
       audience: ReportAudience.COACH,
+      source: ReportSource.AI,
       title: expect.stringContaining('Coach report'),
+      content: {
+        text: expect.stringContaining('Резюме'),
+      },
     });
 
-    await request(server)
+    const editedResponse = await request(server)
       .patch(`/reports/${report.id}`)
       .set('Authorization', `Bearer ${fixture.accessToken}`)
       .send({
-        title: 'Edited coach report',
         content: {
-          summary: 'Edited summary',
-          highlights: ['Edited highlight'],
-          lessonFocus: ['Edited lesson focus'],
-          nextSteps: ['Edited next step'],
+          text: 'Обновленный текст отчета для тренера.',
         },
       })
       .expect(200);
+
+    expect(editedResponse.body).toMatchObject({
+      id: report.id,
+      source: ReportSource.MANUAL,
+      content: {
+        text: 'Обновленный текст отчета для тренера.',
+      },
+    });
 
     await request(server)
       .get(`/reports/${report.id}`)
       .set('Authorization', `Bearer ${fixture.accessToken}`)
       .expect(200)
       .expect(({ body }) => {
-        expect(body.title).toBe('Edited coach report');
-        expect(body.content.summary).toBe('Edited summary');
+        expect(body.title).toBe(generatedReport.body.title);
+        expect(body.source).toBe(ReportSource.MANUAL);
+        expect(body.content.text).toBe('Обновленный текст отчета для тренера.');
       });
+
+    const regeneratedCoachResponse = await request(server)
+      .post(`/analysis/${analysisId}/reports/generate`)
+      .set('Authorization', `Bearer ${fixture.accessToken}`)
+      .send({ audience: ReportAudience.COACH })
+      .expect(201);
+
+    await app
+      .get(AnalysisProcessor)
+      .process(fakeQueue.jobs.at(-1) as unknown as never);
+
+    const regeneratedCoachList = await request(server)
+      .get(`/reports?analysisId=${analysisId}`)
+      .set('Authorization', `Bearer ${fixture.accessToken}`)
+      .expect(200);
+
+    expect(regeneratedCoachList.body.items).toHaveLength(1);
+    expect(regeneratedCoachList.body.items[0]).toMatchObject({
+      id: report.id,
+      audience: ReportAudience.COACH,
+      source: ReportSource.AI,
+    });
+
+    const coachRevisions = (await prisma.reportRevision.findMany({
+      where: { reportId: report.id },
+      orderBy: { version: 'desc' },
+    })) as Array<{ source: ReportSource; version: number }>;
+
+    expect(coachRevisions).toEqual([
+      expect.objectContaining({
+        source: ReportSource.AI,
+        version: 3,
+      }),
+      expect.objectContaining({
+        source: ReportSource.MANUAL,
+        version: 2,
+      }),
+      expect.objectContaining({
+        source: ReportSource.AI,
+        version: 1,
+      }),
+    ]);
+
+    expect(regeneratedCoachResponse.body.id).not.toBeNull();
 
     await request(server)
       .post(`/analysis/${analysisId}/reports/generate`)
@@ -112,22 +168,18 @@ describe('ReportsController (e2e)', () => {
       .process(fakeQueue.jobs.at(-1) as unknown as never);
 
     await request(server)
-      .get(`/reports?analysisId=${analysisId}`)
+      .get(`/reports?gameId=${gameId}`)
       .set('Authorization', `Bearer ${fixture.accessToken}`)
       .expect(200)
       .expect(({ body }) => {
-        expect(body.items).toHaveLength(2);
+        const items = body.items as Array<{ audience: ReportAudience }>;
+
+        expect(items).toHaveLength(2);
+        expect(items.map((item) => item.audience)).toEqual([
+          ReportAudience.PARENT,
+          ReportAudience.COACH,
+        ]);
       });
-
-    await request(server)
-      .delete(`/reports/${report.id}`)
-      .set('Authorization', `Bearer ${fixture.accessToken}`)
-      .expect(204);
-
-    await request(server)
-      .get(`/reports/${report.id}`)
-      .set('Authorization', `Bearer ${fixture.accessToken}`)
-      .expect(404);
   });
 
   it('blocks new report generation for archived students', async () => {
@@ -143,6 +195,31 @@ describe('ReportsController (e2e)', () => {
       .set('Authorization', `Bearer ${fixture.accessToken}`)
       .send({ audience: ReportAudience.COACH })
       .expect(422);
+  });
+
+  it('reuses an in-flight generation job for the same game and same audience', async () => {
+    const fixture = await createCompletedAnalysisFixture({ app, prisma });
+    const analysisId = fixture.analyses[0].id;
+    const server = getServer(app);
+
+    const firstResponse = await request(server)
+      .post(`/analysis/${analysisId}/reports/generate`)
+      .set('Authorization', `Bearer ${fixture.accessToken}`)
+      .send({ audience: ReportAudience.COACH })
+      .expect(201);
+
+    const secondResponse = await request(server)
+      .post(`/analysis/${analysisId}/reports/generate`)
+      .set('Authorization', `Bearer ${fixture.accessToken}`)
+      .send({ audience: ReportAudience.COACH })
+      .expect(201);
+
+    expect(secondResponse.body.id).toBe(firstResponse.body.id);
+    expect(secondResponse.body.gameId).toBe(firstResponse.body.gameId);
+    expect(secondResponse.body.reportAudience).toBe(
+      firstResponse.body.reportAudience,
+    );
+    expect(fakeQueue.jobs).toHaveLength(1);
   });
 
   it('returns GENERATING_OUTPUT while a report job is in progress and retries a failed report generation job', async () => {
@@ -225,7 +302,7 @@ describe('ReportsController (e2e)', () => {
       });
 
     await request(server)
-      .get(`/reports?analysisId=${analysisId}`)
+      .get(`/reports?gameId=${fixture.analyses[0].gameId}`)
       .set('Authorization', `Bearer ${fixture.accessToken}`)
       .expect(200)
       .expect(({ body }) => {

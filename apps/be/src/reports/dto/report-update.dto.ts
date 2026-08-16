@@ -1,11 +1,22 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
-  IsObject,
   IsOptional,
   IsString,
   MaxLength,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+
+class ReportContentUpdateDto {
+  @ApiPropertyOptional({
+    example:
+      'Резюме\nСильная дебютная подготовка, но в тактике были поспешные решения.',
+  })
+  @IsString()
+  @MinLength(1)
+  text: string;
+}
 
 export class ReportUpdateDto {
   @ApiPropertyOptional({ example: 'Coach report: Italian Game review' })
@@ -17,16 +28,11 @@ export class ReportUpdateDto {
 
   @ApiPropertyOptional({
     example: {
-      summary: 'Middlegame planning improved, but tactical checks were rushed.',
-      highlights: [
-        'Better opening recall',
-        'Missed forcing continuation on move 18',
-      ],
-      lessonFocus: ['Candidate move discipline'],
-      nextSteps: ['Review forcing-move checklist'],
+      text: 'Резюме\nМиттельшпиль читался лучше, но форсирующие ходы проверялись не всегда.',
     },
   })
   @IsOptional()
-  @IsObject()
-  content?: Record<string, unknown>;
+  @ValidateNested()
+  @Type(() => ReportContentUpdateDto)
+  content?: ReportContentUpdateDto;
 }

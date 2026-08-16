@@ -12,11 +12,16 @@ import {
   AnalysisJobType,
   Prisma,
   ReportAudience,
+  ReportSource,
 } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StudentsService } from '../students/students.service.js';
 import { ReportGenerationRequestDto } from './dto/report-generation-request.dto.js';
 import { ReportUpdateDto } from './dto/report-update.dto.js';
+import {
+  normalizeReportContent,
+  toReportContentJson,
+} from './report-content.js';
 
 const ARCHIVED_OUTPUTS_ERROR =
   'Archived students cannot receive new generated outputs';
@@ -47,6 +52,19 @@ export class ReportsService {
       throw new UnprocessableEntityException(ARCHIVED_OUTPUTS_ERROR);
     }
 
+    // Dedupe intentionally keys by game + audience because the domain allows
+    // exactly one saved analysis per game.
+    const reusableJob =
+      await this.analysisJobsService.findLatestOwnedActiveGenerationJob({
+        coachAccountId,
+        gameId: analysis.gameId,
+        reportAudience: dto.audience,
+      });
+
+    if (reusableJob) {
+      return reusableJob;
+    }
+
     const job = await this.analysisJobsService.createAndEnqueueGenerationJob({
       coachAccountId,
       studentId: analysis.studentId,
@@ -61,47 +79,72 @@ export class ReportsService {
 
   async list(
     coachAccountId: string,
-    query: { studentId?: string; analysisId?: string },
+    query: {
+      studentId?: string;
+      analysisId?: string;
+      gameId?: string;
+      audience?: ReportAudience;
+    },
   ) {
-    return this.prisma.report.findMany({
+    const reports = await this.prisma.report.findMany({
       where: {
         coachAccountId,
         ...(query.studentId ? { studentId: query.studentId } : {}),
         ...(query.analysisId ? { analysisId: query.analysisId } : {}),
+        ...(query.gameId ? { gameId: query.gameId } : {}),
+        ...(query.audience ? { audience: query.audience } : {}),
       },
-      orderBy: {
-        createdAt: Prisma.SortOrder.desc,
-      },
+      orderBy: [
+        { updatedAt: Prisma.SortOrder.desc },
+        { id: Prisma.SortOrder.desc },
+      ],
     });
+
+    return reports.map((report) => this.toReportResponse(report));
   }
 
   async getOne(reportId: string, coachAccountId: string) {
-    const report = await this.prisma.report.findFirst({
-      where: {
-        id: reportId,
-        coachAccountId,
-      },
-    });
+    const report = await this.getOwnedReport(reportId, coachAccountId);
 
-    if (!report) {
-      throw new NotFoundException('Report not found');
-    }
-
-    return report;
+    return this.toReportResponse(report);
   }
 
   async update(reportId: string, coachAccountId: string, dto: ReportUpdateDto) {
-    await this.getOne(reportId, coachAccountId);
+    const report = await this.getOwnedReport(reportId, coachAccountId);
 
-    return this.prisma.report.update({
-      where: { id: reportId },
-      data: {
-        ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
-        ...(dto.content !== undefined
-          ? { content: dto.content as Prisma.InputJsonObject }
-          : {}),
-      },
+    if (dto.title === undefined && dto.content === undefined) {
+      return this.toReportResponse(report);
+    }
+
+    const nextTitle = dto.title !== undefined ? dto.title.trim() : report.title;
+    const nextContent = normalizeReportContent(dto.content ?? report.content);
+
+    const updatedReport = await this.prisma.$transaction(async (tx) => {
+      const revision = await tx.reportRevision.create({
+        data: {
+          reportId: report.id,
+          analysisId: report.analysisId,
+          title: nextTitle,
+          content: toReportContentJson(nextContent),
+          source: ReportSource.MANUAL,
+          promptVersion: report.promptVersion,
+          model: report.model,
+          version: await this.getNextRevisionVersion(tx, report.id),
+        },
+      });
+
+      return tx.report.update({
+        where: { id: report.id },
+        data: {
+          title: nextTitle,
+          content: toReportContentJson(nextContent),
+          source: ReportSource.MANUAL,
+          currentRevisionId: revision.id,
+        },
+      });
     });
+
+    return this.toReportResponse(updatedReport);
   }
 
   async remove(reportId: string, coachAccountId: string) {
@@ -140,17 +183,60 @@ export class ReportsService {
       analysis: this.savedAnalysisInputMapper.map(analysis),
       audience: data.audience,
     });
-    const report = await this.prisma.report.create({
-      data: {
-        coachAccountId: analysis.coachAccountId,
-        studentId: analysis.studentId,
-        analysisId: analysis.id,
-        title: generated.title,
-        audience: data.audience,
-        content: generated.content,
-        promptVersion: generated.promptVersion,
-        model: generated.model,
-      },
+    const normalizedContent = normalizeReportContent(generated.content);
+    const report = await this.prisma.$transaction(async (tx) => {
+      const existingReport = await tx.report.findUnique({
+        where: {
+          gameId_audience: {
+            gameId: analysis.gameId,
+            audience: data.audience,
+          },
+        },
+      });
+
+      const logicalReport =
+        existingReport ??
+        (await tx.report.create({
+          data: {
+            coachAccountId: analysis.coachAccountId,
+            studentId: analysis.studentId,
+            gameId: analysis.gameId,
+            analysisId: analysis.id,
+            title: generated.title,
+            audience: data.audience,
+            content: toReportContentJson(normalizedContent),
+            source: ReportSource.AI,
+            currentRevisionId: null,
+            promptVersion: generated.promptVersion,
+            model: generated.model,
+          },
+        }));
+
+      const revision = await tx.reportRevision.create({
+        data: {
+          reportId: logicalReport.id,
+          analysisId: analysis.id,
+          title: generated.title,
+          content: toReportContentJson(normalizedContent),
+          source: ReportSource.AI,
+          promptVersion: generated.promptVersion,
+          model: generated.model,
+          version: await this.getNextRevisionVersion(tx, logicalReport.id),
+        },
+      });
+
+      return tx.report.update({
+        where: { id: logicalReport.id },
+        data: {
+          analysisId: analysis.id,
+          title: generated.title,
+          content: toReportContentJson(normalizedContent),
+          source: ReportSource.AI,
+          currentRevisionId: revision.id,
+          promptVersion: generated.promptVersion,
+          model: generated.model,
+        },
+      });
     });
 
     await this.generationTraceService.persistSuccess({
@@ -165,6 +251,47 @@ export class ReportsService {
     });
 
     return report;
+  }
+
+  private async getNextRevisionVersion(
+    tx: Prisma.TransactionClient,
+    reportId: string,
+  ) {
+    const latestRevision = await tx.reportRevision.findMany({
+      where: {
+        reportId,
+      },
+      orderBy: {
+        version: Prisma.SortOrder.desc,
+      },
+      take: 1,
+    });
+
+    return (latestRevision[0]?.version ?? 0) + 1;
+  }
+
+  private async getOwnedReport(reportId: string, coachAccountId: string) {
+    const report = await this.prisma.report.findFirst({
+      where: {
+        id: reportId,
+        coachAccountId,
+      },
+    });
+
+    if (!report) {
+      throw new NotFoundException('Report not found');
+    }
+
+    return report;
+  }
+
+  private toReportResponse<TReport extends { content: unknown }>(
+    report: TReport,
+  ) {
+    return {
+      ...report,
+      content: normalizeReportContent(report.content),
+    };
   }
 
   private async getOwnedAnalysis(analysisId: string, coachAccountId: string) {

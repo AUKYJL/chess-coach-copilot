@@ -58,6 +58,8 @@ export class ReportsController {
     const items = await this.reportsService.list(coach.coachAccountId, {
       studentId: query.studentId,
       analysisId: query.analysisId,
+      gameId: query.gameId,
+      audience: query.audience,
     });
 
     return { items };

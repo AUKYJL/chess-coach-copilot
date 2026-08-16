@@ -14,6 +14,7 @@ import {
   MomentSeverity,
   MoveColor,
   ReportAudience,
+  ReportSource,
   StudentColor,
   WeaknessTag,
 } from '../../src/generated/prisma/client.js';
@@ -205,14 +206,30 @@ type ReportRecord = {
   id: string;
   coachAccountId: string;
   studentId: string;
-  analysisId: string;
+  gameId: string;
+  analysisId: string | null;
   title: string;
   audience: ReportAudience;
   content: Record<string, unknown>;
-  promptVersion: string;
-  model: string;
+  source: ReportSource;
+  currentRevisionId: string | null;
+  promptVersion: string | null;
+  model: string | null;
   createdAt: Date;
   updatedAt: Date;
+};
+
+type ReportRevisionRecord = {
+  id: string;
+  reportId: string;
+  analysisId: string | null;
+  title: string;
+  content: Record<string, unknown>;
+  source: ReportSource;
+  promptVersion: string | null;
+  model: string | null;
+  version: number;
+  createdAt: Date;
 };
 
 type HomeworkRecord = {
@@ -377,6 +394,7 @@ export class InMemoryPrismaService {
   private readonly mistakes: MistakeRecord[] = [];
   private readonly generationTraces: GenerationTraceRecord[] = [];
   private readonly reports: ReportRecord[] = [];
+  private readonly reportRevisions: ReportRevisionRecord[] = [];
   private readonly homeworks: HomeworkRecord[] = [];
   private readonly progressSnapshots: ProgressSnapshotRecord[] = [];
 
@@ -950,6 +968,13 @@ export class InMemoryPrismaService {
         coachAccountId?: string;
         studentId?: string;
         gameId?: string;
+        jobType?: AnalysisJobType;
+        reportAudience?: ReportAudience | null;
+        status?:
+          | AnalysisJobStatus
+          | {
+              in: AnalysisJobStatus[];
+            };
       };
       select?: Record<string, unknown>;
       include?: { game?: boolean; analysis?: boolean; student?: boolean };
@@ -975,6 +1000,27 @@ export class InMemoryPrismaService {
 
           if (args.where.gameId && item.gameId !== args.where.gameId) {
             return false;
+          }
+
+          if (args.where.jobType && item.jobType !== args.where.jobType) {
+            return false;
+          }
+
+          if (
+            args.where.reportAudience !== undefined &&
+            item.reportAudience !== args.where.reportAudience
+          ) {
+            return false;
+          }
+
+          if (args.where.status) {
+            if (typeof args.where.status === 'string') {
+              if (item.status !== args.where.status) {
+                return false;
+              }
+            } else if (!args.where.status.in.includes(item.status)) {
+              return false;
+            }
           }
 
           return true;
@@ -1444,14 +1490,56 @@ export class InMemoryPrismaService {
 
   report = {
     create: async (args: {
-      data: Omit<ReportRecord, 'id' | 'createdAt' | 'updatedAt'>;
+      data: {
+        coachAccountId: string;
+        studentId: string;
+        gameId?: string;
+        analysisId?: string | null;
+        title: string;
+        audience: ReportAudience;
+        content: Record<string, unknown>;
+        source?: ReportSource;
+        currentRevisionId?: string | null;
+        promptVersion?: string | null;
+        model?: string | null;
+      };
     }) => {
+      const analysis =
+        args.data.analysisId === undefined || args.data.analysisId === null
+          ? null
+          : (this.analyses.find((item) => item.id === args.data.analysisId) ??
+            null);
+      const gameId = args.data.gameId ?? analysis?.gameId;
+
+      if (!gameId) {
+        throw new Error('Report gameId is required');
+      }
+
+      const duplicate = this.reports.find(
+        (item) =>
+          item.gameId === gameId && item.audience === args.data.audience,
+      );
+
+      if (duplicate) {
+        throw createUniqueConstraintError();
+      }
+
       const now = new Date();
       const record: ReportRecord = {
         id: randomUUID(),
         createdAt: now,
         updatedAt: now,
-        ...args.data,
+        coachAccountId: args.data.coachAccountId,
+        studentId: args.data.studentId,
+        gameId,
+        analysisId: args.data.analysisId ?? null,
+        title: args.data.title,
+        audience: args.data.audience,
+        content: args.data.content,
+        source: args.data.source ?? ReportSource.AI,
+        currentRevisionId: args.data.currentRevisionId ?? null,
+        promptVersion: args.data.promptVersion ?? null,
+        model: args.data.model ?? null,
       };
 
       this.reports.push(record);
@@ -1462,34 +1550,86 @@ export class InMemoryPrismaService {
         coachAccountId: string;
         studentId?: string;
         analysisId?: string;
+        gameId?: string;
+        audience?: ReportAudience;
       };
       orderBy?:
-        { createdAt: 'desc' } | Array<{ createdAt?: 'desc'; id?: 'desc' }>;
+        | { createdAt?: 'desc'; updatedAt?: 'desc' }
+        | Array<{ createdAt?: 'desc'; updatedAt?: 'desc'; id?: 'desc' }>;
       take?: number;
       select?: SelectMap;
     }) => {
-      return sortByCreatedAtAndIdDesc(
-        this.reports.filter((item) => {
-          if (item.coachAccountId !== args.where.coachAccountId) {
-            return false;
+      const filteredReports = this.reports.filter((item) => {
+        if (item.coachAccountId !== args.where.coachAccountId) {
+          return false;
+        }
+
+        if (args.where.studentId && item.studentId !== args.where.studentId) {
+          return false;
+        }
+
+        if (
+          args.where.analysisId &&
+          item.analysisId !== args.where.analysisId
+        ) {
+          return false;
+        }
+
+        if (args.where.gameId && item.gameId !== args.where.gameId) {
+          return false;
+        }
+
+        if (args.where.audience && item.audience !== args.where.audience) {
+          return false;
+        }
+
+        return true;
+      });
+
+      const orderedReports = [...filteredReports].sort(
+        (leftItem, rightItem) => {
+          const updatedAtDelta =
+            rightItem.updatedAt.getTime() - leftItem.updatedAt.getTime();
+
+          if (updatedAtDelta !== 0) {
+            return updatedAtDelta;
           }
 
-          if (args.where.studentId && item.studentId !== args.where.studentId) {
-            return false;
+          return rightItem.id.localeCompare(leftItem.id);
+        },
+      );
+
+      return orderedReports
+        .slice(0, args.take)
+        .map((item) => applySelect(item, args.select));
+    },
+    findUnique: async (args: {
+      where: {
+        id?: string;
+        gameId_audience?: {
+          gameId: string;
+          audience: ReportAudience;
+        };
+      };
+    }) => {
+      const record =
+        this.reports.find((item) => {
+          if (args.where.id && item.id === args.where.id) {
+            return true;
           }
 
           if (
-            args.where.analysisId &&
-            item.analysisId !== args.where.analysisId
+            args.where.gameId_audience &&
+            item.gameId === args.where.gameId_audience.gameId &&
+            item.audience === args.where.gameId_audience.audience
           ) {
-            return false;
+            return true;
           }
 
-          return true;
-        }),
-      )
-        .slice(0, args.take)
-        .map((item) => applySelect(item, args.select));
+          return false;
+        }) ?? null;
+
+      return record ? structuredClone(record) : null;
     },
     findFirst: async (args: {
       where: { id?: string; coachAccountId?: string };
@@ -1522,6 +1662,19 @@ export class InMemoryPrismaService {
         throw new Error('Report not found');
       }
 
+      const nextGameId = args.data.gameId ?? record.gameId;
+      const nextAudience = args.data.audience ?? record.audience;
+      const duplicate = this.reports.find(
+        (item) =>
+          item.id !== record.id &&
+          item.gameId === nextGameId &&
+          item.audience === nextAudience,
+      );
+
+      if (duplicate) {
+        throw createUniqueConstraintError();
+      }
+
       assignDefined(record, args.data);
       record.updatedAt = new Date();
       return structuredClone(record);
@@ -1534,7 +1687,69 @@ export class InMemoryPrismaService {
       }
 
       const [record] = this.reports.splice(index, 1);
+      for (
+        let revisionIndex = this.reportRevisions.length - 1;
+        revisionIndex >= 0;
+        revisionIndex -= 1
+      ) {
+        if (this.reportRevisions[revisionIndex]?.reportId === record.id) {
+          this.reportRevisions.splice(revisionIndex, 1);
+        }
+      }
+
+      for (const trace of this.generationTraces) {
+        if (trace.reportId === record.id) {
+          trace.reportId = null;
+          trace.updatedAt = new Date();
+        }
+      }
+
       return structuredClone(record);
+    },
+  };
+
+  reportRevision = {
+    create: async (args: {
+      data: Omit<ReportRevisionRecord, 'id' | 'createdAt'>;
+    }) => {
+      const duplicate = this.reportRevisions.find(
+        (item) =>
+          item.reportId === args.data.reportId &&
+          item.version === args.data.version,
+      );
+
+      if (duplicate) {
+        throw createUniqueConstraintError();
+      }
+
+      const previousRevision =
+        this.reportRevisions[this.reportRevisions.length - 1];
+      const now = createMonotonicDate(previousRevision);
+      const record: ReportRevisionRecord = {
+        id: randomUUID(),
+        createdAt: now,
+        ...args.data,
+      };
+
+      this.reportRevisions.push(record);
+      return structuredClone(record);
+    },
+    findMany: async (args: {
+      where: {
+        reportId: string;
+      };
+      orderBy?: {
+        version: 'desc';
+      };
+      take?: number;
+    }) => {
+      const orderedRevisions = [...this.reportRevisions]
+        .filter((item) => item.reportId === args.where.reportId)
+        .sort((leftItem, rightItem) => rightItem.version - leftItem.version);
+
+      return orderedRevisions
+        .slice(0, args.take)
+        .map((item) => structuredClone(item));
     },
   };
 

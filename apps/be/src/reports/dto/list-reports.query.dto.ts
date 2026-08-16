@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID } from 'class-validator';
+import { IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { ReportAudience } from '../../generated/prisma/client.js';
 
 export class ListReportsQueryDto {
   @ApiPropertyOptional({ format: 'uuid' })
@@ -11,4 +12,14 @@ export class ListReportsQueryDto {
   @IsOptional()
   @IsUUID()
   analysisId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  gameId?: string;
+
+  @ApiPropertyOptional({ enum: ReportAudience })
+  @IsOptional()
+  @IsEnum(ReportAudience)
+  audience?: ReportAudience;
 }

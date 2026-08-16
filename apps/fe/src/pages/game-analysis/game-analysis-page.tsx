@@ -81,10 +81,14 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
       <div className="space-y-4">
         {query.gameHeader ? (
           <GameAnalysisHeader
+            changeReportDraft={query.changeReportDraft}
+            closeReportConfirmation={query.closeReportConfirmation}
+            confirmReportAction={query.confirmReportAction}
             header={query.gameHeader}
-            onGenerateReport={query.generateReport}
-            onRefreshReport={query.retryPage}
-            onRetryReportGeneration={query.retryReportGeneration}
+            onGenerateReport={query.requestGenerateReport}
+            onOpenReport={query.openReport}
+            onRequestCloseReportEditor={query.requestCloseReportEditor}
+            onSaveReport={query.saveReport}
             reportGeneration={headerReportGeneration}
           />
         ) : null}
@@ -104,10 +108,14 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
       <div className="space-y-4">
         {query.gameHeader ? (
           <GameAnalysisHeader
+            changeReportDraft={query.changeReportDraft}
+            closeReportConfirmation={query.closeReportConfirmation}
+            confirmReportAction={query.confirmReportAction}
             header={query.gameHeader}
-            onGenerateReport={query.generateReport}
-            onRefreshReport={query.retryPage}
-            onRetryReportGeneration={query.retryReportGeneration}
+            onGenerateReport={query.requestGenerateReport}
+            onOpenReport={query.openReport}
+            onRequestCloseReportEditor={query.requestCloseReportEditor}
+            onSaveReport={query.saveReport}
             reportGeneration={headerReportGeneration}
           />
         ) : null}
@@ -125,10 +133,14 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
       <div className="space-y-4">
         {query.gameHeader ? (
           <GameAnalysisHeader
+            changeReportDraft={query.changeReportDraft}
+            closeReportConfirmation={query.closeReportConfirmation}
+            confirmReportAction={query.confirmReportAction}
             header={query.gameHeader}
-            onGenerateReport={query.generateReport}
-            onRefreshReport={query.retryPage}
-            onRetryReportGeneration={query.retryReportGeneration}
+            onGenerateReport={query.requestGenerateReport}
+            onOpenReport={query.openReport}
+            onRequestCloseReportEditor={query.requestCloseReportEditor}
+            onSaveReport={query.saveReport}
             reportGeneration={headerReportGeneration}
           />
         ) : null}
@@ -151,10 +163,14 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
       <div className="space-y-4">
         {query.gameHeader ? (
           <GameAnalysisHeader
+            changeReportDraft={query.changeReportDraft}
+            closeReportConfirmation={query.closeReportConfirmation}
+            confirmReportAction={query.confirmReportAction}
             header={query.gameHeader}
-            onGenerateReport={query.generateReport}
-            onRefreshReport={query.retryPage}
-            onRetryReportGeneration={query.retryReportGeneration}
+            onGenerateReport={query.requestGenerateReport}
+            onOpenReport={query.openReport}
+            onRequestCloseReportEditor={query.requestCloseReportEditor}
+            onSaveReport={query.saveReport}
             reportGeneration={headerReportGeneration}
           />
         ) : null}
@@ -171,10 +187,14 @@ export function GameAnalysisPage({ gameId, studentId }: GameAnalysisPageProps) {
   return (
     <div className="space-y-4 md:space-y-5">
       <GameAnalysisHeader
+        changeReportDraft={query.changeReportDraft}
+        closeReportConfirmation={query.closeReportConfirmation}
+        confirmReportAction={query.confirmReportAction}
         header={query.page.header}
-        onGenerateReport={query.generateReport}
-        onRefreshReport={query.retryPage}
-        onRetryReportGeneration={query.retryReportGeneration}
+        onGenerateReport={query.requestGenerateReport}
+        onOpenReport={query.openReport}
+        onRequestCloseReportEditor={query.requestCloseReportEditor}
+        onSaveReport={query.saveReport}
         reportGeneration={query.page.reportGeneration}
       />
 

@@ -1,21 +1,55 @@
+enum ReportSource {
+  AI
+  MANUAL
+}
+
 model Report {
   id               String            @id @default(uuid())
   coachAccountId   String
   studentId        String
-  analysisId       String
+  gameId           String
+  analysisId       String?
   title            String
   audience         ReportAudience
   content          Json
-  promptVersion    String
-  model            String
+  source           ReportSource      @default(AI)
+  currentRevisionId String?
+  promptVersion    String?
+  model            String?
   coachAccount     CoachAccount      @relation(fields: [coachAccountId], references: [id], onDelete: Cascade)
   student          Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  analysis         GameAnalysis      @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  game             Game              @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  analysis         GameAnalysis?     @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+  currentRevision  ReportRevision?   @relation("CurrentReportRevision", fields: [currentRevisionId], references: [id], onDelete: SetNull)
   generationTraces GenerationTrace[]
+  revisions        ReportRevision[]  @relation("ReportRevisions")
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
   @@index([coachAccountId])
   @@index([studentId])
+  @@index([gameId])
   @@index([analysisId])
+  @@index([currentRevisionId])
+  @@unique([gameId, audience])
+}
+
+model ReportRevision {
+  id            String        @id @default(uuid())
+  reportId      String
+  analysisId    String?
+  title         String
+  content       Json
+  source        ReportSource
+  promptVersion String?
+  model         String?
+  version       Int
+  report        Report        @relation("ReportRevisions", fields: [reportId], references: [id], onDelete: Cascade)
+  analysis      GameAnalysis? @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+  currentFor    Report[]      @relation("CurrentReportRevision")
+  createdAt     DateTime      @default(now())
+
+  @@index([reportId])
+  @@index([analysisId])
+  @@unique([reportId, version])
 }

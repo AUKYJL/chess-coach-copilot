@@ -966,6 +966,9 @@ export interface components {
              */
             audience: "COACH" | "PARENT";
         };
+        ReportContentResponse: {
+            text: string;
+        };
         ReportResponse: {
             /** Format: uuid */
             id: string;
@@ -974,15 +977,17 @@ export interface components {
             /** Format: uuid */
             studentId: string;
             /** Format: uuid */
-            analysisId: string;
+            gameId: string;
+            /** Format: uuid */
+            analysisId: string | null;
             title: string;
             /** @enum {string} */
             audience: "COACH" | "PARENT";
-            content: {
-                [key: string]: unknown;
-            };
-            promptVersion: string;
-            model: string;
+            /** @enum {string} */
+            source: "AI" | "MANUAL";
+            content: components["schemas"]["ReportContentResponse"];
+            promptVersion: string | null;
+            model: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -991,25 +996,22 @@ export interface components {
         ReportListResponse: {
             items: components["schemas"]["ReportResponse"][];
         };
+        ReportContentUpdateDto: {
+            /**
+             * @example Резюме
+             *     Сильная дебютная подготовка, но в тактике были поспешные решения.
+             */
+            text?: string;
+        };
         ReportUpdateDto: {
             /** @example Coach report: Italian Game review */
             title?: string;
             /**
              * @example {
-             *       "summary": "Middlegame planning improved, but tactical checks were rushed.",
-             *       "highlights": [
-             *         "Better opening recall",
-             *         "Missed forcing continuation on move 18"
-             *       ],
-             *       "lessonFocus": [
-             *         "Candidate move discipline"
-             *       ],
-             *       "nextSteps": [
-             *         "Review forcing-move checklist"
-             *       ]
+             *       "text": "Резюме\nМиттельшпиль читался лучше, но форсирующие ходы проверялись не всегда."
              *     }
              */
-            content?: Record<string, never>;
+            content?: components["schemas"]["ReportContentUpdateDto"];
         };
         HomeworkUpdateDto: {
             /** @example Homework: candidate move discipline */
@@ -1684,6 +1686,8 @@ export interface operations {
             query?: {
                 studentId?: string;
                 analysisId?: string;
+                gameId?: string;
+                audience?: "COACH" | "PARENT";
             };
             header?: never;
             path?: never;

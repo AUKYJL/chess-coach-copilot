@@ -212,15 +212,13 @@ describe('Opaque route ids (e2e)', () => {
       .send({
         title: 'Edited opaque report',
         content: {
-          summary: 'Edited summary',
-          highlights: ['Edited highlight'],
-          lessonFocus: ['Edited focus'],
-          nextSteps: ['Edited next step'],
+          text: 'Edited opaque report body.',
         },
       })
       .expect(200)
       .expect(({ body }) => {
         expect(body.id).toBe(fixture.reportId);
+        expect(body.content.text).toBe('Edited opaque report body.');
       });
 
     await request(server)

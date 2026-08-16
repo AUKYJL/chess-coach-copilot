@@ -3,7 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import { $api } from "@/shared/api";
 
-import type { AnalysisJobResponse, GameDetailsResponse } from "./api-types";
+import type {
+  AnalysisJobResponse,
+  GameDetailsResponse,
+  ReportResponse,
+} from "./api-types";
 import {
   mapGameAnalysisHeader,
   mapGameAnalysisPage,
@@ -12,6 +16,9 @@ import {
 import type {
   GameAnalysisPageViewModel,
   GameAnalysisReportAudience,
+  GameAnalysisReportCardActionViewModel,
+  GameAnalysisReportCardViewModel,
+  GameAnalysisReportConfirmationViewModel,
   GameAnalysisReportGenerationViewModel,
   GameAnalysisReviewStatus,
 } from "./view-model";
@@ -24,6 +31,7 @@ const REPORT_GENERATION_IN_PROGRESS_STATUSES = [
   "CLASSIFICATION",
   "GENERATING_OUTPUT",
 ] as const;
+const REPORT_CARD_ORDER = ["COACH", "PARENT"] as const;
 
 type UseGameAnalysisDataOptions = {
   gameId: string;
@@ -36,16 +44,46 @@ type SubmitMomentReviewInput = {
   status: GameAnalysisReviewStatus;
 };
 
+type ReportEditorState = {
+  draftText: string;
+  errorMessage: string | null;
+  initialText: string;
+  reportId: string;
+  successMessage: string | null;
+};
+
+type ReportConfirmationState =
+  | {
+      kind: "discard-editor";
+    }
+  | {
+      audience: GameAnalysisReportAudience;
+      kind: "regenerate";
+    }
+  | null;
+
+type ReportActionErrorState = {
+  audience: GameAnalysisReportAudience;
+  message: string;
+} | null;
+
 type QueryActions = {
-  generateReport: (audience: GameAnalysisReportAudience) => Promise<void>;
+  changeReportDraft: (text: string) => void;
+  closeReportConfirmation: () => void;
+  confirmReportAction: () => Promise<void>;
   gameHeader: GameAnalysisPageViewModel["header"] | null;
+  openReport: (reportId: string) => void;
   reportGeneration: GameAnalysisReportGenerationViewModel | null;
   isRetryingAnalysis: boolean;
   isSavingReview: boolean;
   onRetryAnalysis: () => Promise<void>;
-  retryReportGeneration: () => Promise<void>;
+  requestCloseReportEditor: () => void;
+  requestGenerateReport: (
+    audience: GameAnalysisReportAudience,
+  ) => Promise<void>;
   retryPage: () => Promise<void>;
   reviewErrorMessage: string | null;
+  saveReport: () => Promise<void>;
   submitMomentReview: (input: SubmitMomentReviewInput) => Promise<void>;
 };
 
@@ -104,7 +142,7 @@ function isReportJobInProgress(
 }
 
 function formatReportAudienceLabel(
-  audience: GameAnalysisReportAudience | AnalysisJobResponse["reportAudience"],
+  audience: GameAnalysisReportAudience,
 ): string {
   return audience === "PARENT" ? "Отчет для родителя" : "Отчет для тренера";
 }
@@ -145,33 +183,116 @@ function formatReportJobStatusLabel(
   return baseLabel;
 }
 
-function isJobForAnalysis(
-  job: AnalysisJobResponse | null | undefined,
-  analysisId: string | null,
-): job is AnalysisJobResponse {
-  return analysisId !== null && job?.sourceAnalysisId === analysisId;
+function formatUpdatedAt(dateString: string): string {
+  return `Обновлен ${new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "long",
+  }).format(new Date(dateString))}`;
 }
 
-function getRecoveredReportJob(args: {
-  analysisId: string | null;
-  jobs: AnalysisJobResponse[];
-}): AnalysisJobResponse | null {
-  if (args.analysisId === null) {
-    return null;
+function getLatestReportJobsByAudience(jobs: AnalysisJobResponse[]) {
+  return {
+    COACH: jobs.find((job) => job.reportAudience === "COACH") ?? null,
+    PARENT: jobs.find((job) => job.reportAudience === "PARENT") ?? null,
+  };
+}
+
+function getReportsByAudience(reports: ReportResponse[]) {
+  return {
+    COACH: reports.find((report) => report.audience === "COACH") ?? null,
+    PARENT: reports.find((report) => report.audience === "PARENT") ?? null,
+  };
+}
+
+function createReportCardAction(args: {
+  disabled?: boolean;
+  isLoading?: boolean;
+  kind: GameAnalysisReportCardActionViewModel["kind"];
+  label: string;
+}): GameAnalysisReportCardActionViewModel {
+  return {
+    disabled: args.disabled ?? false,
+    isLoading: args.isLoading ?? false,
+    kind: args.kind,
+    label: args.label,
+  };
+}
+
+function createIdleReportCard(args: {
+  audience: GameAnalysisReportAudience;
+  errorMessage: string | null;
+  isActionDisabled: boolean;
+  isLoading: boolean;
+  latestFailedJob: AnalysisJobResponse | null;
+}): GameAnalysisReportCardViewModel {
+  const audienceLabel = formatReportAudienceLabel(args.audience);
+  const failureMessage =
+    args.errorMessage ??
+    args.latestFailedJob?.failureMessage ??
+    "Последняя попытка генерации завершилась ошибкой.";
+
+  if (args.isLoading) {
+    return {
+      audience: args.audience,
+      audienceLabel,
+      description: "Загружаем текущее состояние отчета.",
+      inlineError: null,
+      isManual: false,
+      primaryAction: null,
+      reportId: null,
+      secondaryAction: null,
+      state: "loading",
+      statusLabel: "Загрузка",
+      title: "Проверяем отчет",
+      tone: "neutral",
+      updatedAtLabel: null,
+    };
   }
 
-  const matchingJobs = args.jobs.filter(
-    (job) => job.sourceAnalysisId === args.analysisId,
-  );
-
-  if (matchingJobs.length === 0) {
-    return null;
+  if (args.latestFailedJob || args.errorMessage) {
+    return {
+      audience: args.audience,
+      audienceLabel,
+      description: "Отчет не был создан. Повторите попытку генерации.",
+      inlineError: failureMessage,
+      isManual: false,
+      primaryAction: createReportCardAction({
+        disabled: args.isActionDisabled,
+        kind: "retry",
+        label: "Повторить",
+      }),
+      reportId: null,
+      secondaryAction: null,
+      state: "failed",
+      statusLabel: "Ошибка",
+      title: `${audienceLabel} не сформирован`,
+      tone: "danger",
+      updatedAtLabel: null,
+    };
   }
 
-  return matchingJobs.toSorted(
-    (leftJob, rightJob) =>
-      Date.parse(rightJob.createdAt) - Date.parse(leftJob.createdAt),
-  )[0];
+  return {
+    audience: args.audience,
+    audienceLabel,
+    description:
+      "Сформируйте отчет, чтобы открыть его и при необходимости отредактировать вручную.",
+    inlineError: null,
+    isManual: false,
+    primaryAction: createReportCardAction({
+      disabled: args.isActionDisabled,
+      kind: "generate",
+      label: "Сформировать отчет",
+    }),
+    reportId: null,
+    secondaryAction: null,
+    state: "idle",
+    statusLabel: "Нет отчета",
+    title: `${audienceLabel} пока не создан`,
+    tone: "neutral",
+    updatedAtLabel: null,
+  };
 }
 
 export function useGameAnalysisData({
@@ -179,14 +300,20 @@ export function useGameAnalysisData({
   studentId,
 }: UseGameAnalysisDataOptions): GameAnalysisQueryResult {
   const queryClient = useQueryClient();
-  const [isRefreshingPage, setIsRefreshingPage] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
   const [reviewErrorMessage, setReviewErrorMessage] = useState<string | null>(
     null,
   );
-  const [reportGenerationErrorMessage, setReportGenerationErrorMessage] =
-    useState<string | null>(null);
-  const [reportJob, setReportJob] = useState<AnalysisJobResponse | null>(null);
+  const [reportActionError, setReportActionError] =
+    useState<ReportActionErrorState>(null);
+  const [pendingGenerateAudience, setPendingGenerateAudience] =
+    useState<GameAnalysisReportAudience | null>(null);
+  const [editorState, setEditorState] = useState<ReportEditorState | null>(
+    null,
+  );
+  const [savingReportId, setSavingReportId] = useState<string | null>(null);
+  const [confirmationState, setConfirmationState] =
+    useState<ReportConfirmationState>(null);
   const hasGameId = gameId.length > 0;
   const gameParams = {
     params: {
@@ -233,9 +360,9 @@ export function useGameAnalysisData({
     "post",
     "/api/analysis/{analysisId}/reports/generate",
   );
-  const retryReportMutation = $api.useMutation(
-    "post",
-    "/api/analysis/jobs/{jobId}/retry",
+  const updateReportMutation = $api.useMutation(
+    "patch",
+    "/api/reports/{reportId}",
   );
   const reviewMutation = $api.useMutation(
     "patch",
@@ -258,106 +385,85 @@ export function useGameAnalysisData({
     "/api/analysis/jobs",
     reportJobsParams,
     {
-      enabled: hasGameId && latestAnalysisId !== null,
+      enabled: hasGameId,
+      refetchInterval: (query) =>
+        query.state.data?.items.some((job) => isReportJobInProgress(job.status))
+          ? 2000
+          : false,
     },
   );
-  const recoveredReportJob = getRecoveredReportJob({
-    analysisId: latestAnalysisId,
-    jobs: reportJobsQuery.data?.items ?? [],
+  const reportsParams = useMemo(
+    () => ({
+      params: {
+        query: {
+          gameId: gameId || undefined,
+        },
+      },
+    }),
+    [gameId],
+  );
+  const reportsQuery = $api.useQuery("get", "/api/reports", reportsParams, {
+    enabled: hasGameId,
   });
-  const localReportJob = isJobForAnalysis(reportJob, latestAnalysisId)
-    ? reportJob
-    : null;
-  const trackedReportJobId =
-    localReportJob?.id ?? recoveredReportJob?.id ?? null;
-  const reportJobStatusParams = useMemo(
-    () => ({
-      params: {
-        path: {
-          jobId: trackedReportJobId ?? EMPTY_UUID,
-        },
-      },
-    }),
-    [trackedReportJobId],
-  );
-  const reportJobStatusQuery = $api.useQuery(
-    "get",
-    "/api/analysis/jobs/{jobId}",
-    reportJobStatusParams,
-    {
-      enabled: trackedReportJobId !== null,
-      refetchInterval: (query) => {
-        const currentJob = query.state.data;
-        const currentStatus =
-          currentJob?.status ?? reportJob?.status ?? recoveredReportJob?.status;
 
-        return isReportJobInProgress(currentStatus) ? 2000 : false;
-      },
-    },
+  const reports = useMemo(
+    () => reportsQuery.data?.items ?? [],
+    [reportsQuery.data?.items],
   );
-  const trackedReportJob = isJobForAnalysis(
-    reportJobStatusQuery.data,
-    latestAnalysisId,
-  )
-    ? reportJobStatusQuery.data
-    : null;
-  const currentReportJob =
-    trackedReportJob ?? localReportJob ?? recoveredReportJob ?? null;
-  const generatedReportId =
-    currentReportJob?.status === "COMPLETED" ? currentReportJob.reportId : null;
-  const reportParams = useMemo(
-    () => ({
-      params: {
-        path: {
-          reportId: generatedReportId ?? EMPTY_UUID,
-        },
-      },
-    }),
-    [generatedReportId],
+  const reportJobs = useMemo(
+    () => reportJobsQuery.data?.items ?? [],
+    [reportJobsQuery.data?.items],
   );
-  const reportQuery = $api.useQuery(
-    "get",
-    "/api/reports/{reportId}",
-    reportParams,
-    {
-      enabled: generatedReportId !== null,
-    },
+  const reportsByAudience = useMemo(
+    () => getReportsByAudience(reports),
+    [reports],
   );
+  const latestJobsByAudience = useMemo(
+    () => getLatestReportJobsByAudience(reportJobs),
+    [reportJobs],
+  );
+  const reportsById = useMemo(() => {
+    const items: Record<string, ReportResponse> = {};
+
+    for (const report of reports) {
+      items[report.id] = report;
+    }
+
+    return items;
+  }, [reports]);
 
   useEffect(() => {
-    setReportJob(null);
-    setReportGenerationErrorMessage(null);
+    setPendingGenerateAudience(null);
+    setReportActionError(null);
+    setEditorState(null);
+    setSavingReportId(null);
+    setConfirmationState(null);
   }, [latestAnalysisId]);
 
-  useEffect(() => {
-    if (reportJobStatusQuery.data) {
-      setReportJob(reportJobStatusQuery.data);
-    }
-  }, [reportJobStatusQuery.data]);
+  const currentEditorReport =
+    editorState === null ? null : (reportsById[editorState.reportId] ?? null);
+  const currentEditorAudience = currentEditorReport?.audience;
+
+  const clearReportActionError = (audience: GameAnalysisReportAudience) => {
+    setReportActionError((currentError) =>
+      currentError?.audience === audience ? null : currentError,
+    );
+  };
 
   const retryPage = async () => {
     setRetryError(null);
-    setIsRefreshingPage(true);
 
-    try {
-      const refetches: Promise<unknown>[] = [gameQuery.refetch()];
+    const refetches: Promise<unknown>[] = [
+      gameQuery.refetch(),
+      reportJobsQuery.refetch(),
+      reportsQuery.refetch(),
+    ];
 
-      if (latestAnalysisId !== null) {
-        refetches.push(analysisQuery.refetch(), reportJobsQuery.refetch());
-      }
-
-      if (trackedReportJobId !== null) {
-        refetches.push(reportJobStatusQuery.refetch());
-      }
-
-      if (generatedReportId !== null) {
-        refetches.push(reportQuery.refetch());
-      }
-
-      await Promise.all(refetches);
-    } finally {
-      setIsRefreshingPage(false);
+    if (latestAnalysisId !== null) {
+      refetches.push(analysisQuery.refetch());
     }
+
+    await Promise.all(refetches);
   };
 
   const onRetryAnalysis = async () => {
@@ -383,15 +489,16 @@ export function useGameAnalysisData({
     }
   };
 
-  const generateReport = async (audience: GameAnalysisReportAudience) => {
+  const runGenerateReport = async (audience: GameAnalysisReportAudience) => {
     if (!latestAnalysisId) {
       return;
     }
 
-    setReportGenerationErrorMessage(null);
+    clearReportActionError(audience);
+    setPendingGenerateAudience(audience);
 
     try {
-      const createdJob = await generateReportMutation.mutateAsync({
+      await generateReportMutation.mutateAsync({
         params: {
           path: {
             analysisId: latestAnalysisId,
@@ -402,37 +509,172 @@ export function useGameAnalysisData({
         },
       });
 
-      setReportJob(createdJob);
-      await reportJobsQuery.refetch();
+      await Promise.all([reportJobsQuery.refetch(), reportsQuery.refetch()]);
+      setConfirmationState(null);
     } catch (error) {
-      setReportGenerationErrorMessage(
-        getErrorMessage(error, "Не удалось запустить генерацию отчета."),
-      );
+      setReportActionError({
+        audience,
+        message: getErrorMessage(
+          error,
+          "Не удалось запустить генерацию отчета.",
+        ),
+      });
+    } finally {
+      setPendingGenerateAudience(null);
     }
   };
 
-  const retryReportGeneration = async () => {
-    if (!currentReportJob?.id || currentReportJob.status !== "FAILED") {
+  const requestGenerateReport = async (
+    audience: GameAnalysisReportAudience,
+  ) => {
+    if (reportsByAudience[audience]) {
+      clearReportActionError(audience);
+      setConfirmationState({
+        audience,
+        kind: "regenerate",
+      });
       return;
     }
 
-    setReportGenerationErrorMessage(null);
+    await runGenerateReport(audience);
+  };
+
+  const openReport = (reportId: string) => {
+    const report = reportsById[reportId];
+
+    if (!report) {
+      return;
+    }
+
+    setConfirmationState(null);
+    setEditorState({
+      draftText: report.content.text,
+      errorMessage: null,
+      initialText: report.content.text,
+      reportId,
+      successMessage: null,
+    });
+  };
+
+  const closeEditor = () => {
+    setEditorState(null);
+    setSavingReportId(null);
+  };
+
+  const requestCloseReportEditor = () => {
+    if (!editorState) {
+      return;
+    }
+
+    if (editorState.draftText !== editorState.initialText) {
+      setConfirmationState({
+        kind: "discard-editor",
+      });
+      return;
+    }
+
+    closeEditor();
+  };
+
+  const closeReportConfirmation = () => {
+    setConfirmationState(null);
+  };
+
+  const confirmReportAction = async () => {
+    if (!confirmationState) {
+      return;
+    }
+
+    if (confirmationState.kind === "discard-editor") {
+      closeEditor();
+      setConfirmationState(null);
+      return;
+    }
+
+    const audience = confirmationState.audience;
+
+    setConfirmationState(null);
+    await runGenerateReport(audience);
+  };
+
+  const changeReportDraft = (text: string) => {
+    setEditorState((currentState) => {
+      if (!currentState) {
+        return currentState;
+      }
+
+      return {
+        ...currentState,
+        draftText: text,
+        errorMessage: null,
+        successMessage: null,
+      };
+    });
+  };
+
+  const saveReport = async () => {
+    if (!editorState) {
+      return;
+    }
+
+    const nextText = editorState.draftText.trim();
+
+    if (!nextText) {
+      setEditorState((currentState) =>
+        currentState
+          ? {
+              ...currentState,
+              errorMessage: "Текст отчета не может быть пустым.",
+              successMessage: null,
+            }
+          : currentState,
+      );
+      return;
+    }
+
+    setSavingReportId(editorState.reportId);
 
     try {
-      const retriedJob = await retryReportMutation.mutateAsync({
+      const updatedReport = await updateReportMutation.mutateAsync({
         params: {
           path: {
-            jobId: currentReportJob.id,
+            reportId: editorState.reportId,
+          },
+        },
+        body: {
+          content: {
+            text: nextText,
           },
         },
       });
 
-      setReportJob(retriedJob);
-      await reportJobsQuery.refetch();
-    } catch (error) {
-      setReportGenerationErrorMessage(
-        getErrorMessage(error, "Не удалось перезапустить генерацию отчета."),
+      setEditorState((currentState) =>
+        currentState
+          ? {
+              ...currentState,
+              draftText: updatedReport.content.text,
+              errorMessage: null,
+              initialText: updatedReport.content.text,
+              successMessage: "Изменения сохранены.",
+            }
+          : currentState,
       );
+      await reportsQuery.refetch();
+    } catch (error) {
+      setEditorState((currentState) =>
+        currentState
+          ? {
+              ...currentState,
+              errorMessage: getErrorMessage(
+                error,
+                "Не удалось сохранить изменения отчета.",
+              ),
+              successMessage: null,
+            }
+          : currentState,
+      );
+    } finally {
+      setSavingReportId(null);
     }
   };
 
@@ -469,152 +711,233 @@ export function useGameAnalysisData({
   };
 
   const reportGeneration = (() => {
-    if (latestAnalysisId === null && currentReportJob === null) {
+    if (!gameData) {
       return null;
     }
 
-    const isBusy =
-      generateReportMutation.isPending ||
-      retryReportMutation.isPending ||
-      isReportJobInProgress(currentReportJob?.status);
-    const audienceLabel =
-      currentReportJob?.reportAudience === null
-        ? null
-        : formatReportAudienceLabel(
-            currentReportJob?.reportAudience ?? "COACH",
-          );
-    const status = (() => {
-      if (currentReportJob === null) {
-        return null;
+    const cards = REPORT_CARD_ORDER.map((audience) => {
+      const report = reportsByAudience[audience];
+      const latestJob = latestJobsByAudience[audience];
+      const audienceLabel = formatReportAudienceLabel(audience);
+      const latestFailedJob = latestJob?.status === "FAILED" ? latestJob : null;
+      const cardErrorMessage =
+        reportActionError?.audience === audience ? reportActionError.message : null;
+      const isGenerating =
+        pendingGenerateAudience === audience ||
+        isReportJobInProgress(latestJob?.status);
+      const isSavingCurrentAudience =
+        updateReportMutation.isPending && currentEditorAudience === audience;
+      const isActionDisabled = latestAnalysisId === null || isSavingCurrentAudience;
+
+      if (!report) {
+        if (isGenerating) {
+          return {
+            audience,
+            audienceLabel,
+            description:
+              latestJob && isReportJobInProgress(latestJob.status)
+                ? formatReportJobStatusLabel(
+                    latestJob.status,
+                    latestJob.progressPercent,
+                  )
+                : "Создаем отчет. Он появится здесь сразу после завершения.",
+            inlineError: null,
+            isManual: false,
+            primaryAction: createReportCardAction({
+              disabled: true,
+              isLoading: true,
+              kind: "generate",
+              label: "Создаем отчет...",
+            }),
+            reportId: null,
+            secondaryAction: null,
+            state: "pending" as const,
+            statusLabel: "В работе",
+            title: `${audienceLabel} создается`,
+            tone: "warning" as const,
+            updatedAtLabel: null,
+          };
+        }
+
+        return createIdleReportCard({
+          audience,
+          errorMessage: cardErrorMessage,
+          isActionDisabled,
+          isLoading: reportsQuery.isPending,
+          latestFailedJob,
+        });
       }
 
-      if (isReportJobInProgress(currentReportJob.status)) {
+      if (isGenerating) {
         return {
-          action: {
-            kind: "none" as const,
-            label: null,
-          },
+          audience,
+          audienceLabel,
+          description:
+            latestJob && isReportJobInProgress(latestJob.status)
+              ? formatReportJobStatusLabel(
+                  latestJob.status,
+                  latestJob.progressPercent,
+                )
+              : "Создаем новую версию отчета. Текущая версия остается доступной.",
+          inlineError: null,
+          isManual: report.source === "MANUAL",
+          primaryAction: createReportCardAction({
+            disabled: true,
+            isLoading: true,
+            kind: "regenerate",
+            label: "Создаем отчет...",
+          }),
+          reportId: report.id,
+          secondaryAction: createReportCardAction({
+            kind: "open",
+            label: "Открыть текущий отчет",
+          }),
           state: "pending" as const,
+          statusLabel: "В работе",
+          title: report.title,
           tone: "warning" as const,
-          label: "В работе",
-          title: audienceLabel
-            ? `${audienceLabel} формируется`
-            : "Формируем отчет",
-          description: `${formatReportJobStatusLabel(currentReportJob.status, currentReportJob.progressPercent)}. Новые запросы будут доступны после завершения текущей генерации.`,
-          reportId: null,
-          reportTitle: null,
+          updatedAtLabel: formatUpdatedAt(report.updatedAt),
         };
       }
 
-      if (currentReportJob.status === "FAILED") {
+      if (latestFailedJob || cardErrorMessage) {
         return {
-          action: {
-            kind: "retry-generation" as const,
+          audience,
+          audienceLabel,
+          description:
+            "Последняя попытка обновить отчет не удалась. Текущая версия остается доступной.",
+          inlineError:
+            cardErrorMessage ??
+            latestFailedJob?.failureMessage ??
+            "Не удалось обновить отчет.",
+          isManual: report.source === "MANUAL",
+          primaryAction: createReportCardAction({
+            kind: "open",
+            label: "Открыть текущий отчет",
+          }),
+          reportId: report.id,
+          secondaryAction: createReportCardAction({
+            disabled: isActionDisabled,
+            kind: "retry",
             label: "Повторить",
-          },
+          }),
           state: "failed" as const,
+          statusLabel: "Ошибка",
+          title: report.title,
           tone: "danger" as const,
-          label: "Ошибка",
-          title: audienceLabel
-            ? `${audienceLabel} не сформирован`
-            : "Не удалось сформировать отчет",
-          description:
-            currentReportJob.failureMessage ||
-            "Мы не смогли завершить генерацию отчета.",
-          reportId: null,
-          reportTitle: null,
-        };
-      }
-
-      if (currentReportJob.status !== "COMPLETED") {
-        return null;
-      }
-
-      if (!currentReportJob.reportId) {
-        return {
-          action: {
-            kind: "none" as const,
-            label: null,
-          },
-          state: "failed" as const,
-          tone: "danger" as const,
-          label: "Ошибка",
-          title: "Отчет завершился без результата",
-          description:
-            "Генерация завершилась, но сервер не вернул идентификатор отчета.",
-          reportId: null,
-          reportTitle: null,
-        };
-      }
-
-      if (reportQuery.isPending) {
-        return {
-          action: {
-            kind: "none" as const,
-            label: null,
-          },
-          state: "pending" as const,
-          tone: "warning" as const,
-          label: "Загружаем",
-          title: "Отчет готов, загружаем детали",
-          description: `Получили результат генерации. Загружаем карточку отчета ${currentReportJob.reportId}.`,
-          reportId: currentReportJob.reportId,
-          reportTitle: null,
-        };
-      }
-
-      if (reportQuery.isError || !reportQuery.data) {
-        return {
-          action: {
-            kind: "refresh-report" as const,
-            label: "Обновить",
-          },
-          state: "failed" as const,
-          tone: "danger" as const,
-          label: "Ошибка",
-          title: "Отчет сформирован, но детали недоступны",
-          description: `Сервер вернул id ${currentReportJob.reportId}, но загрузить сам отчет не удалось.`,
-          reportId: currentReportJob.reportId,
-          reportTitle: null,
+          updatedAtLabel: formatUpdatedAt(report.updatedAt),
         };
       }
 
       return {
-        action: {
-          kind: "none" as const,
-          label: null,
-        },
-        state: "success" as const,
+        audience,
+        audienceLabel,
+        description:
+          report.source === "MANUAL"
+            ? "Текст отчета был отредактирован вручную."
+            : "Отчет готов к просмотру и редактированию.",
+        inlineError: null,
+        isManual: report.source === "MANUAL",
+        primaryAction: createReportCardAction({
+          kind: "open",
+          label: "Открыть отчет",
+        }),
+        reportId: report.id,
+        secondaryAction: createReportCardAction({
+          disabled: isActionDisabled,
+          kind: "regenerate",
+          label: "Пересоздать",
+        }),
+        state: "ready" as const,
+        statusLabel: "Готов",
+        title: report.title,
         tone: "success" as const,
-        label: "Готов",
-        title: reportQuery.data.title,
-        description: `${formatReportAudienceLabel(reportQuery.data.audience)} готов. ID отчета: ${reportQuery.data.id}.`,
-        reportId: reportQuery.data.id,
-        reportTitle: reportQuery.data.title,
+        updatedAtLabel: formatUpdatedAt(report.updatedAt),
       };
-    })();
+    });
+
+    const editor =
+      editorState && currentEditorReport
+        ? {
+            audienceLabel: formatReportAudienceLabel(
+              currentEditorReport.audience,
+            ),
+            errorMessage: editorState.errorMessage,
+            gameLabel: mapGameAnalysisHeader({
+              game: gameData,
+              statusLabel:
+                latestAnalysisJobStatus === null
+                  ? "Анализ недоступен"
+                  : mapProcessingStatusLabel(gameData),
+              statusTone:
+                latestAnalysisJobStatus === "FAILED"
+                  ? "danger"
+                  : latestAnalysisId !== null
+                    ? "success"
+                    : "neutral",
+            }).title,
+            isDirty: editorState.draftText !== editorState.initialText,
+            isSaveDisabled:
+              editorState.draftText.trim().length === 0 ||
+              editorState.draftText === editorState.initialText ||
+              (updateReportMutation.isPending &&
+                savingReportId === editorState.reportId),
+            isSaving:
+              updateReportMutation.isPending &&
+              savingReportId === editorState.reportId,
+            reportId: editorState.reportId,
+            successMessage: editorState.successMessage,
+            text: editorState.draftText,
+            title: currentEditorReport.title,
+            updatedAtLabel: formatUpdatedAt(currentEditorReport.updatedAt),
+          }
+        : null;
+
+    const confirmation: GameAnalysisReportConfirmationViewModel | null =
+      confirmationState === null
+        ? null
+        : confirmationState.kind === "discard-editor"
+          ? {
+              confirmLabel: "Выйти без сохранения",
+              description:
+                "Есть несохраненные изменения. Выйти без сохранения?",
+              isPending: false,
+              kind: "discard-editor",
+              title: "Закрыть отчет",
+            }
+          : {
+              confirmLabel: "Пересоздать отчет",
+              description:
+                "Текущий отчет будет заменен новой AI-версией. Продолжить?",
+              isPending:
+                generateReportMutation.isPending &&
+                pendingGenerateAudience === confirmationState.audience,
+              kind: "regenerate",
+              title: "Пересоздать отчет",
+            };
 
     return {
-      activeJobId: currentReportJob?.id ?? null,
-      errorMessage: reportGenerationErrorMessage,
-      isActionPending:
-        retryReportMutation.isPending ||
-        (status?.action.kind === "refresh-report" && isRefreshingPage),
-      isDisabled: latestAnalysisId === null || isBusy,
-      status,
+      cards,
+      confirmation,
+      editor,
     };
   })();
 
   const queryActions: QueryActions = {
-    generateReport,
+    changeReportDraft,
+    closeReportConfirmation,
+    confirmReportAction,
     gameHeader: null,
+    openReport,
     reportGeneration,
     isRetryingAnalysis: retryAnalysisMutation.isPending,
     isSavingReview: reviewMutation.isPending,
     onRetryAnalysis,
-    retryReportGeneration,
+    requestCloseReportEditor,
+    requestGenerateReport,
     retryPage,
     reviewErrorMessage,
+    saveReport,
     submitMomentReview,
   };
 
@@ -686,6 +1009,15 @@ export function useGameAnalysisData({
           analysisQuery.error,
           "Не удалось загрузить разбор партии.",
         ),
+      };
+    }
+
+    if (!reportGeneration) {
+      return {
+        ...queryActions,
+        gameHeader: loadingHeader,
+        state: "loading",
+        page: null,
       };
     }
 

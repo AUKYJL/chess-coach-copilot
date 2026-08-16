@@ -162,6 +162,7 @@ model GameAnalysis {
   criticalMoments        CriticalMoment[]
   mistakes               Mistake[]
   reports                Report[]
+  reportRevisions        ReportRevision[]
   homeworks              Homework[]
   generationTraces       GenerationTrace[]
   createdAt              DateTime          @default(now())

@@ -21,5 +21,8 @@ export type AnalysisJobListResponse =
 export type AnalysisJobResponse =
   paths["/api/analysis/jobs/{jobId}"]["get"]["responses"][200]["content"]["application/json"];
 
+export type ReportListResponse =
+  paths["/api/reports"]["get"]["responses"][200]["content"]["application/json"];
+
 export type ReportResponse =
   paths["/api/reports/{reportId}"]["get"]["responses"][200]["content"]["application/json"];

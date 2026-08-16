@@ -3,8 +3,8 @@ import type {
   GameAnalysisCriticalMomentViewModel,
   GameAnalysisHeaderViewModel,
   GameAnalysisPageViewModel,
-  GameAnalysisReportGenerationViewModel,
   GameAnalysisReplayMoveViewModel,
+  GameAnalysisReportGenerationViewModel,
   GameAnalysisSummaryStatViewModel,
   SemanticTone,
 } from "./view-model";
@@ -416,7 +416,7 @@ export function mapGameAnalysisHeader(args: {
 export function mapGameAnalysisPage(args: {
   analysis: AnalysisDetailsResponse;
   game: GameDetailsResponse;
-  reportGeneration: GameAnalysisReportGenerationViewModel | null;
+  reportGeneration: GameAnalysisReportGenerationViewModel;
 }): GameAnalysisPageViewModel {
   return {
     header: mapGameAnalysisHeader({

@@ -4,6 +4,7 @@ export type {
   AnalysisJobListResponse,
   AnalysisJobResponse,
   GameDetailsResponse,
+  ReportListResponse,
   ReportResponse,
 } from "./api-types";
 export type {
