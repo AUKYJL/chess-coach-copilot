@@ -12,12 +12,10 @@ export const generatedProgressPayloadSchema = z.object({
   confidenceLevel: z.nativeEnum(ConfidenceLevel),
 });
 
-export type GeneratedProgressPayload = z.infer<
-  typeof generatedProgressPayloadSchema
->;
+export type ProgressSummary = z.infer<typeof generatedProgressPayloadSchema>;
 
 export function validateGeneratedProgressPayload(
   payload: unknown,
-): GeneratedProgressPayload {
+): ProgressSummary {
   return generatedProgressPayloadSchema.parse(payload);
 }

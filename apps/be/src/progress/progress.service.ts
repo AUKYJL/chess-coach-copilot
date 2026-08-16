@@ -1,4 +1,5 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import type { ProgressSummary } from '../analysis/classification/generated-progress.schema.js';
 import { SavedAnalysisInputMapper } from '../analysis/classification/saved-analysis-input.mapper.js';
 import { SavedOutputGenerationService } from '../analysis/classification/saved-output-generation.service.js';
 import { GenerationTraceService } from '../analysis/classification/generation-trace.service.js';
@@ -83,15 +84,15 @@ export class ProgressService {
       status: 'ready',
       requiredAnalysisCount: MINIMUM_PROGRESS_ANALYSES,
       availableAnalysisCount: analyses.length,
-      snapshot: latestSnapshot as unknown as {
-        id: string;
-        studentId: string;
-        analysisCount: number;
-        summary: Record<string, unknown>;
-        promptVersion: string;
-        model: string;
-        createdAt: Date;
-        updatedAt: Date;
+      snapshot: {
+        id: latestSnapshot.id,
+        studentId: latestSnapshot.studentId,
+        analysisCount: latestSnapshot.analysisCount,
+        summary: latestSnapshot.summary as ProgressSummary,
+        promptVersion: latestSnapshot.promptVersion,
+        model: latestSnapshot.model,
+        createdAt: latestSnapshot.createdAt,
+        updatedAt: latestSnapshot.updatedAt,
       },
     };
   }

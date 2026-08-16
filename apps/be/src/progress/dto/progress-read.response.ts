@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type { ProgressSummary } from '../../analysis/classification/generated-progress.schema.js';
 
 export class ProgressSnapshotResponse {
   @ApiProperty({ format: 'uuid' })
@@ -11,7 +12,7 @@ export class ProgressSnapshotResponse {
   analysisCount: number;
 
   @ApiProperty({ type: 'object', additionalProperties: true })
-  summary: Record<string, unknown>;
+  summary: ProgressSummary;
 
   @ApiProperty()
   promptVersion: string;

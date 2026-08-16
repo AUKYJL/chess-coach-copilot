@@ -13,6 +13,7 @@ import {
 } from './generated-homework.schema.js';
 import {
   generatedProgressPayloadSchema,
+  type ProgressSummary,
   validateGeneratedProgressPayload,
 } from './generated-progress.schema.js';
 import {
@@ -40,7 +41,7 @@ export interface GeneratedHomeworkArtifact {
 }
 
 export interface GeneratedProgressArtifact {
-  summary: Prisma.InputJsonObject;
+  summary: ProgressSummary;
   promptVersion: string;
   model: string;
   rawOutput: Prisma.InputJsonValue;

@@ -6,6 +6,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import type { Job } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 import {
   AnalysisJobStatus,
@@ -16,7 +17,10 @@ import {
   ANALYSIS_JOB_ENQUEUER,
   ANALYSIS_QUEUE_NAME,
 } from '../../queues/queue.constants.js';
-import type { AnalysisJobEnqueuer } from '../../queues/queue.service.js';
+import type {
+  AnalysisJobEnqueuer,
+  AnalysisQueueJobData,
+} from '../../queues/queue.service.js';
 import { AnalysisJobResponse } from '../dto/analysis-job.response.js';
 import { AnalysisJobEventsService } from './analysis-job-events.service.js';
 import {
@@ -109,7 +113,7 @@ export class AnalysisJobsService {
         traceId: data.traceId,
         analysisJobId: persistedJob.id,
         queueName: ANALYSIS_QUEUE_NAME,
-        bullJobId: this.getQueueJobId(queueJob),
+        bullJobId: String(queueJob.id),
       },
       'Analysis job enqueued',
     );
@@ -121,7 +125,7 @@ export class AnalysisJobsService {
       message: 'Analysis job enqueued',
       payload: {
         queueName: ANALYSIS_QUEUE_NAME,
-        bullJobId: this.getQueueJobId(queueJob),
+        bullJobId: String(queueJob.id),
       },
     });
 
@@ -272,12 +276,12 @@ export class AnalysisJobsService {
     return this.getJobResponse(updatedJob.id, coachAccountId);
   }
 
-  private async enqueueCreatedJob<T>(
+  private async enqueueCreatedJob(
     jobId: string,
     traceId: string,
-    enqueue: () => Promise<T>,
+    enqueue: () => Promise<Job<AnalysisQueueJobData>>,
   ) {
-    let queueJob: T;
+    let queueJob: Job<AnalysisQueueJobData>;
 
     try {
       queueJob = await enqueue();
@@ -322,26 +326,12 @@ export class AnalysisJobsService {
 
     return {
       job,
-      queueJob: queueJob!,
+      queueJob,
     };
   }
 
   private toFailureMessage(error: unknown) {
     return error instanceof Error ? error.message : 'Queue enqueue failed';
-  }
-
-  private getQueueJobId(queueJob: unknown) {
-    if (typeof queueJob !== 'object' || queueJob === null) {
-      return null;
-    }
-
-    if (!('id' in queueJob)) {
-      return null;
-    }
-
-    const { id } = queueJob;
-
-    return typeof id === 'string' || typeof id === 'number' ? String(id) : null;
   }
 
   private toJobResponse(job: AnalysisJobResponseRow): AnalysisJobResponse {

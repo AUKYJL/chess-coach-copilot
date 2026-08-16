@@ -117,7 +117,10 @@ export class ReportsService {
     }
 
     const nextTitle = dto.title !== undefined ? dto.title.trim() : report.title;
-    const nextContent = normalizeReportContent(dto.content ?? report.content);
+    const nextContent =
+      dto.content !== undefined
+        ? { text: dto.content.text }
+        : normalizeReportContent(report.content);
 
     const updatedReport = await this.prisma.$transaction(async (tx) => {
       const revision = await tx.reportRevision.create({
