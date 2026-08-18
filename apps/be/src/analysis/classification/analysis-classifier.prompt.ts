@@ -1,5 +1,16 @@
 import { WeaknessTag } from '../../generated/prisma/client.js';
 
+const OUTPUT_LANGUAGE_RULES = [
+  'OUTPUT LANGUAGE: Russian.',
+  'Write all human-readable natural-language content in Russian.',
+  'Use standard Russian chess terminology appropriate for chess coaches and students.',
+  'Prefer established Russian chess terms over literal translations or English terminology.',
+  'Do not translate or localize machine-readable values.',
+  'Keep JSON property names, enum values, weakness tags, IDs, identifiers, and schema-defined values exactly as defined in English.',
+  'Keep chess notation unchanged, including SAN, UCI, PGN, FEN, square names, move numbers, and engine numeric evaluations.',
+  'When a JSON field contains explanatory prose, write the field value in Russian while keeping the JSON key unchanged.',
+].join('\n');
+
 const PRODUCT_CONTEXT = [
   'You are the analysis backend for Chess Coach Copilot.',
   'Your output is consumed by application code, not by an end user.',
@@ -19,6 +30,8 @@ const ALLOWED_WEAKNESS_TAGS = ALLOWED_WEAKNESS_TAG_VALUES.join(', ');
 export const JSON_ANALYSIS_PROMPT = [
   PRODUCT_CONTEXT,
   'MODE: json_analysis',
+  '',
+  OUTPUT_LANGUAGE_RULES,
   '',
   STUDENT_ANALYSIS_RULES,
   '',
@@ -40,6 +53,9 @@ export const JSON_ANALYSIS_PROMPT = [
 
 export const COACH_REPORT_PROMPT = [
   PRODUCT_CONTEXT,
+  '',
+  OUTPUT_LANGUAGE_RULES,
+  '',
   'MODE: coach_report',
   '',
   'Transform a structured game analysis into a concise report for a chess coach.',
@@ -50,6 +66,9 @@ export const COACH_REPORT_PROMPT = [
 
 export const PARENT_REPORT_PROMPT = [
   PRODUCT_CONTEXT,
+  '',
+  OUTPUT_LANGUAGE_RULES,
+  '',
   'MODE: parent_report',
   '',
   'Transform an analysis or coach report into a short parent-friendly summary.',
@@ -59,6 +78,9 @@ export const PARENT_REPORT_PROMPT = [
 
 export const HOMEWORK_PROMPT = [
   PRODUCT_CONTEXT,
+  '',
+  OUTPUT_LANGUAGE_RULES,
+  '',
   'MODE: homework',
   '',
   'Transform a saved analysis into an actionable homework draft for the student.',
@@ -68,6 +90,9 @@ export const HOMEWORK_PROMPT = [
 
 export const FULL_PIPELINE_PROMPT = [
   PRODUCT_CONTEXT,
+  '',
+  OUTPUT_LANGUAGE_RULES,
+  '',
   'MODE: full_pipeline',
   '',
   'Reference prompt for a combined flow that produces JSON analysis, a coach report, and a parent report from one game input.',
@@ -76,6 +101,9 @@ export const FULL_PIPELINE_PROMPT = [
 
 export const PROGRESS_ANALYSIS_PROMPT = [
   PRODUCT_CONTEXT,
+  '',
+  OUTPUT_LANGUAGE_RULES,
+  '',
   'MODE: progress_analysis',
   '',
   'Analyze progress across multiple games or prior JSON analyses.',

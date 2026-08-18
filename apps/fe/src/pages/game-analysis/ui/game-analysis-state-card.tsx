@@ -67,7 +67,11 @@ export function GameAnalysisStateCard({
 
         {actionLabel && onAction ? (
           <div className="flex flex-wrap gap-2">
-            <Button disabled={isSubmitting} onClick={onAction} size={BUTTON_SIZE.SM}>
+            <Button
+              disabled={isSubmitting}
+              onClick={onAction}
+              size={BUTTON_SIZE.SM}
+            >
               {actionLabel}
             </Button>
             {secondaryActionLabel && onSecondaryAction ? (

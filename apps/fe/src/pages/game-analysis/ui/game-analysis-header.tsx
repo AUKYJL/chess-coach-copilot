@@ -102,7 +102,10 @@ export function GameAnalysisHeader({
                 >
                   {header.metadata.join(" • ")}
                 </Typography>
-                <ToneBadge label={header.statusLabel} tone={header.statusTone} />
+                <ToneBadge
+                  label={header.statusLabel}
+                  tone={header.statusTone}
+                />
               </div>
             </div>
           </div>
@@ -123,16 +126,10 @@ export function GameAnalysisHeader({
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="space-y-1">
                         <Typography
-                          color={TYPOGRAPHY_COLOR.SECONDARY}
-                          variant={TYPOGRAPHY_VARIANT.CAPTION}
-                        >
-                          {card.audienceLabel}
-                        </Typography>
-                        <Typography
                           className="text-base font-semibold"
                           variant={TYPOGRAPHY_VARIANT.BODY}
                         >
-                          {card.title}
+                          {card.audienceLabel}
                         </Typography>
                       </div>
 

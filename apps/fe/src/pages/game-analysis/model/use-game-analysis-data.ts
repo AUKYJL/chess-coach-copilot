@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { $api } from "@/shared/api";
 
@@ -37,6 +37,11 @@ type UseGameAnalysisDataOptions = {
   gameId: string;
   studentId: string;
 };
+
+type ReportJobsByAudience = Record<
+  GameAnalysisReportAudience,
+  AnalysisJobResponse | null
+>;
 
 type SubmitMomentReviewInput = {
   coachNote: string;
@@ -141,6 +146,108 @@ function isReportJobInProgress(
     : false;
 }
 
+function getJobRecencyValue(dateString: string): number {
+  return Date.parse(dateString);
+}
+
+function isJobNewerOrSame(
+  candidate: AnalysisJobResponse,
+  reference: AnalysisJobResponse,
+): boolean {
+  const createdAtDiff =
+    getJobRecencyValue(candidate.createdAt) -
+    getJobRecencyValue(reference.createdAt);
+
+  if (createdAtDiff !== 0) {
+    return createdAtDiff > 0;
+  }
+
+  return (
+    getJobRecencyValue(candidate.updatedAt) >=
+    getJobRecencyValue(reference.updatedAt)
+  );
+}
+
+function createEmptyReportJobsByAudience(): ReportJobsByAudience {
+  return {
+    COACH: null,
+    PARENT: null,
+  };
+}
+
+function getLatestReportJobsByAudience(jobs: AnalysisJobResponse[]) {
+  return {
+    COACH: jobs.find((job) => job.reportAudience === "COACH") ?? null,
+    PARENT: jobs.find((job) => job.reportAudience === "PARENT") ?? null,
+  };
+}
+
+function getMergedLatestReportJobsByAudience(args: {
+  optimisticJobsByAudience: ReportJobsByAudience;
+  serverJobsByAudience: ReportJobsByAudience;
+}): ReportJobsByAudience {
+  const items = createEmptyReportJobsByAudience();
+
+  for (const audience of REPORT_CARD_ORDER) {
+    const optimisticJob = args.optimisticJobsByAudience[audience];
+    const serverJob = args.serverJobsByAudience[audience];
+
+    if (!optimisticJob) {
+      items[audience] = serverJob;
+      continue;
+    }
+
+    if (!serverJob) {
+      items[audience] = optimisticJob;
+      continue;
+    }
+
+    if (
+      serverJob.id === optimisticJob.id ||
+      isJobNewerOrSame(serverJob, optimisticJob)
+    ) {
+      items[audience] = serverJob;
+      continue;
+    }
+
+    items[audience] = isReportJobInProgress(optimisticJob.status)
+      ? optimisticJob
+      : serverJob;
+  }
+
+  return items;
+}
+
+function isReportSyncedWithCompletedJob(args: {
+  job: AnalysisJobResponse;
+  report: ReportResponse;
+}): boolean {
+  if (args.job.status !== "COMPLETED") {
+    return false;
+  }
+
+  if (args.job.reportId) {
+    return (
+      args.report.id === args.job.reportId &&
+      getJobRecencyValue(args.report.updatedAt) >=
+        getJobRecencyValue(args.job.createdAt)
+    );
+  }
+
+  if (args.job.sourceAnalysisId) {
+    return (
+      args.report.analysisId === args.job.sourceAnalysisId &&
+      getJobRecencyValue(args.report.updatedAt) >=
+        getJobRecencyValue(args.job.createdAt)
+    );
+  }
+
+  return (
+    getJobRecencyValue(args.report.updatedAt) >=
+    getJobRecencyValue(args.job.createdAt)
+  );
+}
+
 function formatReportAudienceLabel(
   audience: GameAnalysisReportAudience,
 ): string {
@@ -190,13 +297,6 @@ function formatUpdatedAt(dateString: string): string {
     minute: "2-digit",
     month: "long",
   }).format(new Date(dateString))}`;
-}
-
-function getLatestReportJobsByAudience(jobs: AnalysisJobResponse[]) {
-  return {
-    COACH: jobs.find((job) => job.reportAudience === "COACH") ?? null,
-    PARENT: jobs.find((job) => job.reportAudience === "PARENT") ?? null,
-  };
 }
 
 function getReportsByAudience(reports: ReportResponse[]) {
@@ -308,12 +408,17 @@ export function useGameAnalysisData({
     useState<ReportActionErrorState>(null);
   const [pendingGenerateAudience, setPendingGenerateAudience] =
     useState<GameAnalysisReportAudience | null>(null);
+  const [optimisticReportJobsByAudience, setOptimisticReportJobsByAudience] =
+    useState<ReportJobsByAudience>(createEmptyReportJobsByAudience);
   const [editorState, setEditorState] = useState<ReportEditorState | null>(
     null,
   );
   const [savingReportId, setSavingReportId] = useState<string | null>(null);
   const [confirmationState, setConfirmationState] =
     useState<ReportConfirmationState>(null);
+  const previousLatestJobsByAudienceRef = useRef<ReportJobsByAudience>(
+    createEmptyReportJobsByAudience(),
+  );
   const hasGameId = gameId.length > 0;
   const gameParams = {
     params: {
@@ -387,8 +492,17 @@ export function useGameAnalysisData({
     {
       enabled: hasGameId,
       refetchInterval: (query) =>
-        query.state.data?.items.some((job) => isReportJobInProgress(job.status))
-          ? 2000
+        Object.values(
+          getMergedLatestReportJobsByAudience({
+            optimisticJobsByAudience: optimisticReportJobsByAudience,
+            serverJobsByAudience: getLatestReportJobsByAudience(
+              query.state.data?.items ?? [],
+            ),
+          }),
+        ).some(
+          (job) => job !== null && isReportJobInProgress(job.status),
+        )
+          ? 5000
           : false,
     },
   );
@@ -418,9 +532,17 @@ export function useGameAnalysisData({
     () => getReportsByAudience(reports),
     [reports],
   );
-  const latestJobsByAudience = useMemo(
+  const serverLatestJobsByAudience = useMemo(
     () => getLatestReportJobsByAudience(reportJobs),
     [reportJobs],
+  );
+  const latestJobsByAudience = useMemo(
+    () =>
+      getMergedLatestReportJobsByAudience({
+        optimisticJobsByAudience: optimisticReportJobsByAudience,
+        serverJobsByAudience: serverLatestJobsByAudience,
+      }),
+    [optimisticReportJobsByAudience, serverLatestJobsByAudience],
   );
   const reportsById = useMemo(() => {
     const items: Record<string, ReportResponse> = {};
@@ -435,10 +557,75 @@ export function useGameAnalysisData({
   useEffect(() => {
     setPendingGenerateAudience(null);
     setReportActionError(null);
+    setOptimisticReportJobsByAudience(createEmptyReportJobsByAudience());
     setEditorState(null);
     setSavingReportId(null);
     setConfirmationState(null);
   }, [latestAnalysisId]);
+
+  useEffect(() => {
+    setOptimisticReportJobsByAudience((currentJobs) => {
+      let hasChanges = false;
+      const nextJobs = { ...currentJobs };
+
+      for (const audience of REPORT_CARD_ORDER) {
+        const optimisticJob = currentJobs[audience];
+
+        if (!optimisticJob) {
+          continue;
+        }
+
+        const serverJob = serverLatestJobsByAudience[audience];
+
+        if (
+          (serverJob &&
+            (serverJob.id === optimisticJob.id ||
+              isJobNewerOrSame(serverJob, optimisticJob)))
+        ) {
+          nextJobs[audience] = null;
+          hasChanges = true;
+        }
+      }
+
+      return hasChanges ? nextJobs : currentJobs;
+    });
+  }, [serverLatestJobsByAudience]);
+
+  useEffect(() => {
+    const previousLatestJobsByAudience = previousLatestJobsByAudienceRef.current;
+    let shouldRefetchReports = false;
+
+    for (const audience of REPORT_CARD_ORDER) {
+      const previousJob = previousLatestJobsByAudience[audience];
+      const currentJob = latestJobsByAudience[audience];
+      const currentReport = reportsByAudience[audience];
+
+      if (
+        currentJob?.status === "COMPLETED" &&
+        previousJob?.status !== "COMPLETED" &&
+        (!currentReport ||
+          !isReportSyncedWithCompletedJob({
+            job: currentJob,
+            report: currentReport,
+          }))
+      ) {
+        shouldRefetchReports = true;
+        break;
+      }
+    }
+
+    previousLatestJobsByAudienceRef.current = latestJobsByAudience;
+
+    if (!shouldRefetchReports) {
+      return;
+    }
+
+    const refetchPromise = reportsQuery.refetch();
+
+    refetchPromise.catch(() => {
+      // Query state surfaces the error; this avoids an unhandled rejection.
+    });
+  }, [latestJobsByAudience, reportsByAudience, reportsQuery]);
 
   const currentEditorReport =
     editorState === null ? null : (reportsById[editorState.reportId] ?? null);
@@ -498,7 +685,7 @@ export function useGameAnalysisData({
     setPendingGenerateAudience(audience);
 
     try {
-      await generateReportMutation.mutateAsync({
+      const nextJob = await generateReportMutation.mutateAsync({
         params: {
           path: {
             analysisId: latestAnalysisId,
@@ -509,7 +696,10 @@ export function useGameAnalysisData({
         },
       });
 
-      await Promise.all([reportJobsQuery.refetch(), reportsQuery.refetch()]);
+      setOptimisticReportJobsByAudience((currentJobs) => ({
+        ...currentJobs,
+        [audience]: nextJob,
+      }));
       setConfirmationState(null);
     } catch (error) {
       setReportActionError({
@@ -722,15 +912,23 @@ export function useGameAnalysisData({
       const latestFailedJob = latestJob?.status === "FAILED" ? latestJob : null;
       const cardErrorMessage =
         reportActionError?.audience === audience ? reportActionError.message : null;
+      const isSubmittingGenerateRequest =
+        pendingGenerateAudience === audience && generateReportMutation.isPending;
       const isGenerating =
-        pendingGenerateAudience === audience ||
-        isReportJobInProgress(latestJob?.status);
+        isSubmittingGenerateRequest || isReportJobInProgress(latestJob?.status);
+      const isCompletedWaitingForReport =
+        latestJob?.status === "COMPLETED" &&
+        (!report ||
+          !isReportSyncedWithCompletedJob({
+            job: latestJob,
+            report,
+          }));
       const isSavingCurrentAudience =
         updateReportMutation.isPending && currentEditorAudience === audience;
       const isActionDisabled = latestAnalysisId === null || isSavingCurrentAudience;
 
       if (!report) {
-        if (isGenerating) {
+        if (isGenerating || isCompletedWaitingForReport) {
           return {
             audience,
             audienceLabel,
@@ -740,7 +938,7 @@ export function useGameAnalysisData({
                     latestJob.status,
                     latestJob.progressPercent,
                   )
-                : "Создаем отчет. Он появится здесь сразу после завершения.",
+                : "Отчет готов. Подтягиваем его в карточку.",
             inlineError: null,
             isManual: false,
             primaryAction: createReportCardAction({
@@ -768,7 +966,7 @@ export function useGameAnalysisData({
         });
       }
 
-      if (isGenerating) {
+      if (isGenerating || isCompletedWaitingForReport) {
         return {
           audience,
           audienceLabel,
@@ -778,7 +976,7 @@ export function useGameAnalysisData({
                   latestJob.status,
                   latestJob.progressPercent,
                 )
-              : "Создаем новую версию отчета. Текущая версия остается доступной.",
+              : "Новая версия готова. Обновляем карточку, текущий отчет пока остается доступным.",
           inlineError: null,
           isManual: report.source === "MANUAL",
           primaryAction: createReportCardAction({
