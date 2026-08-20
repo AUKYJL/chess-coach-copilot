@@ -17,6 +17,7 @@ import { PgnPreparationService } from './preparation/pgn-preparation.service.js'
 import { EngineEvidenceService } from './preparation/engine-evidence.service.js';
 import { StockfishGameAnalyzerService } from './engine/stockfish-game-analyzer.service.js';
 import { StockfishUciAdapter } from './engine/stockfish-uci.adapter.js';
+import { EngineAnalysisService } from './engine/engine-analysis.service.js';
 import { AnalysisQueriesService } from './results/analysis-queries.service.js';
 import { AnalysisReviewsService } from './results/analysis-reviews.service.js';
 import { AnalysisResultsRepository } from './results/analysis-results.repository.js';
@@ -35,6 +36,7 @@ import { AnalysisController } from './results/analysis.controller.js';
     EngineEvidenceService,
     StockfishUciAdapter,
     StockfishGameAnalyzerService,
+    EngineAnalysisService,
     AnnotationExtractorService,
     PgnPreparationService,
     AnalysisClassifierService,
@@ -49,7 +51,9 @@ import { AnalysisController } from './results/analysis.controller.js';
     AnalysisJobsRepository,
     AnalysisJobEventsService,
     AnalysisJobsService,
+    PgnParserService,
     PgnPreparationService,
+    StockfishGameAnalyzerService,
     AnalysisClassifierService,
     AnalysisQueriesService,
     AnalysisReviewsService,
@@ -57,6 +61,7 @@ import { AnalysisController } from './results/analysis.controller.js';
     GenerationTraceService,
     SavedAnalysisInputMapper,
     SavedOutputGenerationService,
+    EngineAnalysisService,
   ],
 })
 export class AnalysisModule {}

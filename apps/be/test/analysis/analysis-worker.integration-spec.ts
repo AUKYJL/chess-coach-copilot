@@ -1,8 +1,12 @@
 import { Global, Module } from '@nestjs/common';
+import { getQueueToken } from '@nestjs/bullmq';
 import { ConfigModule } from '@nestjs/config';
 import { jest } from '@jest/globals';
 import { readFileSync } from 'fs';
-import type { AnalysisQueueJobData } from '../../src/queues/queue.service.js';
+import type {
+  AnalysisQueueJobData,
+  EngineAnalysisQueueJobData,
+} from '../../src/queues/queue.service.js';
 import { Test } from '@nestjs/testing';
 import { AnalysisModule } from '../../src/analysis/analysis.module.js';
 import { AnalysisProcessingModule } from '../../src/analysis/jobs/analysis-processing.module.js';
@@ -16,6 +20,7 @@ import {
   loggerConfig,
   openrouterConfig,
   redisConfig,
+  stockfishConfig,
   validateEnv,
 } from '../../src/config/index.js';
 import { GamesModule } from '../../src/games/games.module.js';
@@ -26,7 +31,11 @@ import {
 import { LlmService } from '../../src/llm/llm.service.js';
 import { PrismaModule } from '../../src/prisma/prisma.module.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
-import { ANALYSIS_JOB_ENQUEUER } from '../../src/queues/queue.constants.js';
+import {
+  ANALYSIS_JOB_ENQUEUER,
+  ENGINE_ANALYSIS_JOB_ENQUEUER,
+  ENGINE_ANALYSIS_QUEUE_NAME,
+} from '../../src/queues/queue.constants.js';
 import { InMemoryPrismaService } from '../helpers/in-memory-prisma.js';
 import {
   AnalysisJobStatus,
@@ -52,6 +61,18 @@ class FakeAnalysisJobEnqueuer {
       data: { analysisJobId, traceId },
     });
   }
+
+  enqueueEngineAnalysisJob(
+    analysisJobId: string,
+    _gameId: string,
+    traceId: string,
+  ): Promise<{ id: string; name: string; data: EngineAnalysisQueueJobData }> {
+    return Promise.resolve({
+      id: analysisJobId,
+      name: 'process-engine-analysis',
+      data: { analysisJobId, traceId },
+    });
+  }
 }
 
 @Global()
@@ -62,8 +83,20 @@ class FakeAnalysisJobEnqueuer {
       provide: ANALYSIS_JOB_ENQUEUER,
       useExisting: FakeAnalysisJobEnqueuer,
     },
+    {
+      provide: ENGINE_ANALYSIS_JOB_ENQUEUER,
+      useExisting: FakeAnalysisJobEnqueuer,
+    },
+    {
+      provide: getQueueToken(ENGINE_ANALYSIS_QUEUE_NAME),
+      useValue: { getJob: () => Promise.resolve(undefined) },
+    },
   ],
-  exports: [ANALYSIS_JOB_ENQUEUER],
+  exports: [
+    ANALYSIS_JOB_ENQUEUER,
+    ENGINE_ANALYSIS_JOB_ENQUEUER,
+    getQueueToken(ENGINE_ANALYSIS_QUEUE_NAME),
+  ],
 })
 class TestingQueueModule {}
 
@@ -88,6 +121,7 @@ describe('AnalysisProcessor (integration)', () => {
             appConfig,
             databaseConfig,
             redisConfig,
+            stockfishConfig,
             jwtConfig,
             loggerConfig,
             openrouterConfig,

@@ -1,4 +1,5 @@
 import { Global, INestApplication, Module } from '@nestjs/common';
+import { getQueueToken } from '@nestjs/bullmq';
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { Logger } from 'nestjs-pino';
@@ -13,6 +14,7 @@ import {
   loggerConfig,
   openrouterConfig,
   redisConfig,
+  stockfishConfig,
   validateEnv,
 } from '../../src/config/index.js';
 import { ExternalAccountsModule } from '../../src/external-accounts/external-accounts.module.js';
@@ -23,7 +25,11 @@ import { LlmService } from '../../src/llm/llm.service.js';
 import { PrismaModule } from '../../src/prisma/prisma.module.js';
 import { ProgressModule } from '../../src/progress/progress.module.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
-import { ANALYSIS_JOB_ENQUEUER } from '../../src/queues/queue.constants.js';
+import {
+  ANALYSIS_JOB_ENQUEUER,
+  ENGINE_ANALYSIS_JOB_ENQUEUER,
+  ENGINE_ANALYSIS_QUEUE_NAME,
+} from '../../src/queues/queue.constants.js';
 import type { AnalysisQueueJobData } from '../../src/queues/queue.service.js';
 import { ReportsModule } from '../../src/reports/reports.module.js';
 import { setupSwagger } from '../../src/shared/swagger/swagger.config.js';
@@ -54,6 +60,14 @@ class FakeAnalysisJobEnqueuer {
   }
 
   enqueueGenerationJob(analysisJobId: string, traceId: string) {
+    return this.enqueue({ analysisJobId, traceId });
+  }
+
+  enqueueEngineAnalysisJob(
+    analysisJobId: string,
+    _gameId: string,
+    traceId: string,
+  ) {
     return this.enqueue({ analysisJobId, traceId });
   }
 
@@ -208,8 +222,21 @@ class FakeLlmService {
       provide: ANALYSIS_JOB_ENQUEUER,
       useExisting: FakeAnalysisJobEnqueuer,
     },
+    {
+      provide: ENGINE_ANALYSIS_JOB_ENQUEUER,
+      useExisting: FakeAnalysisJobEnqueuer,
+    },
+    {
+      provide: getQueueToken(ENGINE_ANALYSIS_QUEUE_NAME),
+      useValue: { getJob: () => Promise.resolve(undefined) },
+    },
   ],
-  exports: [FakeAnalysisJobEnqueuer, ANALYSIS_JOB_ENQUEUER],
+  exports: [
+    FakeAnalysisJobEnqueuer,
+    ANALYSIS_JOB_ENQUEUER,
+    ENGINE_ANALYSIS_JOB_ENQUEUER,
+    getQueueToken(ENGINE_ANALYSIS_QUEUE_NAME),
+  ],
 })
 class TestingQueueModule {}
 
@@ -223,6 +250,7 @@ class TestingQueueModule {}
         appConfig,
         databaseConfig,
         redisConfig,
+        stockfishConfig,
         jwtConfig,
         loggerConfig,
         openrouterConfig,

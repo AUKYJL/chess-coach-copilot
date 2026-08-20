@@ -23,6 +23,7 @@ import type {
 } from '../../queues/queue.service.js';
 import { AnalysisJobResponse } from '../dto/analysis-job.response.js';
 import { AnalysisJobEventsService } from './analysis-job-events.service.js';
+import { EngineAnalysisService } from '../engine/engine-analysis.service.js';
 import {
   mapAnalysisJobResponse,
   type AnalysisJobResponseRow,
@@ -35,6 +36,7 @@ export class AnalysisJobsService {
     private readonly logger: PinoLogger,
     private readonly analysisJobsRepository: AnalysisJobsRepository,
     private readonly analysisJobEventsService: AnalysisJobEventsService,
+    private readonly engineAnalysisService: EngineAnalysisService,
     @Inject(ANALYSIS_JOB_ENQUEUER)
     private readonly analysisJobEnqueuer: AnalysisJobEnqueuer,
   ) {
@@ -220,6 +222,21 @@ export class AnalysisJobsService {
       throw new UnprocessableEntityException(
         'Only failed analysis jobs can be retried',
       );
+    }
+
+    if (job.jobType === AnalysisJobType.ENGINE_ANALYSIS) {
+      const retryJob = await this.engineAnalysisService.queueEngineAnalysis(
+        job.gameId,
+        randomUUID(),
+      );
+
+      if (!retryJob) {
+        throw new UnprocessableEntityException(
+          'Engine analysis is already complete',
+        );
+      }
+
+      return this.getJobResponse(retryJob.id, coachAccountId);
     }
 
     const result = await this.analysisJobsRepository.retryFailedJob(

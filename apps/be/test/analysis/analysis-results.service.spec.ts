@@ -12,6 +12,7 @@ import {
   loggerConfig,
   openrouterConfig,
   redisConfig,
+  stockfishConfig,
   validateEnv,
 } from '../../src/config/index.js';
 import {
@@ -23,7 +24,10 @@ import {
 import { LlmService } from '../../src/llm/llm.service.js';
 import { PrismaModule } from '../../src/prisma/prisma.module.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
-import { ANALYSIS_JOB_ENQUEUER } from '../../src/queues/queue.constants.js';
+import {
+  ANALYSIS_JOB_ENQUEUER,
+  ENGINE_ANALYSIS_JOB_ENQUEUER,
+} from '../../src/queues/queue.constants.js';
 import { InMemoryPrismaService } from '../helpers/in-memory-prisma.js';
 
 class FakeAnalysisJobEnqueuer {
@@ -31,6 +35,18 @@ class FakeAnalysisJobEnqueuer {
     return Promise.resolve({
       id: analysisJobId,
       name: 'process-analysis',
+      data: { analysisJobId, traceId },
+    });
+  }
+
+  enqueueEngineAnalysisJob(
+    analysisJobId: string,
+    _gameId: string,
+    traceId: string,
+  ) {
+    return Promise.resolve({
+      id: analysisJobId,
+      name: 'process-engine-analysis',
       data: { analysisJobId, traceId },
     });
   }
@@ -44,8 +60,12 @@ class FakeAnalysisJobEnqueuer {
       provide: ANALYSIS_JOB_ENQUEUER,
       useExisting: FakeAnalysisJobEnqueuer,
     },
+    {
+      provide: ENGINE_ANALYSIS_JOB_ENQUEUER,
+      useExisting: FakeAnalysisJobEnqueuer,
+    },
   ],
-  exports: [ANALYSIS_JOB_ENQUEUER],
+  exports: [ANALYSIS_JOB_ENQUEUER, ENGINE_ANALYSIS_JOB_ENQUEUER],
 })
 class TestingQueueModule {}
 
@@ -70,6 +90,7 @@ describe('AnalysisResultsService (integration)', () => {
             appConfig,
             databaseConfig,
             redisConfig,
+            stockfishConfig,
             jwtConfig,
             loggerConfig,
             openrouterConfig,
