@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { StudentColor } from '../../generated/prisma/client.js';
 import { AnnotationExtractorService } from '../classification/annotation-extractor.service.js';
+import { EngineEvidenceCandidateDetectorService } from '../classification/engine-evidence-candidate-detector.service.js';
 import { EngineEvidenceService } from './engine-evidence.service.js';
 import { PgnParserService } from './pgn-parser.service.js';
 import { PgnPreparationService } from './pgn-preparation.service.js';
@@ -12,6 +13,7 @@ describe('PgnPreparationService', () => {
     parser,
     extractor,
     new EngineEvidenceService(),
+    new EngineEvidenceCandidateDetectorService(),
   );
 
   it('returns parsed PGN and extracted context for the fixture', () => {

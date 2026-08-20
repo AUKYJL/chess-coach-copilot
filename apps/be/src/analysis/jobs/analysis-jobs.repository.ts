@@ -63,6 +63,19 @@ export class AnalysisJobsRepository {
     });
   }
 
+  findLatestWorkflowJobForGame(gameId: string) {
+    return this.prisma.analysisJob.findFirst({
+      where: {
+        gameId,
+        jobType: {
+          in: [AnalysisJobType.ENGINE_ANALYSIS, AnalysisJobType.ANALYSIS],
+        },
+      },
+      select: ANALYSIS_JOB_RESPONSE_SELECT,
+      orderBy: ANALYSIS_JOB_LIST_ORDER_BY,
+    });
+  }
+
   findOwnedJobs(args: {
     coachAccountId: string;
     studentId?: string;

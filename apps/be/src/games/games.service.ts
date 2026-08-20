@@ -51,8 +51,14 @@ export class GamesService {
         studentId: data.studentId,
         normalizedPgnHash: data.normalizedPgnHash,
       },
-      select: { id: true },
     });
+
+    if (duplicate) {
+      return {
+        game: duplicate,
+        isDuplicate: true,
+      };
+    }
 
     const game = await this.prisma.game.create({
       data: {
@@ -64,7 +70,7 @@ export class GamesService {
 
     return {
       game,
-      isDuplicate: Boolean(duplicate),
+      isDuplicate: false,
     };
   }
 

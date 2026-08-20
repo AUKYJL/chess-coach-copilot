@@ -1,6 +1,8 @@
 import {
   AnalysisJobStatus,
   AnalysisJobType,
+  EngineEvidenceSource,
+  EngineEvidenceStatus,
   Prisma,
   type GameResult,
   type StudentColor,
@@ -30,6 +32,8 @@ export const GAME_CARD_SELECT = {
   rawResult: true,
   derivedResult: true,
   plyCount: true,
+  engineEvidenceStatus: true,
+  engineEvidenceSource: true,
   importedAt: true,
   analysisJobs: {
     where: {
@@ -62,6 +66,8 @@ type GameCardBase = {
   rawResult: string | null;
   derivedResult: GameResult;
   plyCount: number | null;
+  engineEvidenceStatus: EngineEvidenceStatus | null;
+  engineEvidenceSource: EngineEvidenceSource | null;
   importedAt: Date;
   analysisJobs: Array<{
     id: string;
@@ -92,6 +98,8 @@ export function mapGameWithLatestJob<TGame extends GameCardBase>(game: TGame) {
     rawResult: game.rawResult,
     derivedResult: game.derivedResult,
     plyCount: game.plyCount,
+    engineEvidenceStatus: game.engineEvidenceStatus,
+    engineEvidenceSource: game.engineEvidenceSource,
     importedAt: game.importedAt,
     latestAnalysisJobStatus: latestJob?.status ?? null,
     latestAnalysisJobId: latestJob?.id ?? null,

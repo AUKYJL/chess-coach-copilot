@@ -5,6 +5,7 @@ import { PrismaModule } from '../prisma/prisma.module.js';
 import { AppLoggingModule } from '../shared/logging/logging.module.js';
 import { AnalysisClassifierService } from './classification/analysis-classifier.service.js';
 import { AnnotationExtractorService } from './classification/annotation-extractor.service.js';
+import { EngineEvidenceCandidateDetectorService } from './classification/engine-evidence-candidate-detector.service.js';
 import { GenerationTraceService } from './classification/generation-trace.service.js';
 import { SavedAnalysisInputMapper } from './classification/saved-analysis-input.mapper.js';
 import { SavedOutputGenerationService } from './classification/saved-output-generation.service.js';
@@ -38,6 +39,7 @@ import { AnalysisController } from './results/analysis.controller.js';
     StockfishGameAnalyzerService,
     EngineAnalysisService,
     AnnotationExtractorService,
+    EngineEvidenceCandidateDetectorService,
     PgnPreparationService,
     AnalysisClassifierService,
     AnalysisQueriesService,

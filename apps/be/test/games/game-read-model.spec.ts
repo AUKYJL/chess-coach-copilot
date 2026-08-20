@@ -19,6 +19,8 @@ describe('mapGameWithLatestJob', () => {
       rawResult: '1-0',
       derivedResult: 'WIN',
       plyCount: 42,
+      engineEvidenceStatus: null,
+      engineEvidenceSource: null,
       importedAt: new Date('2026-08-08T10:00:00.000Z'),
       analysisJobs: [
         {

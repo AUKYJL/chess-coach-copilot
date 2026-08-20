@@ -56,6 +56,8 @@ class FakeDatabase {
   readonly job = {
     id: 'engine-job',
     traceId: 'trace-id',
+    coachAccountId: 'coach-id',
+    studentId: 'student-id',
     gameId: 'game-id',
     jobType: AnalysisJobType.ENGINE_ANALYSIS,
     status: AnalysisJobStatus.PENDING,
@@ -78,6 +80,8 @@ class FakeDatabase {
       this.jobUpdates.push(args.data);
       return Promise.resolve({ count: 1 });
     },
+    findFirst: () => Promise.resolve(null),
+    create: () => Promise.resolve({ id: 'analysis-job' }),
   };
 
   game = {
@@ -113,6 +117,9 @@ function createProcessor(
           source: 'STOCKFISH',
           positions: [],
         }),
+    } as never,
+    {
+      enqueuePersistedAnalysisJob: () => Promise.resolve({}),
     } as never,
   );
 }

@@ -162,11 +162,19 @@ export class AnalysisProcessor extends WorkerHost {
         },
       });
 
-      const { parsedPgn, extractedContext } =
-        this.pgnPreparationService.parseForAnalysis(
-          rawPgnOverride ?? analysisJob.game.rawPgn,
-          analysisJob.game.studentColor,
-        );
+      const usesPersistedEngineEvidence =
+        analysisJob.game.engineEvidence !== null;
+      const preparedPgn = usesPersistedEngineEvidence
+        ? this.pgnPreparationService.parsePersistedForAnalysis(
+            rawPgnOverride ?? analysisJob.game.rawPgn,
+            analysisJob.game.studentColor,
+            analysisJob.game.engineEvidence,
+          )
+        : this.pgnPreparationService.parseForAnalysis(
+            rawPgnOverride ?? analysisJob.game.rawPgn,
+            analysisJob.game.studentColor,
+          );
+      const { parsedPgn, extractedContext } = preparedPgn;
       stage = 'analysis_status_extracting_annotations';
 
       await this.analysisJobsRepository.transitionStatus(
@@ -226,10 +234,16 @@ export class AnalysisProcessor extends WorkerHost {
         },
       });
 
-      const classifiedResult = await this.analysisClassifierService.classify(
-        parsedPgn,
-        extractedContext,
-      );
+      const classifiedResult =
+        usesPersistedEngineEvidence && extractedContext.moments.length === 0
+          ? this.analysisClassifierService.createNoCriticalMomentsResult(
+              parsedPgn,
+              extractedContext,
+            )
+          : await this.analysisClassifierService.classify(
+              parsedPgn,
+              extractedContext,
+            );
 
       const persistedAnalysis =
         await this.analysisResultsService.persistCompletedAnalysis({

@@ -90,6 +90,7 @@ export class StockfishGameAnalyzerService {
         toEnginePositionEvidence(
           position,
           deepByFen.get(position.fen) ?? scanByFen.get(position.fen)!,
+          deepByFen.has(position.fen) ? 'DEEP' : 'SCAN',
         ),
       ),
       engine: compactEngineIdentity(this.stockfishUciAdapter.getIdentity()),
@@ -205,6 +206,7 @@ function compareCandidates(left: Candidate, right: Candidate): number {
 function toEnginePositionEvidence(
   position: PositionReference,
   analysis: StockfishPositionAnalysis,
+  analysisLevel: 'SCAN' | 'DEEP',
 ): EnginePositionEvidence {
   return {
     ply: position.ply,
@@ -216,6 +218,7 @@ function toEnginePositionEvidence(
       : {}),
     ...(analysis.depth !== null ? { depth: analysis.depth } : {}),
     ...(analysis.nodes !== null ? { nodes: analysis.nodes } : {}),
+    analysisLevel,
   };
 }
 

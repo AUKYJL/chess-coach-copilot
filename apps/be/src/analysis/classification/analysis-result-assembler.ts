@@ -87,6 +87,24 @@ export function buildReducedConfidenceAnalysisResult(
   });
 }
 
+export function buildNoCriticalMomentsAnalysisResult(
+  parsedPgn: ParsedPgn,
+): AnalysisResultPayload {
+  return validateAnalysisResultPayload({
+    confidenceLevel: ConfidenceLevel.MEDIUM,
+    overallDiagnosis:
+      'No critical student moves were detected from the available engine evidence.',
+    openingName: parsedPgn.headers.opening,
+    result: parsedPgn.result,
+    mainWeaknessTag: null,
+    secondaryWeaknessTags: [],
+    recommendedLessonTitle: null,
+    recommendedLessonWhy: null,
+    recommendedFocusPoints: [],
+    mistakes: [],
+  });
+}
+
 export function assembleAnalysisResultPayload(data: {
   parsedPgn: ParsedPgn;
   extractedContext: ExtractedAnnotationContext;

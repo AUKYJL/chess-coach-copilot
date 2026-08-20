@@ -128,7 +128,7 @@ describe('ImportsController (e2e)', () => {
       rawPgn: `[Event "Training"]
 [Result "1-0"]
 
-1. e4 { [%eval 0.2] } e5 { [%eval 0.1] } 2. Nf3 { [%eval 0.5] } Nc6 1-0`,
+1. e4 { [%eval 0.2] } e5 2. Nf3 { [%eval 0.5] } Nc6 1-0`,
     };
 
     await request(server)
@@ -137,11 +137,14 @@ describe('ImportsController (e2e)', () => {
       .send({ ...payload, rawPgn: 'broken pgn' })
       .expect(400);
 
-    await request(server)
+    const firstImport = await request(server)
       .post(`/students/${studentId}/imports/pgn`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send(payload)
       .expect(201);
+
+    expect(firstImport.body.jobType).toBe(AnalysisJobType.ENGINE_ANALYSIS);
+    const queueCountAfterFirstImport = fakeQueue.jobs.length;
 
     const duplicateResponse = await request(server)
       .post(`/students/${studentId}/imports/pgn`)
@@ -152,11 +155,13 @@ describe('ImportsController (e2e)', () => {
 [Result "1-0"]
 
 
-1.   e4 {   [%eval 0.2]   } e5\t{ [%eval 0.1] }\t2. Nf3 { [%eval 0.5] } Nc6 1-0`,
+1.   e4 {   [%eval 0.2]   } e5\t2. Nf3 { [%eval 0.5] } Nc6 1-0`,
       })
       .expect(201);
 
     expect(duplicateResponse.body.isDuplicate).toBe(true);
+    expect(duplicateResponse.body.id).toBe(firstImport.body.id);
+    expect(fakeQueue.jobs).toHaveLength(queueCountAfterFirstImport);
 
     await request(server)
       .post(`/students/${studentId}/archive`)

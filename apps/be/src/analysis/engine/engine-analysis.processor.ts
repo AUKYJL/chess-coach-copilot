@@ -11,6 +11,7 @@ import {
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import {
+  ANALYSIS_QUEUE_NAME,
   ENGINE_ANALYSIS_JOB_NAME,
   ENGINE_ANALYSIS_QUEUE_NAME,
 } from '../../queues/queue.constants.js';
@@ -18,6 +19,7 @@ import type { EngineAnalysisQueueJobData } from '../../queues/queue.service.js';
 import { PgnParserService } from '../preparation/pgn-parser.service.js';
 import { StockfishError } from './stockfish.error.js';
 import { StockfishGameAnalyzerService } from './stockfish-game-analyzer.service.js';
+import { AnalysisJobsService } from '../jobs/analysis-jobs.service.js';
 
 @Injectable()
 @Processor(ENGINE_ANALYSIS_QUEUE_NAME, { concurrency: 1 })
@@ -27,6 +29,7 @@ export class EngineAnalysisProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly pgnParserService: PgnParserService,
     private readonly stockfishGameAnalyzerService: StockfishGameAnalyzerService,
+    private readonly analysisJobsService: AnalysisJobsService,
   ) {
     super();
     this.logger.setContext(EngineAnalysisProcessor.name);
@@ -110,7 +113,7 @@ export class EngineAnalysisProcessor extends WorkerHost {
         persistedJob.game.studentColor,
       );
 
-      await this.prisma.$transaction(async (tx) => {
+      const downstream = await this.prisma.$transaction(async (tx) => {
         await tx.game.update({
           where: { id: persistedJob.gameId },
           data: {
@@ -129,7 +132,52 @@ export class EngineAnalysisProcessor extends WorkerHost {
             failureMessage: null,
           },
         });
+
+        const existingAnalysisJob = await tx.analysisJob.findFirst({
+          where: {
+            gameId: persistedJob.gameId,
+            jobType: AnalysisJobType.ANALYSIS,
+          },
+          select: { id: true },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (existingAnalysisJob) {
+          return { id: existingAnalysisJob.id, created: false };
+        }
+
+        const analysisJob = await tx.analysisJob.create({
+          data: {
+            traceId: persistedJob.traceId,
+            coachAccountId: persistedJob.coachAccountId,
+            studentId: persistedJob.studentId,
+            gameId: persistedJob.gameId,
+            jobType: AnalysisJobType.ANALYSIS,
+            queueName: ANALYSIS_QUEUE_NAME,
+          },
+          select: { id: true },
+        });
+
+        return { id: analysisJob.id, created: true };
       });
+
+      if (downstream.created) {
+        try {
+          await this.analysisJobsService.enqueuePersistedAnalysisJob(
+            downstream.id,
+            persistedJob.traceId,
+          );
+        } catch (error) {
+          this.logger.error(
+            {
+              ...context,
+              downstreamAnalysisJobId: downstream.id,
+              err: error instanceof Error ? error : undefined,
+            },
+            'Engine analysis completed but downstream analysis enqueue failed',
+          );
+        }
+      }
       this.logger.info(
         { ...context, durationMs: Date.now() - startedAt },
         'Engine analysis completed',

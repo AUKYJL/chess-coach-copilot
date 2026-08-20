@@ -84,8 +84,15 @@ export class ImportsService {
       );
     }
 
-    const { parsedPgn, extractedContext, engineEvidence } =
-      this.pgnPreparationService.parseForAnalysis(dto.rawPgn, dto.studentColor);
+    const {
+      parsedPgn,
+      extractedContext,
+      engineEvidenceInspection,
+      engineEvidence,
+    } = this.pgnPreparationService.parseForAnalysis(
+      dto.rawPgn,
+      dto.studentColor,
+    );
     const gameSummary = this.pgnPreparationService.buildGameSummary(parsedPgn);
     this.logger.info(
       {
@@ -158,13 +165,29 @@ export class ImportsService {
       },
     });
 
-    const analysisJob =
-      await this.analysisJobsService.createAndEnqueueAnalysisJob({
-        traceId,
-        coachAccountId,
-        studentId,
-        gameId: game.id,
-      });
+    if (isDuplicate) {
+      return {
+        ...(await this.analysisJobsService.getLatestWorkflowJobForGame(
+          game.id,
+        )),
+        isDuplicate: true,
+      };
+    }
+
+    const analysisJob = engineEvidenceInspection.sufficient
+      ? await this.analysisJobsService.createAndEnqueueAnalysisJob({
+          traceId,
+          coachAccountId,
+          studentId,
+          gameId: game.id,
+        })
+      : await this.analysisJobsService.queueEngineAnalysis(game.id, traceId);
+
+    if (!analysisJob) {
+      throw new UnprocessableEntityException(
+        'Engine analysis is already complete',
+      );
+    }
 
     return {
       id: analysisJob.id,

@@ -15,6 +15,7 @@ import {
   AnalysisInterpretationAssemblyError,
   assembleAnalysisResultPayload,
   buildReducedConfidenceAnalysisResult,
+  buildNoCriticalMomentsAnalysisResult,
 } from './analysis-result-assembler.js';
 
 export interface ClassifiedAnalysisResult {
@@ -38,25 +39,7 @@ export class AnalysisClassifierService {
     parsedPgn: ParsedPgn,
     extractedContext: ExtractedAnnotationContext,
   ): Promise<ClassifiedAnalysisResult> {
-    const inputPayload: Prisma.InputJsonObject = {
-      headers: parsedPgn.headers,
-      rawResult: parsedPgn.rawResult,
-      result: parsedPgn.result,
-      studentColor: parsedPgn.studentColor,
-      annotationCoverage: extractedContext.annotationCoverage,
-      diagnostics: parsedPgn.diagnostics.map((diagnostic) => ({
-        type: diagnostic.type,
-        key: diagnostic.key,
-        value: diagnostic.value,
-        message: diagnostic.message,
-        location: diagnostic.location,
-      })),
-      moments: extractedContext.moments.map((moment) => ({
-        ...moment,
-        sourceEvidence: moment.sourceEvidence,
-      })),
-      surroundingMoves: this.buildSurroundingMoves(parsedPgn, extractedContext),
-    };
+    const inputPayload = this.buildInputPayload(parsedPgn, extractedContext);
 
     if (
       !extractedContext.hasEngineAnnotations ||
@@ -137,6 +120,47 @@ export class AnalysisClassifierService {
       model: llmResponse.model,
       rawOutput: llmResponse.payload,
       inputPayload,
+    };
+  }
+
+  createNoCriticalMomentsResult(
+    parsedPgn: ParsedPgn,
+    extractedContext: ExtractedAnnotationContext,
+  ): ClassifiedAnalysisResult {
+    return {
+      payload: buildNoCriticalMomentsAnalysisResult(parsedPgn),
+      promptVersion: 'rule-based-no-critical-moments-v1',
+      model: 'rule-based-no-critical-moments',
+      rawOutput: {
+        mode: 'rule_based_no_critical_moments',
+        reason: 'no_product_critical_moments',
+      },
+      inputPayload: this.buildInputPayload(parsedPgn, extractedContext),
+    };
+  }
+
+  private buildInputPayload(
+    parsedPgn: ParsedPgn,
+    extractedContext: ExtractedAnnotationContext,
+  ): Prisma.InputJsonObject {
+    return {
+      headers: parsedPgn.headers,
+      rawResult: parsedPgn.rawResult,
+      result: parsedPgn.result,
+      studentColor: parsedPgn.studentColor,
+      annotationCoverage: extractedContext.annotationCoverage,
+      diagnostics: parsedPgn.diagnostics.map((diagnostic) => ({
+        type: diagnostic.type,
+        key: diagnostic.key,
+        value: diagnostic.value,
+        message: diagnostic.message,
+        location: diagnostic.location,
+      })),
+      moments: extractedContext.moments.map((moment) => ({
+        ...moment,
+        sourceEvidence: moment.sourceEvidence,
+      })),
+      surroundingMoves: this.buildSurroundingMoves(parsedPgn, extractedContext),
     };
   }
 

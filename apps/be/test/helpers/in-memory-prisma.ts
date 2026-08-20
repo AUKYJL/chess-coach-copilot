@@ -784,6 +784,15 @@ export class InMemoryPrismaService {
   };
 
   game = {
+    findUnique: async (args: {
+      where: { id: string };
+      select?: Record<string, unknown>;
+    }) => {
+      const record =
+        this.games.find((item) => item.id === args.where.id) ?? null;
+
+      return this.selectGame(record, args.select);
+    },
     findMany: async (args: {
       where: {
         coachAccountId?: string;
@@ -934,6 +943,30 @@ export class InMemoryPrismaService {
       record.updatedAt = new Date();
       return structuredClone(record);
     },
+    updateMany: async (args: {
+      where: {
+        id: string;
+        OR?: Array<{ engineEvidenceStatus: string | null }>;
+      };
+      data: Partial<GameRecord>;
+    }) => {
+      const record = this.games.find((item) => item.id === args.where.id);
+
+      if (
+        !record ||
+        (args.where.OR &&
+          !args.where.OR.some(
+            (condition) =>
+              record.engineEvidenceStatus === condition.engineEvidenceStatus,
+          ))
+      ) {
+        return { count: 0 };
+      }
+
+      assignDefined(record, args.data);
+      record.updatedAt = new Date();
+      return { count: 1 };
+    },
   };
 
   analysisJob = {
@@ -982,7 +1015,7 @@ export class InMemoryPrismaService {
         coachAccountId?: string;
         studentId?: string;
         gameId?: string;
-        jobType?: AnalysisJobType;
+        jobType?: AnalysisJobType | { in: AnalysisJobType[] };
         reportAudience?: ReportAudience | null;
         status?:
           | AnalysisJobStatus
@@ -1016,8 +1049,14 @@ export class InMemoryPrismaService {
             return false;
           }
 
-          if (args.where.jobType && item.jobType !== args.where.jobType) {
-            return false;
+          if (args.where.jobType) {
+            if (typeof args.where.jobType === 'string') {
+              if (item.jobType !== args.where.jobType) {
+                return false;
+              }
+            } else if (!args.where.jobType.in.includes(item.jobType)) {
+              return false;
+            }
           }
 
           if (

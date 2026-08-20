@@ -134,6 +134,16 @@ export class AnalysisJobsService {
     return persistedJob;
   }
 
+  queueEngineAnalysis(gameId: string, traceId: string) {
+    return this.engineAnalysisService.queueEngineAnalysis(gameId, traceId);
+  }
+
+  async enqueuePersistedAnalysisJob(jobId: string, traceId: string) {
+    return this.enqueueCreatedJob(jobId, traceId, () =>
+      this.analysisJobEnqueuer.enqueueAnalysisJob(jobId, traceId),
+    );
+  }
+
   async createAndEnqueueGenerationJob(data: {
     coachAccountId: string;
     studentId: string;
@@ -185,6 +195,17 @@ export class AnalysisJobsService {
     coachAccountId: string,
   ): Promise<AnalysisJobResponse> {
     const job = await this.getJob(jobId, coachAccountId);
+
+    return this.toJobResponse(job);
+  }
+
+  async getLatestWorkflowJobForGame(gameId: string) {
+    const job =
+      await this.analysisJobsRepository.findLatestWorkflowJobForGame(gameId);
+
+    if (!job) {
+      throw new NotFoundException('Analysis job not found');
+    }
 
     return this.toJobResponse(job);
   }
