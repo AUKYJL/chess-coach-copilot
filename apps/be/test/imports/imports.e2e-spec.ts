@@ -97,6 +97,16 @@ describe('ImportsController (e2e)', () => {
       latestAnalysisJobStatus: 'PENDING',
     });
 
+    const persistedGame = await prisma.game.findFirst({
+      where: { id: response.body.gameId as string },
+    });
+    expect(persistedGame?.engineEvidenceStatus).toBe('READY');
+    expect(persistedGame?.engineEvidenceSource).toBe('PGN');
+    expect(persistedGame?.engineEvidence).toMatchObject({
+      schemaVersion: 1,
+      source: 'PGN',
+    });
+
     const jobHistoryResponse = await request(getServer(app))
       .get(`/analysis/jobs?studentId=${studentId}`)
       .set('Authorization', `Bearer ${accessToken}`)

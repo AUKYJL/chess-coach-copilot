@@ -14,6 +14,9 @@ import { AnalysisJobsRepository } from './jobs/analysis-jobs.repository.js';
 import { AnalysisJobsService } from './jobs/analysis-jobs.service.js';
 import { PgnParserService } from './preparation/pgn-parser.service.js';
 import { PgnPreparationService } from './preparation/pgn-preparation.service.js';
+import { EngineEvidenceService } from './preparation/engine-evidence.service.js';
+import { StockfishGameAnalyzerService } from './engine/stockfish-game-analyzer.service.js';
+import { StockfishUciAdapter } from './engine/stockfish-uci.adapter.js';
 import { AnalysisQueriesService } from './results/analysis-queries.service.js';
 import { AnalysisReviewsService } from './results/analysis-reviews.service.js';
 import { AnalysisResultsRepository } from './results/analysis-results.repository.js';
@@ -29,6 +32,9 @@ import { AnalysisController } from './results/analysis.controller.js';
     AnalysisJobsService,
     AnalysisResultsRepository,
     PgnParserService,
+    EngineEvidenceService,
+    StockfishUciAdapter,
+    StockfishGameAnalyzerService,
     AnnotationExtractorService,
     PgnPreparationService,
     AnalysisClassifierService,

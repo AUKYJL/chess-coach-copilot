@@ -73,6 +73,7 @@ describe('AnalysisProcessor (integration)', () => {
     process.env.JWT_ACCESS_SECRET = 'test-access-secret';
     process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
     process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
+    process.env.STOCKFISH_BINARY_PATH = '/test/stockfish';
   });
 
   it('moves a job through parse, extraction, classification, and completion', async () => {

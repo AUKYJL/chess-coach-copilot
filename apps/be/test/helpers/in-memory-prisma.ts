@@ -84,6 +84,9 @@ type GameRecord = {
   hasEngineAnnotations: boolean;
   annotationCoverage: AnnotationCoverage;
   reducedConfidenceWarning: string | null;
+  engineEvidence: Record<string, unknown> | null;
+  engineEvidenceStatus: string | null;
+  engineEvidenceSource: string | null;
   importedAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -871,6 +874,9 @@ export class InMemoryPrismaService {
         | 'derivedResult'
         | 'plyCount'
         | 'reducedConfidenceWarning'
+        | 'engineEvidence'
+        | 'engineEvidenceStatus'
+        | 'engineEvidenceSource'
       > & {
         sourceLabel?: string | null;
         event?: string | null;
@@ -883,6 +889,9 @@ export class InMemoryPrismaService {
         derivedResult?: GameResult;
         plyCount?: number | null;
         reducedConfidenceWarning?: string | null;
+        engineEvidence?: Record<string, unknown> | null;
+        engineEvidenceStatus?: string | null;
+        engineEvidenceSource?: string | null;
       };
     }) => {
       const now = new Date();
@@ -903,6 +912,9 @@ export class InMemoryPrismaService {
         derivedResult: args.data.derivedResult ?? GameResult.UNKNOWN,
         plyCount: args.data.plyCount ?? null,
         reducedConfidenceWarning: args.data.reducedConfidenceWarning ?? null,
+        engineEvidence: args.data.engineEvidence ?? null,
+        engineEvidenceStatus: args.data.engineEvidenceStatus ?? null,
+        engineEvidenceSource: args.data.engineEvidenceSource ?? null,
       };
 
       this.games.push(record);

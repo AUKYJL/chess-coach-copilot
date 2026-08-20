@@ -62,6 +62,7 @@ export function validateEnv(
   getRequiredString(config, 'JWT_ACCESS_SECRET');
   getRequiredString(config, 'JWT_REFRESH_SECRET');
   getRequiredString(config, 'OPENROUTER_API_KEY');
+  getRequiredString(config, 'STOCKFISH_BINARY_PATH');
   validateOptionalPositiveInteger(config, 'PORT');
   validateOptionalPositiveInteger(config, 'JWT_ACCESS_TTL_SECONDS');
   validateOptionalPositiveInteger(config, 'JWT_REFRESH_TTL_SECONDS');

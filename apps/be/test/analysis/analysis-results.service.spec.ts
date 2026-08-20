@@ -55,6 +55,7 @@ describe('AnalysisResultsService (integration)', () => {
     process.env.JWT_ACCESS_SECRET = 'test-access-secret';
     process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
     process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
+    process.env.STOCKFISH_BINARY_PATH = '/test/stockfish';
   });
 
   it('replaces aggregate data for the same job without duplicating rows', async () => {

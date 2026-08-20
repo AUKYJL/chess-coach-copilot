@@ -6,3 +6,4 @@ export { default as jwtConfig } from './jwt.config.js';
 export { default as loggerConfig } from './logger.config.js';
 export { default as openrouterConfig } from './openrouter.config.js';
 export { default as redisConfig } from './redis.config.js';
+export { default as stockfishConfig } from './stockfish.config.js';

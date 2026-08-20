@@ -2,6 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { StudentColor } from '../../generated/prisma/client.js';
 import type { ExtractedAnnotationContext } from '../classification/annotation-extractor.service.js';
 import { AnnotationExtractorService } from '../classification/annotation-extractor.service.js';
+import type {
+  EngineEvidence,
+  EngineEvidenceInspection,
+} from './engine-evidence.model.js';
+import { EngineEvidenceService } from './engine-evidence.service.js';
 import { createPgnFingerprint } from './pgn-normalization.util.js';
 import type { ParsedPgn } from './pgn-parser.service.js';
 import { PgnParserService } from './pgn-parser.service.js';
@@ -9,6 +14,8 @@ import { PgnParserService } from './pgn-parser.service.js';
 export interface PreparedPgnForAnalysis {
   parsedPgn: ParsedPgn;
   extractedContext: ExtractedAnnotationContext;
+  engineEvidenceInspection: EngineEvidenceInspection;
+  engineEvidence: EngineEvidence | null;
 }
 
 export interface PersistedGameSummary {
@@ -28,6 +35,7 @@ export class PgnPreparationService {
   constructor(
     private readonly pgnParserService: PgnParserService,
     private readonly annotationExtractorService: AnnotationExtractorService,
+    private readonly engineEvidenceService: EngineEvidenceService,
   ) {}
 
   parseForAnalysis(
@@ -36,10 +44,16 @@ export class PgnPreparationService {
   ): PreparedPgnForAnalysis {
     const parsedPgn = this.pgnParserService.parse(rawPgn, studentColor);
     const extractedContext = this.annotationExtractorService.extract(parsedPgn);
+    const engineEvidenceInspection =
+      this.engineEvidenceService.inspect(parsedPgn);
 
     return {
       parsedPgn,
       extractedContext,
+      engineEvidenceInspection,
+      engineEvidence: engineEvidenceInspection.sufficient
+        ? this.engineEvidenceService.normalizeAnnotatedPgn(parsedPgn)
+        : null,
     };
   }
 

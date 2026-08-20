@@ -2,10 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   AnalysisJobStatus,
   AnnotationCoverage,
+  EngineEvidenceSource,
+  EngineEvidenceStatus,
   GameResult,
   GameSourceType,
   StudentColor,
 } from '../generated/prisma/client.js';
+import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   GAME_CARD_SELECT,
@@ -39,6 +42,9 @@ export class GamesService {
     hasEngineAnnotations: boolean;
     annotationCoverage: AnnotationCoverage;
     reducedConfidenceWarning: string | null;
+    engineEvidence: Prisma.InputJsonValue | null;
+    engineEvidenceStatus: EngineEvidenceStatus | null;
+    engineEvidenceSource: EngineEvidenceSource | null;
   }) {
     const duplicate = await this.prisma.game.findFirst({
       where: {
@@ -51,6 +57,7 @@ export class GamesService {
     const game = await this.prisma.game.create({
       data: {
         ...data,
+        engineEvidence: data.engineEvidence ?? Prisma.JsonNull,
         sourceType: GameSourceType.MANUAL_PGN,
       },
     });

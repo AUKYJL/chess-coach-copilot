@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, MoveColor } from '../../generated/prisma/client.js';
 import { PgnParserService } from '../preparation/pgn-parser.service.js';
+import { EngineEvidenceService } from '../preparation/engine-evidence.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 const DEFAULT_INITIAL_FEN =
@@ -11,6 +12,7 @@ export class AnalysisQueriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pgnParserService: PgnParserService,
+    private readonly engineEvidenceService: EngineEvidenceService,
   ) {}
 
   async listOwnedAnalyses(args: {
@@ -62,9 +64,16 @@ export class AnalysisQueriesService {
       throw new NotFoundException('Analysis not found');
     }
 
-    const parsedGame = this.pgnParserService.parse(
-      analysis.game.rawPgn,
-      analysis.game.studentColor,
+    const parsedGame = this.engineEvidenceService.overlay(
+      this.pgnParserService.parse(
+        analysis.game.rawPgn,
+        analysis.game.studentColor,
+      ),
+      analysis.game.engineEvidence
+        ? this.engineEvidenceService.parsePersisted(
+            analysis.game.engineEvidence,
+          )
+        : null,
     );
     const replayMoves = parsedGame.moves.map((move) => ({
       ply: move.ply,

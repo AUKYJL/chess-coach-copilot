@@ -1,6 +1,7 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 import { AnalysisJobEventsService } from '../analysis/jobs/analysis-job-events.service.js';
+import { Prisma } from '../generated/prisma/client.js';
 import { AnalysisJobResponse } from '../analysis/dto/analysis-job.response.js';
 import { AnalysisJobsService } from '../analysis/jobs/analysis-jobs.service.js';
 import { PgnPreparationService } from '../analysis/preparation/pgn-preparation.service.js';
@@ -83,7 +84,7 @@ export class ImportsService {
       );
     }
 
-    const { parsedPgn, extractedContext } =
+    const { parsedPgn, extractedContext, engineEvidence } =
       this.pgnPreparationService.parseForAnalysis(dto.rawPgn, dto.studentColor);
     const gameSummary = this.pgnPreparationService.buildGameSummary(parsedPgn);
     this.logger.info(
@@ -129,6 +130,9 @@ export class ImportsService {
       hasEngineAnnotations: extractedContext.hasEngineAnnotations,
       annotationCoverage: extractedContext.annotationCoverage,
       reducedConfidenceWarning: extractedContext.reducedConfidenceWarning,
+      engineEvidence: engineEvidence as Prisma.InputJsonValue,
+      engineEvidenceStatus: engineEvidence ? 'READY' : null,
+      engineEvidenceSource: engineEvidence ? 'PGN' : null,
     });
     this.logger.info(
       {
