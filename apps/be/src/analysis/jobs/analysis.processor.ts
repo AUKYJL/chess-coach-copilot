@@ -5,6 +5,7 @@ import { PinoLogger } from 'nestjs-pino';
 import {
   AnalysisJobStatus,
   AnalysisJobType,
+  EngineEvidenceStatus,
   ReportAudience,
   type Prisma,
 } from '../../generated/prisma/client.js';
@@ -127,6 +128,36 @@ export class AnalysisProcessor extends WorkerHost {
     let stage = 'analysis_status_parsing_started';
 
     try {
+      if (
+        analysisJob.game.engineEvidenceStatus !== null &&
+        (analysisJob.game.engineEvidenceStatus !== EngineEvidenceStatus.READY ||
+          analysisJob.game.engineEvidence === null)
+      ) {
+        await this.analysisJobsRepository.transitionStatus(
+          analysisJobId,
+          [AnalysisJobStatus.PENDING],
+          AnalysisJobStatus.FAILED,
+          {
+            progressPercent: 100,
+            completedAt: new Date(),
+            failureCode: 'ENGINE_EVIDENCE_NOT_READY',
+            failureMessage:
+              'Analysis cannot start before engine evidence is ready',
+          },
+        );
+        this.logger.warn(
+          {
+            event: 'analysis_blocked_engine_evidence_not_ready',
+            traceId,
+            analysisJobId,
+            gameId: analysisJob.gameId,
+            engineEvidenceStatus: analysisJob.game.engineEvidenceStatus,
+          },
+          'Analysis job was blocked because engine evidence is not ready',
+        );
+        return;
+      }
+
       const parsingTransition =
         await this.analysisJobsRepository.transitionStatus(
           analysisJobId,

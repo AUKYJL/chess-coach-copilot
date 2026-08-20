@@ -62,7 +62,6 @@ export function validateEnv(
   getRequiredString(config, 'JWT_ACCESS_SECRET');
   getRequiredString(config, 'JWT_REFRESH_SECRET');
   getRequiredString(config, 'OPENROUTER_API_KEY');
-  getRequiredString(config, 'STOCKFISH_BINARY_PATH');
   validateOptionalPositiveInteger(config, 'PORT');
   validateOptionalPositiveInteger(config, 'JWT_ACCESS_TTL_SECONDS');
   validateOptionalPositiveInteger(config, 'JWT_REFRESH_TTL_SECONDS');
@@ -72,4 +71,14 @@ export function validateEnv(
 
 export function getRequiredEnv(name: string): string {
   return getRequiredString(process.env, name);
+}
+
+export function getOptionalEnv(name: string): string | null {
+  const value = process.env[name];
+
+  if (value === undefined || value.trim().length === 0) {
+    return null;
+  }
+
+  return value;
 }

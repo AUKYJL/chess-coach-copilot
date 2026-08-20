@@ -8,4 +8,4 @@ process.env.JWT_REFRESH_TTL_SECONDS ??= '2592000';
 process.env.AUTH_REFRESH_COOKIE_NAME ??= 'refresh_token';
 process.env.APP_CORS_ORIGINS ??= 'http://localhost:5173';
 process.env.OPENROUTER_API_KEY ??= 'test-openrouter-api-key';
-process.env.STOCKFISH_BINARY_PATH ??= '/test/stockfish';
+process.env.STOCKFISH_PATH ??= '/test/stockfish';

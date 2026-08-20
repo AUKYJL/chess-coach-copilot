@@ -179,7 +179,18 @@ export class EngineAnalysisProcessor extends WorkerHost {
         }
       }
       this.logger.info(
-        { ...context, durationMs: Date.now() - startedAt },
+        {
+          ...context,
+          queueWaitMs: startedAt - persistedJob.createdAt.getTime(),
+          durationMs: Date.now() - startedAt,
+          scannedPositionCount: evidence.positions.filter(
+            (position) => position.analysisLevel === 'SCAN',
+          ).length,
+          deepMoveCount:
+            evidence.positions.filter(
+              (position) => position.analysisLevel === 'DEEP',
+            ).length / 2,
+        },
         'Engine analysis completed',
       );
     } catch (error) {
@@ -218,6 +229,7 @@ export class EngineAnalysisProcessor extends WorkerHost {
           failureCode,
           terminal,
           exhausted,
+          queueWaitMs: startedAt - persistedJob.createdAt.getTime(),
           durationMs: Date.now() - startedAt,
           err: error instanceof Error ? error : undefined,
         },

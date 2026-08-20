@@ -55,6 +55,7 @@ class FakeDatabase {
   readonly jobUpdates: Array<Record<string, unknown>> = [];
   readonly job = {
     id: 'engine-job',
+    createdAt: new Date(),
     traceId: 'trace-id',
     coachAccountId: 'coach-id',
     studentId: 'student-id',

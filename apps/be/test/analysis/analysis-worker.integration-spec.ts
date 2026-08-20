@@ -106,7 +106,7 @@ describe('AnalysisProcessor (integration)', () => {
     process.env.JWT_ACCESS_SECRET = 'test-access-secret';
     process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
     process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
-    process.env.STOCKFISH_BINARY_PATH = '/test/stockfish';
+    process.env.STOCKFISH_PATH = '/test/stockfish';
   });
 
   it('moves a job through parse, extraction, classification, and completion', async () => {
@@ -1100,6 +1100,14 @@ describe('AnalysisProcessor (integration)', () => {
       .useValue({
         classify: () => Promise.resolve(null),
         generate: () =>
+          Promise.reject(
+            new LlmResponseFormatError(
+              'LLM returned invalid JSON in the response body',
+              LLM_RESPONSE_FORMAT_FAILURE_CODE.INVALID_JSON,
+              rawText,
+            ),
+          ),
+        generateStructured: () =>
           Promise.reject(
             new LlmResponseFormatError(
               'LLM returned invalid JSON in the response body',

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
+import { Chess } from 'chess.js';
 import type { StudentColor } from '../../generated/prisma/client.js';
 import { stockfishConfig } from '../../config/index.js';
 import type {
@@ -176,31 +177,43 @@ function selectCandidates(
 
       return { before, after, beforeEvaluation, afterEvaluation };
     })
-    .filter(
-      (candidate) =>
-        compareEngineEvaluations(
-          candidate.beforeEvaluation,
-          candidate.afterEvaluation,
-        ) > 0,
-    )
-    .sort(compareCandidates)
+    .filter((candidate) => isStudentDeterioration(candidate, studentColor))
+    .sort((left, right) => compareCandidates(left, right, studentColor))
     .slice(0, maxDeepMoves);
 }
 
-function compareCandidates(left: Candidate, right: Candidate): number {
+function isStudentDeterioration(
+  candidate: Candidate,
+  studentColor: StudentColor,
+): boolean {
+  const comparison = compareEngineEvaluations(
+    candidate.beforeEvaluation,
+    candidate.afterEvaluation,
+  );
+
+  return studentColor === 'WHITE' ? comparison > 0 : comparison < 0;
+}
+
+function compareCandidates(
+  left: Candidate,
+  right: Candidate,
+  studentColor: StudentColor,
+): number {
   const afterComparison = compareEngineEvaluations(
     left.afterEvaluation,
     right.afterEvaluation,
   );
 
   if (afterComparison !== 0) {
-    return afterComparison;
+    return studentColor === 'WHITE' ? afterComparison : -afterComparison;
   }
 
-  return compareEngineEvaluations(
+  const beforeComparison = compareEngineEvaluations(
     right.beforeEvaluation,
     left.beforeEvaluation,
   );
+
+  return studentColor === 'WHITE' ? beforeComparison : -beforeComparison;
 }
 
 function toEnginePositionEvidence(
@@ -208,18 +221,78 @@ function toEnginePositionEvidence(
   analysis: StockfishPositionAnalysis,
   analysisLevel: 'SCAN' | 'DEEP',
 ): EnginePositionEvidence {
+  const notation = toSanNotation(position.fen, analysis);
+
   return {
     ply: position.ply,
     fen: position.fen,
     evaluation: analysis.evaluation,
-    ...(analysis.bestMove ? { bestMove: analysis.bestMove } : {}),
-    ...(analysis.principalVariation.length > 0
-      ? { principalVariation: analysis.principalVariation }
+    ...(notation.bestMove ? { bestMove: notation.bestMove } : {}),
+    ...(notation.principalVariation
+      ? { principalVariation: notation.principalVariation }
       : {}),
     ...(analysis.depth !== null ? { depth: analysis.depth } : {}),
     ...(analysis.nodes !== null ? { nodes: analysis.nodes } : {}),
     analysisLevel,
   };
+}
+
+function toSanNotation(
+  fen: string,
+  analysis: StockfishPositionAnalysis,
+): {
+  bestMove: string | null;
+  principalVariation: string[] | null;
+} {
+  try {
+    return {
+      bestMove: analysis.bestMove
+        ? toSanMove(new Chess(fen), analysis.bestMove)
+        : null,
+      principalVariation: toSanVariation(fen, analysis.principalVariation),
+    };
+  } catch {
+    return { bestMove: null, principalVariation: null };
+  }
+}
+
+function toSanVariation(fen: string, moves: string[]): string[] | null {
+  if (moves.length === 0) {
+    return null;
+  }
+
+  const chess = new Chess(fen);
+  const sanMoves: string[] = [];
+
+  for (const move of moves) {
+    const san = toSanMove(chess, move);
+
+    if (!san) {
+      return null;
+    }
+
+    sanMoves.push(san);
+  }
+
+  return sanMoves;
+}
+
+function toSanMove(chess: Chess, move: string): string | null {
+  const match = /^([a-h][1-8])([a-h][1-8])([qrbn])?$/.exec(move);
+
+  if (!match) {
+    return null;
+  }
+
+  try {
+    return chess.move({
+      from: match[1],
+      to: match[2],
+      ...(match[3] ? { promotion: match[3] } : {}),
+    }).san;
+  } catch {
+    return null;
+  }
 }
 
 function compactEngineIdentity(identity: {

@@ -1,4 +1,5 @@
 import { StudentColor } from '../../generated/prisma/client.js';
+import { PgnParserService } from '../preparation/pgn-parser.service.js';
 import type { ParsedPgn } from '../preparation/pgn-parser.service.js';
 import { StockfishGameAnalyzerService } from './stockfish-game-analyzer.service.js';
 import type { StockfishPositionAnalysis } from './stockfish-uci.adapter.js';
@@ -68,6 +69,48 @@ describe('StockfishGameAnalyzerService', () => {
     expect(adapter.calls.filter((call) => call.nodes === 100)).toHaveLength(2);
     expect(adapter.calls.filter((call) => call.nodes === 500)).toHaveLength(2);
   });
+
+  it('deepens deteriorating moves made by a black student', async () => {
+    const adapter = new FakeStockfishAdapter({
+      f0: { type: 'cp', value: 0 },
+      f1: { type: 'cp', value: -100 },
+      f2: { type: 'cp', value: 100 },
+      f3: { type: 'cp', value: 100 },
+    });
+    const service = new StockfishGameAnalyzerService(
+      adapter as never,
+      configuration,
+    );
+
+    await service.analyze(createParsedGame(), StudentColor.BLACK);
+
+    expect(adapter.calls.filter((call) => call.nodes === 500)).toEqual([
+      expect.objectContaining({ fen: 'f1' }),
+      expect.objectContaining({ fen: 'f2' }),
+    ]);
+  });
+
+  it('persists legal Stockfish notation as SAN and omits an invalid PV', async () => {
+    const parsed = new PgnParserService().parse(
+      '[Event "Test"]\n[Result "*"]\n\n1. e4 e5 *',
+      StudentColor.WHITE,
+    );
+    const evaluations = Object.fromEntries([
+      [parsed.moves[0].beforeFen, { type: 'cp' as const, value: 100 }],
+      [parsed.moves[0].afterFen, { type: 'cp' as const, value: 0 }],
+      [parsed.moves[1].afterFen, { type: 'cp' as const, value: 0 }],
+    ]);
+    const adapter = new FakeStockfishAdapter(evaluations, ['e2e4', 'invalid']);
+    const service = new StockfishGameAnalyzerService(
+      adapter as never,
+      configuration,
+    );
+
+    const evidence = await service.analyze(parsed, StudentColor.WHITE);
+
+    expect(evidence.positions[0]).toMatchObject({ bestMove: 'e4' });
+    expect(evidence.positions[0]?.principalVariation).toBeUndefined();
+  });
 });
 
 class FakeStockfishAdapter {
@@ -79,6 +122,7 @@ class FakeStockfishAdapter {
       string,
       StockfishPositionAnalysis['evaluation']
     >,
+    private readonly principalVariation = ['e2e4', 'e7e5'],
   ) {}
 
   startNewGame(): Promise<void> {
@@ -95,7 +139,7 @@ class FakeStockfishAdapter {
     return Promise.resolve({
       evaluation: this.evaluations[fen],
       bestMove: 'e2e4',
-      principalVariation: ['e2e4', 'e7e5'],
+      principalVariation: this.principalVariation,
       depth: 12,
       nodes,
     });

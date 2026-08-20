@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
+import { StockfishUciAdapter } from './analysis/engine/stockfish-uci.adapter.js';
 import { WorkerModule } from './worker.module.js';
 
 async function bootstrap(): Promise<void> {
@@ -8,6 +9,8 @@ async function bootstrap(): Promise<void> {
   });
 
   app.useLogger(app.get(Logger));
+  app.enableShutdownHooks();
+  await app.get(StockfishUciAdapter).verifyAvailable();
 }
 
 bootstrap().catch((error: unknown) => {

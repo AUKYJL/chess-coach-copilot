@@ -45,7 +45,7 @@ process.env.DATABASE_URL ??= 'postgresql://test:test@localhost:5432/test';
 process.env.JWT_ACCESS_SECRET ??= 'test-access-secret';
 process.env.JWT_REFRESH_SECRET ??= 'test-refresh-secret';
 process.env.OPENROUTER_API_KEY ??= 'test-openrouter-key';
-process.env.STOCKFISH_BINARY_PATH ??= '/test/stockfish';
+process.env.STOCKFISH_PATH ??= '/test/stockfish';
 
 class FakeAnalysisJobEnqueuer {
   readonly jobs: Array<{

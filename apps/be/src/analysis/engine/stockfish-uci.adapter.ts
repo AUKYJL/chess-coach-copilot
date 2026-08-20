@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
+import { PinoLogger } from 'nestjs-pino';
 import { stockfishConfig } from '../../config/index.js';
 import type { EngineEvaluation } from '../preparation/engine-evidence.model.js';
 import { StockfishError } from './stockfish.error.js';
@@ -38,9 +39,16 @@ export class StockfishUciAdapter implements OnModuleDestroy {
   private shuttingDown = false;
 
   constructor(
+    private readonly logger: PinoLogger,
     @Inject(stockfishConfig.KEY)
     private readonly configuration: ConfigType<typeof stockfishConfig>,
-  ) {}
+  ) {
+    this.logger.setContext(StockfishUciAdapter.name);
+  }
+
+  async verifyAvailable(): Promise<void> {
+    await this.ensureReady();
+  }
 
   analyzePosition(
     fen: string,
@@ -69,6 +77,7 @@ export class StockfishUciAdapter implements OnModuleDestroy {
 
   async onModuleDestroy(): Promise<void> {
     this.shuttingDown = true;
+    await this.queue.catch(() => undefined);
     const process = this.process;
 
     if (!process) {
@@ -163,6 +172,13 @@ export class StockfishUciAdapter implements OnModuleDestroy {
 
     if (this.process) {
       return this.process;
+    }
+
+    if (!this.configuration.binaryPath) {
+      throw new StockfishError(
+        'BINARY_START_FAILURE',
+        'STOCKFISH_PATH is required when starting the Stockfish worker',
+      );
     }
 
     const process = spawn(this.configuration.binaryPath, [], { shell: false });
@@ -285,6 +301,14 @@ export class StockfishUciAdapter implements OnModuleDestroy {
     }
 
     this.process = null;
+    this.logger.warn(
+      {
+        event: 'stockfish_restart_scheduled',
+        failureCode:
+          error instanceof StockfishError ? error.code : 'BINARY_START_FAILURE',
+      },
+      'Stockfish process stopped; it will restart for the next request',
+    );
     this.rejectPending(
       error instanceof StockfishError
         ? error

@@ -19,7 +19,7 @@ describe('PgnPreparationService', () => {
   it('returns parsed PGN and extracted context for the fixture', () => {
     const rawPgn = readFileSync(
       new URL(
-        '../../test/fixtures/pgn/annotated-lichess-with-eval.pgn',
+        '../../../test/fixtures/pgn/annotated-lichess-with-eval.pgn',
         import.meta.url,
       ),
       'utf8',

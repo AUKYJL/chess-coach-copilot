@@ -1,5 +1,5 @@
 import { registerAs } from '@nestjs/config';
-import { getRequiredEnv } from './env.validation.js';
+import { getOptionalEnv } from './env.validation.js';
 
 const THREADS = 1;
 const HASH_MB = 32;
@@ -11,7 +11,7 @@ const POSITION_HARD_TIMEOUT_MS = 30_000;
 const GAME_HARD_TIMEOUT_MS = 10 * 60_000;
 
 export default registerAs('stockfish', () => ({
-  binaryPath: getRequiredEnv('STOCKFISH_BINARY_PATH'),
+  binaryPath: getOptionalEnv('STOCKFISH_PATH'),
   threads: THREADS,
   hashMb: HASH_MB,
   multiPv: MULTI_PV,

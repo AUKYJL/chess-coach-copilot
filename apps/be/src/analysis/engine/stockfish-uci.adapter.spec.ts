@@ -29,7 +29,7 @@ describe('StockfishUciAdapter', () => {
   it('keeps one process, completes the UCI handshake, and parses final output', async () => {
     const process = createProcess();
     spawnMock.mockReturnValue(process);
-    const adapter = new StockfishUciAdapter(configuration);
+    const adapter = new StockfishUciAdapter(logger, configuration);
 
     await adapter.startNewGame();
     const analysis = await adapter.analyzePosition(FEN, 100);
@@ -61,7 +61,7 @@ describe('StockfishUciAdapter', () => {
   it('normalizes Black-to-move scores and serializes concurrent requests', async () => {
     const process = createProcess();
     spawnMock.mockReturnValue(process);
-    const adapter = new StockfishUciAdapter(configuration);
+    const adapter = new StockfishUciAdapter(logger, configuration);
     const blackFen = FEN.replace(' w ', ' b ');
 
     const [first, second] = await Promise.all([
@@ -82,7 +82,7 @@ describe('StockfishUciAdapter', () => {
     spawnMock
       .mockReturnValueOnce(failedProcess)
       .mockReturnValueOnce(restartedProcess);
-    const adapter = new StockfishUciAdapter(configuration);
+    const adapter = new StockfishUciAdapter(logger, configuration);
 
     await expect(adapter.analyzePosition(FEN, 100)).rejects.toMatchObject({
       code: 'UNEXPECTED_PROCESS_EXIT',
@@ -99,7 +99,7 @@ describe('StockfishUciAdapter', () => {
     spawnMock
       .mockReturnValueOnce(timedOutProcess)
       .mockReturnValueOnce(restartedProcess);
-    const adapter = new StockfishUciAdapter({
+    const adapter = new StockfishUciAdapter(logger, {
       ...configuration,
       positionHardTimeoutMs: 1,
     });
@@ -113,6 +113,11 @@ describe('StockfishUciAdapter', () => {
     expect(restartedProcess.commands).toContain('quit');
   });
 });
+
+const logger = {
+  setContext: () => undefined,
+  warn: () => undefined,
+} as never;
 
 function createProcess(
   options: { exitOnGo?: boolean; noGoResponse?: boolean } = {},

@@ -15,6 +15,7 @@
     "dev": "nest start --watch",
     "start:dev": "nest start --watch",
     "start:worker": "nest start --watch --entryFile worker",
+    "start:worker:prod": "node dist/worker.js",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
     "prelint": "npm run prisma:generate",
@@ -106,7 +107,7 @@
       "ts"
     ],
     "rootDir": ".",
-    "testRegex": "test/.*\\.spec\\.ts$",
+    "testRegex": "(?:test|src)/.*\\.spec\\.ts$",
     "transform": {
       "^.+\\.ts$": [
         "ts-jest",
