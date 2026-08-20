@@ -1,13 +1,8 @@
-export {
-  analyzeGameSchema,
-  hasReliableAnnotatedEvidence,
-  hasStructuredEngineAnnotations,
-  isAnnotatedPgn,
-  looksLikePgn,
-} from "./analyze-game-schema";
+export { analyzeGameSchema, looksLikePgn } from "./analyze-game-schema";
 export {
   getAnalyzedGamesCount,
   getStudentInitials,
+  isGameAnalysisInProgress,
   getStudentOverviewStatus,
   mapPerformanceTrendToViewModel,
   mapProgressInsightToViewModel,

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   AnalysisJobStatus,
+  AnalysisJobType,
   AnnotationCoverage,
   EngineEvidenceSource,
   EngineEvidenceStatus,
@@ -14,6 +15,7 @@ import {
   GAME_CARD_SELECT,
   GAME_DETAIL_SELECT,
   GAME_LIST_ORDER_BY,
+  LATEST_ANALYSIS_JOB_ORDER_BY,
   type GameCardRow,
   mapGameDetail,
   mapGameWithLatestJob,
@@ -113,19 +115,30 @@ export class GamesService {
   }
 
   async getOwnedGame(gameId: string, coachAccountId: string) {
-    const game = await this.prisma.game.findFirst({
-      where: {
-        id: gameId,
-        coachAccountId,
-      },
-      select: GAME_DETAIL_SELECT,
-    });
+    const [game, latestEngineAnalysisJob] = await Promise.all([
+      this.prisma.game.findFirst({
+        where: {
+          id: gameId,
+          coachAccountId,
+        },
+        select: GAME_DETAIL_SELECT,
+      }),
+      this.prisma.analysisJob.findFirst({
+        where: {
+          gameId,
+          coachAccountId,
+          jobType: AnalysisJobType.ENGINE_ANALYSIS,
+        },
+        orderBy: LATEST_ANALYSIS_JOB_ORDER_BY,
+        select: { id: true },
+      }),
+    ]);
 
     if (!game) {
       throw new NotFoundException('Game not found');
     }
 
-    return mapGameDetail(game);
+    return mapGameDetail(game, latestEngineAnalysisJob?.id ?? null);
   }
 
   async getOwnedGamePgn(gameId: string, coachAccountId: string) {

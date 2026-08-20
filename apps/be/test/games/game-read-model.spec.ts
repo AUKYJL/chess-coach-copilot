@@ -38,4 +38,30 @@ describe('mapGameWithLatestJob', () => {
       latestAnalysisId: 'analysis-1',
     });
   });
+
+  it('includes a separately resolved engine analysis job id', () => {
+    const result = mapGameWithLatestJob(
+      {
+        id: 'game-1',
+        sourceLabel: null,
+        studentColor: StudentColor.WHITE,
+        event: null,
+        site: null,
+        whitePlayerName: null,
+        blackPlayerName: null,
+        openingHeader: null,
+        ecoCode: null,
+        rawResult: null,
+        derivedResult: 'UNKNOWN',
+        plyCount: 42,
+        engineEvidenceStatus: null,
+        engineEvidenceSource: null,
+        importedAt: new Date('2026-08-08T10:00:00.000Z'),
+        analysisJobs: [],
+      },
+      'engine-job-latest',
+    );
+
+    expect(result.latestEngineAnalysisJobId).toBe('engine-job-latest');
+  });
 });

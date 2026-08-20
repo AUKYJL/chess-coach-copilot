@@ -144,6 +144,15 @@ describe('ImportsController (e2e)', () => {
       .expect(201);
 
     expect(firstImport.body.jobType).toBe(AnalysisJobType.ENGINE_ANALYSIS);
+    const gameResponse = await request(server)
+      .get(`/games/${firstImport.body.gameId as string}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(gameResponse.body).toMatchObject({
+      engineEvidenceStatus: 'QUEUED',
+      latestEngineAnalysisJobId: firstImport.body.id,
+    });
     const queueCountAfterFirstImport = fakeQueue.jobs.length;
 
     const duplicateResponse = await request(server)

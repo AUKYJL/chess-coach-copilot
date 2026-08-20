@@ -462,6 +462,7 @@ paths:
             type: string
             enum:
               - PENDING
+              - RUNNING
               - PARSING
               - EXTRACTING_ANNOTATIONS
               - CLASSIFICATION
@@ -531,6 +532,7 @@ paths:
             type: string
             enum:
               - ANALYSIS
+              - ENGINE_ANALYSIS
               - REPORT_GENERATION
               - HOMEWORK_GENERATION
               - PROGRESS_GENERATION
@@ -541,6 +543,7 @@ paths:
             type: string
             enum:
               - PENDING
+              - RUNNING
               - PARSING
               - EXTRACTING_ANNOTATIONS
               - CLASSIFICATION
@@ -1132,6 +1135,7 @@ components:
           type: string
           enum:
             - PENDING
+            - RUNNING
             - PARSING
             - EXTRACTING_ANNOTATIONS
             - CLASSIFICATION
@@ -1351,10 +1355,29 @@ components:
         importedAt:
           type: string
           format: date-time
+        engineEvidenceStatus:
+          type: string
+          enum:
+            - READY
+            - QUEUED
+            - RUNNING
+            - FAILED
+          nullable: true
+        engineEvidenceSource:
+          type: string
+          enum:
+            - PGN
+            - STOCKFISH
+          nullable: true
+        latestEngineAnalysisJobId:
+          type: string
+          format: uuid
+          nullable: true
         latestAnalysisJobStatus:
           type: string
           enum:
             - PENDING
+            - RUNNING
             - PARSING
             - EXTRACTING_ANNOTATIONS
             - CLASSIFICATION
@@ -1384,6 +1407,9 @@ components:
         - derivedResult
         - plyCount
         - importedAt
+        - engineEvidenceStatus
+        - engineEvidenceSource
+        - latestEngineAnalysisJobId
         - latestAnalysisJobStatus
         - latestAnalysisJobId
         - latestAnalysisId
@@ -1798,6 +1824,7 @@ components:
           type: string
           enum:
             - ANALYSIS
+            - ENGINE_ANALYSIS
             - REPORT_GENERATION
             - HOMEWORK_GENERATION
             - PROGRESS_GENERATION
@@ -1805,6 +1832,7 @@ components:
           type: string
           enum:
             - PENDING
+            - RUNNING
             - PARSING
             - EXTRACTING_ANNOTATIONS
             - CLASSIFICATION

@@ -584,7 +584,7 @@ export interface components {
             /** Format: date-time */
             lastAnalysisAt: string | null;
             /** @enum {string|null} */
-            latestAnalysisJobStatus: "PENDING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED" | null;
+            latestAnalysisJobStatus: "PENDING" | "RUNNING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED" | null;
             /** @enum {string|null} */
             mainWeaknessTag: "MISSED_FORK" | "MISSED_PIN" | "MISSED_DOUBLE_ATTACK" | "MISSED_DISCOVERED_ATTACK" | "MISSED_MATE" | "ALLOWED_MATE" | "HANGING_PIECE" | "MISSED_CAPTURE" | "BAD_CAPTURE" | "MISSED_OPPONENT_THREAT" | "OPENED_LINE" | "UNKNOWN_TACTICAL_ERROR" | "KING_SAFETY" | "DELAYED_CASTLING" | "POOR_DEVELOPMENT" | "EARLY_QUEEN" | "BAD_TRADE" | "POOR_CONVERSION" | "OPENING_STRATEGY" | "PAWN_STRUCTURE" | "ENDGAME_TECHNIQUE" | "UNKNOWN_STRATEGIC_ERROR" | "TIME_MANAGEMENT" | "CALCULATION_DEPTH" | "TUNNEL_VISION" | "MATERIAL_GREED" | "LOW_BOARD_AWARENESS" | "INSUFFICIENT_ANNOTATION_DATA" | "REDUCED_CONFIDENCE" | null;
         };
@@ -656,7 +656,13 @@ export interface components {
             /** Format: date-time */
             importedAt: string;
             /** @enum {string|null} */
-            latestAnalysisJobStatus: "PENDING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED" | null;
+            engineEvidenceStatus: "READY" | "QUEUED" | "RUNNING" | "FAILED" | null;
+            /** @enum {string|null} */
+            engineEvidenceSource: "PGN" | "STOCKFISH" | null;
+            /** Format: uuid */
+            latestEngineAnalysisJobId: string | null;
+            /** @enum {string|null} */
+            latestAnalysisJobStatus: "PENDING" | "RUNNING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED" | null;
             /** Format: uuid */
             latestAnalysisJobId: string | null;
             /** Format: uuid */
@@ -777,9 +783,9 @@ export interface components {
             /** Format: uuid */
             studentId: string;
             /** @enum {string} */
-            jobType: "ANALYSIS" | "REPORT_GENERATION" | "HOMEWORK_GENERATION" | "PROGRESS_GENERATION";
+            jobType: "ANALYSIS" | "ENGINE_ANALYSIS" | "REPORT_GENERATION" | "HOMEWORK_GENERATION" | "PROGRESS_GENERATION";
             /** @enum {string} */
-            status: "PENDING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED";
+            status: "PENDING" | "RUNNING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED";
             /** Format: uuid */
             sourceAnalysisId: string | null;
             /** @enum {string|null} */
@@ -852,7 +858,7 @@ export interface components {
             reviewStatus: "UNREVIEWED" | "CONFIRMED" | "REJECTED";
             coachNote: string | null;
             category: string;
-            /** @enum {string} */
+            /** @enum {string|null} */
             mainTag: "MISSED_FORK" | "MISSED_PIN" | "MISSED_DOUBLE_ATTACK" | "MISSED_DISCOVERED_ATTACK" | "MISSED_MATE" | "ALLOWED_MATE" | "HANGING_PIECE" | "MISSED_CAPTURE" | "BAD_CAPTURE" | "MISSED_OPPONENT_THREAT" | "OPENED_LINE" | "UNKNOWN_TACTICAL_ERROR" | "KING_SAFETY" | "DELAYED_CASTLING" | "POOR_DEVELOPMENT" | "EARLY_QUEEN" | "BAD_TRADE" | "POOR_CONVERSION" | "OPENING_STRATEGY" | "PAWN_STRUCTURE" | "ENDGAME_TECHNIQUE" | "UNKNOWN_STRATEGIC_ERROR" | "TIME_MANAGEMENT" | "CALCULATION_DEPTH" | "TUNNEL_VISION" | "MATERIAL_GREED" | "LOW_BOARD_AWARENESS" | "INSUFFICIENT_ANNOTATION_DATA" | "REDUCED_CONFIDENCE" | null;
             secondaryTags: ("MISSED_FORK" | "MISSED_PIN" | "MISSED_DOUBLE_ATTACK" | "MISSED_DISCOVERED_ATTACK" | "MISSED_MATE" | "ALLOWED_MATE" | "HANGING_PIECE" | "MISSED_CAPTURE" | "BAD_CAPTURE" | "MISSED_OPPONENT_THREAT" | "OPENED_LINE" | "UNKNOWN_TACTICAL_ERROR" | "KING_SAFETY" | "DELAYED_CASTLING" | "POOR_DEVELOPMENT" | "EARLY_QUEEN" | "BAD_TRADE" | "POOR_CONVERSION" | "OPENING_STRATEGY" | "PAWN_STRUCTURE" | "ENDGAME_TECHNIQUE" | "UNKNOWN_STRATEGIC_ERROR" | "TIME_MANAGEMENT" | "CALCULATION_DEPTH" | "TUNNEL_VISION" | "MATERIAL_GREED" | "LOW_BOARD_AWARENESS" | "INSUFFICIENT_ANNOTATION_DATA" | "REDUCED_CONFIDENCE")[];
             explanation: string;
@@ -1445,7 +1451,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 cursor?: string;
-                analysisStatus?: "PENDING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED";
+                analysisStatus?: "PENDING" | "RUNNING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED";
             };
             header?: never;
             path: {
@@ -1508,8 +1514,8 @@ export interface operations {
             query?: {
                 studentId?: string;
                 gameId?: string;
-                jobType?: "ANALYSIS" | "REPORT_GENERATION" | "HOMEWORK_GENERATION" | "PROGRESS_GENERATION";
-                status?: "PENDING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED";
+                jobType?: "ANALYSIS" | "ENGINE_ANALYSIS" | "REPORT_GENERATION" | "HOMEWORK_GENERATION" | "PROGRESS_GENERATION";
+                status?: "PENDING" | "RUNNING" | "PARSING" | "EXTRACTING_ANNOTATIONS" | "CLASSIFICATION" | "GENERATING_OUTPUT" | "COMPLETED" | "FAILED";
                 limit?: number;
                 cursor?: string;
             };

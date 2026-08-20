@@ -270,7 +270,7 @@ export class StudentsService {
             createdAt: latestProgress.createdAt,
           }
         : null,
-      recentGames: games.map(mapGameWithLatestJob),
+      recentGames: games.map((game) => mapGameWithLatestJob(game)),
       recentAnalyses: analyses.map((analysis) => ({
         id: analysis.id,
         analysisJobId: analysis.analysisJobId,

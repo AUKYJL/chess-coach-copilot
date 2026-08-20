@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   AnalysisJobStatus,
+  EngineEvidenceSource,
+  EngineEvidenceStatus,
   ExternalPlatform,
   GameResult,
   MomentSeverity,
@@ -129,6 +131,15 @@ export class RecentGameResponse {
 
   @ApiProperty({ type: String, format: 'date-time' })
   importedAt: Date;
+
+  @ApiProperty({ enum: EngineEvidenceStatus, nullable: true })
+  engineEvidenceStatus: EngineEvidenceStatus | null;
+
+  @ApiProperty({ enum: EngineEvidenceSource, nullable: true })
+  engineEvidenceSource: EngineEvidenceSource | null;
+
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  latestEngineAnalysisJobId: string | null;
 
   @ApiProperty({ enum: AnalysisJobStatus, nullable: true })
   latestAnalysisJobStatus: AnalysisJobStatus | null;

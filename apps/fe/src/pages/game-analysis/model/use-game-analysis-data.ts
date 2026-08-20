@@ -136,6 +136,19 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function isGameAnalysisInProgress(game: GameDetailsResponse) {
+  return (
+    game.engineEvidenceStatus === "QUEUED" ||
+    game.engineEvidenceStatus === "RUNNING" ||
+    game.latestAnalysisJobStatus === "PENDING" ||
+    game.latestAnalysisJobStatus === "RUNNING" ||
+    game.latestAnalysisJobStatus === "PARSING" ||
+    game.latestAnalysisJobStatus === "EXTRACTING_ANNOTATIONS" ||
+    game.latestAnalysisJobStatus === "CLASSIFICATION" ||
+    game.latestAnalysisJobStatus === "GENERATING_OUTPUT"
+  );
+}
+
 function isReportJobInProgress(
   status: AnalysisJobResponse["status"] | null | undefined,
 ): boolean {
@@ -429,10 +442,15 @@ export function useGameAnalysisData({
   };
   const gameQuery = $api.useQuery("get", "/api/games/{gameId}", gameParams, {
     enabled: hasGameId,
+    refetchInterval: (query) =>
+      query.state.data && isGameAnalysisInProgress(query.state.data)
+        ? 5000
+        : false,
   });
   const gameData = gameQuery.data as GameDetailsResponse | undefined;
   const latestAnalysisId = gameData?.latestAnalysisId ?? null;
   const latestAnalysisJobId = gameData?.latestAnalysisJobId ?? null;
+  const latestEngineAnalysisJobId = gameData?.latestEngineAnalysisJobId ?? null;
   const latestAnalysisJobStatus = gameData?.latestAnalysisJobStatus ?? null;
   const analysisParams = useMemo(
     () => ({
@@ -654,7 +672,9 @@ export function useGameAnalysisData({
   };
 
   const onRetryAnalysis = async () => {
-    if (!latestAnalysisJobId) {
+    const retryJobId = latestAnalysisJobId ?? latestEngineAnalysisJobId;
+
+    if (!retryJobId) {
       return;
     }
 
@@ -664,7 +684,7 @@ export function useGameAnalysisData({
       await retryAnalysisMutation.mutateAsync({
         params: {
           path: {
-            jobId: latestAnalysisJobId,
+            jobId: retryJobId,
           },
         },
       });
@@ -1234,6 +1254,44 @@ export function useGameAnalysisData({
     };
   }
 
+  if (gameData.engineEvidenceStatus === "FAILED") {
+    return {
+      ...queryActions,
+      gameHeader: mapGameAnalysisHeader({
+        game: gameData,
+        statusLabel: "Ошибка Stockfish",
+        statusTone: "danger",
+      }),
+      state: "failed",
+      page: null,
+      errorMessage:
+        retryError ?? "Stockfish не смог завершить анализ этой партии.",
+    };
+  }
+
+  if (
+    gameData.engineEvidenceStatus === "QUEUED" ||
+    gameData.engineEvidenceStatus === "RUNNING"
+  ) {
+    const isQueued = gameData.engineEvidenceStatus === "QUEUED";
+
+    return {
+      ...queryActions,
+      gameHeader: mapGameAnalysisHeader({
+        game: gameData,
+        statusLabel: isQueued ? "Stockfish в очереди" : "Stockfish анализирует",
+        statusTone: "warning",
+      }),
+      state: "processing",
+      page: null,
+      statusTitle: isQueued
+        ? "Stockfish ожидает запуска"
+        : "Stockfish анализирует партию",
+      statusDescription:
+        "Критические моменты и рекомендации появятся после завершения анализа движком.",
+    };
+  }
+
   if (latestAnalysisJobStatus === "FAILED") {
     return {
       ...queryActions,
@@ -1250,6 +1308,7 @@ export function useGameAnalysisData({
 
   if (
     latestAnalysisJobStatus === "PENDING" ||
+    latestAnalysisJobStatus === "RUNNING" ||
     latestAnalysisJobStatus === "PARSING" ||
     latestAnalysisJobStatus === "EXTRACTING_ANNOTATIONS" ||
     latestAnalysisJobStatus === "CLASSIFICATION" ||

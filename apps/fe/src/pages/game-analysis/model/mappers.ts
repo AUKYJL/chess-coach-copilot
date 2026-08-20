@@ -1,3 +1,5 @@
+import { formatWeaknessTag } from "@/shared/lib/format-weakness-tag";
+
 import type { AnalysisDetailsResponse, GameDetailsResponse } from "./api-types";
 import type {
   GameAnalysisCriticalMomentViewModel,
@@ -8,7 +10,6 @@ import type {
   GameAnalysisSummaryStatViewModel,
   SemanticTone,
 } from "./view-model";
-import { formatWeaknessTag } from "@/shared/lib/format-weakness-tag";
 
 type PositionEvaluation =
   | {
@@ -65,6 +66,8 @@ function formatStatusLabel(
     switch (status) {
       case "PENDING":
         return "Ожидание";
+      case "RUNNING":
+        return "Анализируем партию";
       case "PARSING":
         return "Читаем партию";
       case "EXTRACTING_ANNOTATIONS":

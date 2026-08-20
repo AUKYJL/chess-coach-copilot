@@ -10,23 +10,19 @@ import {
   DialogHeader,
   DialogTitle,
   Form,
-  FormInputField,
-  FormTextareaField,
   FormControl,
   FormField,
+  FormInputField,
   FormItem,
   FormLabel,
   FormMessage,
+  FormTextareaField,
   RadioGroup,
   RadioGroupItem,
 } from "@/shared/ui";
 import { BUTTON_VARIANT, Button } from "@/shared/ui/button";
 
-import {
-  type AnalyzeGameDraft,
-  analyzeGameSchema,
-  isAnnotatedPgn,
-} from "../model";
+import { type AnalyzeGameDraft, analyzeGameSchema } from "../model";
 
 type AnalyzeGameDialogProps = {
   open: boolean;
@@ -68,8 +64,8 @@ export function AnalyzeGameDialog({
         <DialogHeader>
           <DialogTitle>Проанализировать партию</DialogTitle>
           <DialogDescription>
-            Отправьте уже аннотированный PGN на анализ. Здесь принимается только
-            аннотированный PGN.
+            Вставьте PGN. Если в нём нет данных движка, мы запустим анализ
+            Stockfish — это может занять несколько минут.
           </DialogDescription>
         </DialogHeader>
 
@@ -77,10 +73,6 @@ export function AnalyzeGameDialog({
           <form
             className="space-y-4"
             onSubmit={form.handleSubmit(async (values) => {
-              if (!isAnnotatedPgn(values.rawPgn)) {
-                return;
-              }
-
               await onSubmit({
                 rawPgn: values.rawPgn.trim(),
                 studentColor: values.studentColor,
@@ -91,8 +83,10 @@ export function AnalyzeGameDialog({
             <FormTextareaField
               control={form.control}
               name="rawPgn"
-              label="Аннотированный PGN"
-              placeholder='[Event "Тренировочная партия"] ... 12. Qxh2+? {Пропущена угроза}'
+              label="PGN"
+              placeholder={
+                '[Event "Тренировочная партия"]\n[Result "1-0"]\n\n1. e4 e5 2. Nf3 Nc6 1-0'
+              }
               rows={10}
             />
 
@@ -127,18 +121,23 @@ export function AnalyzeGameDialog({
               control={form.control}
               name="sourceLabel"
               label="Подпись источника"
-              placeholder="Аннотированный экспорт"
+              placeholder="Экспорт с Lichess"
             />
 
             <DialogFooter>
               <Button
                 type="button"
                 variant={BUTTON_VARIANT.OUTLINE}
+                disabled={form.formState.isSubmitting}
                 onClick={() => onOpenChange(false)}
               >
                 Отмена
               </Button>
-              <Button type="submit">Проанализировать партию</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting
+                  ? "Отправляем PGN..."
+                  : "Проанализировать партию"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

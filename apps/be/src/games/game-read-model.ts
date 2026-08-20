@@ -82,7 +82,10 @@ export type GameCardRow = Prisma.GameGetPayload<{
 
 export type GameCard = ReturnType<typeof mapGameWithLatestJob>;
 
-export function mapGameWithLatestJob<TGame extends GameCardBase>(game: TGame) {
+export function mapGameWithLatestJob<TGame extends GameCardBase>(
+  game: TGame,
+  latestEngineAnalysisJobId: string | null = null,
+) {
   const latestJob = game.analysisJobs[0] ?? null;
 
   return {
@@ -101,6 +104,7 @@ export function mapGameWithLatestJob<TGame extends GameCardBase>(game: TGame) {
     engineEvidenceStatus: game.engineEvidenceStatus,
     engineEvidenceSource: game.engineEvidenceSource,
     importedAt: game.importedAt,
+    latestEngineAnalysisJobId,
     latestAnalysisJobStatus: latestJob?.status ?? null,
     latestAnalysisJobId: latestJob?.id ?? null,
     latestAnalysisId: latestJob?.analysis?.id ?? null,
@@ -124,9 +128,12 @@ export type GameDetailRow = Prisma.GameGetPayload<{
 
 export type GameDetail = ReturnType<typeof mapGameDetail>;
 
-export function mapGameDetail(game: GameDetailRow) {
+export function mapGameDetail(
+  game: GameDetailRow,
+  latestEngineAnalysisJobId: string | null = null,
+) {
   return {
-    ...mapGameWithLatestJob(game),
+    ...mapGameWithLatestJob(game, latestEngineAnalysisJobId),
     studentId: game.studentId,
     sourceType: game.sourceType,
     hasEngineAnnotations: game.hasEngineAnnotations,

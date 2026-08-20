@@ -10,6 +10,7 @@ import type {
 } from "./index";
 import {
   getStudentOverviewStatus,
+  isGameAnalysisInProgress,
   mapStudentOverviewViewModel,
 } from "./mappers";
 
@@ -118,6 +119,10 @@ export function useStudentOverviewData({
     studentPathParams,
     {
       enabled: hasStudentId,
+      refetchInterval: (query) =>
+        query.state.data?.recentGames.some(isGameAnalysisInProgress)
+          ? 5000
+          : false,
     },
   );
   const analysisProfileQuery = $api.useQuery(

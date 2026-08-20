@@ -19,12 +19,19 @@ import { getPerformanceDirectionTone, getSeverityTone } from "./semantic-tones";
 
 const jobStatusLabels: Record<string, string> = {
   PENDING: "Ожидание",
+  RUNNING: "Анализируем партию",
   PARSING: "Читаем партию",
   EXTRACTING_ANNOTATIONS: "Ищем ключевые позиции",
   CLASSIFICATION: "Определяем паттерны",
   GENERATING_OUTPUT: "Готовим рекомендации",
   COMPLETED: "Готово",
   FAILED: "Анализ не выполнен",
+};
+
+const engineStatusLabels: Record<string, string> = {
+  QUEUED: "Stockfish в очереди",
+  RUNNING: "Stockfish анализирует",
+  FAILED: "Ошибка Stockfish",
 };
 
 const severityLabels: Record<string, string> = {
@@ -116,6 +123,28 @@ function jobStatusToLabel(status: string | null) {
   }
 
   return jobStatusLabels[status] ?? titleCase(status);
+}
+
+function getAnalysisStateLabel(game: RecentGameRecord) {
+  const engineStatusLabel =
+    game.engineEvidenceStatus === null
+      ? null
+      : (engineStatusLabels[game.engineEvidenceStatus] ?? null);
+
+  return engineStatusLabel ?? jobStatusToLabel(game.latestAnalysisJobStatus);
+}
+
+export function isGameAnalysisInProgress(game: RecentGameRecord) {
+  return (
+    game.engineEvidenceStatus === "QUEUED" ||
+    game.engineEvidenceStatus === "RUNNING" ||
+    game.latestAnalysisJobStatus === "PENDING" ||
+    game.latestAnalysisJobStatus === "RUNNING" ||
+    game.latestAnalysisJobStatus === "PARSING" ||
+    game.latestAnalysisJobStatus === "EXTRACTING_ANNOTATIONS" ||
+    game.latestAnalysisJobStatus === "CLASSIFICATION" ||
+    game.latestAnalysisJobStatus === "GENERATING_OUTPUT"
+  );
 }
 
 function getPlayersLabel(game: RecentGameRecord) {
@@ -255,7 +284,7 @@ export function mapRecentGamesToViewModel(
     metaLabel: getGameMetaLabel(game),
     openingName: getOpeningLabel(game),
     importedAtLabel: formatDate(game.importedAt),
-    analysisStateLabel: jobStatusToLabel(game.latestAnalysisJobStatus),
+    analysisStateLabel: getAnalysisStateLabel(game),
   }));
 }
 
