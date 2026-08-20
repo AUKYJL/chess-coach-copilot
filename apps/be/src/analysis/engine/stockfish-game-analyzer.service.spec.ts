@@ -90,6 +90,67 @@ describe('StockfishGameAnalyzerService', () => {
     ]);
   });
 
+  it('prioritizes the largest White centipawn loss for deep analysis', async () => {
+    const adapter = new FakeStockfishAdapter({
+      f0: { type: 'cp', value: 800 },
+      f1: { type: 'cp', value: 500 },
+      f2: { type: 'cp', value: 100 },
+      f3: { type: 'cp', value: 90 },
+    });
+    const service = new StockfishGameAnalyzerService(adapter as never, {
+      ...configuration,
+      maxDeepMoves: 1,
+    });
+
+    await service.analyze(createParsedGame(), StudentColor.WHITE);
+
+    expect(adapter.calls.filter((call) => call.nodes === 500)).toEqual([
+      expect.objectContaining({ fen: 'f0' }),
+      expect.objectContaining({ fen: 'f1' }),
+    ]);
+  });
+
+  it('prioritizes the largest Black centipawn loss for deep analysis', async () => {
+    const adapter = new FakeStockfishAdapter({
+      f0: { type: 'cp', value: 0 },
+      f1: { type: 'cp', value: -800 },
+      f2: { type: 'cp', value: -500 },
+      f3: { type: 'cp', value: -100 },
+      f4: { type: 'cp', value: -90 },
+    });
+    const service = new StockfishGameAnalyzerService(adapter as never, {
+      ...configuration,
+      maxDeepMoves: 1,
+    });
+
+    await service.analyze(createFourPlyGame(), StudentColor.BLACK);
+
+    expect(adapter.calls.filter((call) => call.nodes === 500)).toEqual([
+      expect.objectContaining({ fen: 'f1' }),
+      expect.objectContaining({ fen: 'f2' }),
+    ]);
+  });
+
+  it('prioritizes a transition to a losing mate over centipawn losses', async () => {
+    const adapter = new FakeStockfishAdapter({
+      f0: { type: 'cp', value: 100 },
+      f1: { type: 'mate', value: -3 },
+      f2: { type: 'cp', value: 100 },
+      f3: { type: 'cp', value: -200 },
+    });
+    const service = new StockfishGameAnalyzerService(adapter as never, {
+      ...configuration,
+      maxDeepMoves: 1,
+    });
+
+    await service.analyze(createParsedGame(), StudentColor.WHITE);
+
+    expect(adapter.calls.filter((call) => call.nodes === 500)).toEqual([
+      expect.objectContaining({ fen: 'f0' }),
+      expect.objectContaining({ fen: 'f1' }),
+    ]);
+  });
+
   it('persists legal Stockfish notation as SAN and omits an invalid PV', async () => {
     const parsed = new PgnParserService().parse(
       '[Event "Test"]\n[Result "*"]\n\n1. e4 e5 *',
@@ -156,6 +217,17 @@ function createParsedGame(): ParsedPgn {
       { ply: 1, color: 'w', beforeFen: 'f0', afterFen: 'f1' },
       { ply: 2, color: 'b', beforeFen: 'f1', afterFen: 'f2' },
       { ply: 3, color: 'w', beforeFen: 'f2', afterFen: 'f3' },
+    ],
+  } as ParsedPgn;
+}
+
+function createFourPlyGame(): ParsedPgn {
+  return {
+    moves: [
+      { ply: 1, color: 'w', beforeFen: 'f0', afterFen: 'f1' },
+      { ply: 2, color: 'b', beforeFen: 'f1', afterFen: 'f2' },
+      { ply: 3, color: 'w', beforeFen: 'f2', afterFen: 'f3' },
+      { ply: 4, color: 'b', beforeFen: 'f3', afterFen: 'f4' },
     ],
   } as ParsedPgn;
 }

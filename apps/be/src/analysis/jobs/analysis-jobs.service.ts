@@ -139,7 +139,7 @@ export class AnalysisJobsService {
   }
 
   async enqueuePersistedAnalysisJob(jobId: string, traceId: string) {
-    return this.enqueueCreatedJob(jobId, traceId, () =>
+    return this.enqueueJob(jobId, traceId, false, () =>
       this.analysisJobEnqueuer.enqueueAnalysisJob(jobId, traceId),
     );
   }
@@ -319,15 +319,26 @@ export class AnalysisJobsService {
     traceId: string,
     enqueue: () => Promise<Job<AnalysisQueueJobData>>,
   ) {
+    return this.enqueueJob(jobId, traceId, true, enqueue);
+  }
+
+  private async enqueueJob(
+    jobId: string,
+    traceId: string,
+    markFailedOnError: boolean,
+    enqueue: () => Promise<Job<AnalysisQueueJobData>>,
+  ) {
     let queueJob: Job<AnalysisQueueJobData>;
 
     try {
       queueJob = await enqueue();
     } catch (error) {
-      await this.analysisJobsRepository.markFailed(jobId, {
-        failureCode: 'QUEUE_ENQUEUE_FAILED',
-        failureMessage: this.toFailureMessage(error),
-      });
+      if (markFailedOnError) {
+        await this.analysisJobsRepository.markFailed(jobId, {
+          failureCode: 'QUEUE_ENQUEUE_FAILED',
+          failureMessage: this.toFailureMessage(error),
+        });
+      }
       this.logger.error(
         {
           event: 'analysis_job_enqueue_failed',

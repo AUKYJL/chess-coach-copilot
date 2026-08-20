@@ -199,6 +199,46 @@ function compareCandidates(
   right: Candidate,
   studentColor: StudentColor,
 ): number {
+  const leftMateRank = getMateDeteriorationRank(left, studentColor);
+  const rightMateRank = getMateDeteriorationRank(right, studentColor);
+
+  if (leftMateRank !== rightMateRank) {
+    return rightMateRank - leftMateRank;
+  }
+
+  if (leftMateRank > 0) {
+    return compareMateDeteriorations(left, right, studentColor);
+  }
+
+  return (
+    getCentipawnLoss(right, studentColor) - getCentipawnLoss(left, studentColor)
+  );
+}
+
+function getMateDeteriorationRank(
+  candidate: Candidate,
+  studentColor: StudentColor,
+): number {
+  if (isStudentLosingMate(candidate.afterEvaluation, studentColor)) {
+    return 3;
+  }
+
+  if (isStudentWinningMate(candidate.beforeEvaluation, studentColor)) {
+    return 2;
+  }
+
+  const hasMate =
+    candidate.beforeEvaluation.type === 'mate' ||
+    candidate.afterEvaluation.type === 'mate';
+
+  return hasMate ? 1 : 0;
+}
+
+function compareMateDeteriorations(
+  left: Candidate,
+  right: Candidate,
+  studentColor: StudentColor,
+): number {
   const afterComparison = compareEngineEvaluations(
     left.afterEvaluation,
     right.afterEvaluation,
@@ -214,6 +254,35 @@ function compareCandidates(
   );
 
   return studentColor === 'WHITE' ? beforeComparison : -beforeComparison;
+}
+
+function getCentipawnLoss(
+  candidate: Candidate,
+  studentColor: StudentColor,
+): number {
+  return studentColor === 'WHITE'
+    ? candidate.beforeEvaluation.value - candidate.afterEvaluation.value
+    : candidate.afterEvaluation.value - candidate.beforeEvaluation.value;
+}
+
+function isStudentLosingMate(
+  evaluation: EngineEvaluation,
+  studentColor: StudentColor,
+): boolean {
+  return (
+    evaluation.type === 'mate' &&
+    (studentColor === 'WHITE' ? evaluation.value < 0 : evaluation.value > 0)
+  );
+}
+
+function isStudentWinningMate(
+  evaluation: EngineEvaluation,
+  studentColor: StudentColor,
+): boolean {
+  return (
+    evaluation.type === 'mate' &&
+    (studentColor === 'WHITE' ? evaluation.value > 0 : evaluation.value < 0)
+  );
 }
 
 function toEnginePositionEvidence(

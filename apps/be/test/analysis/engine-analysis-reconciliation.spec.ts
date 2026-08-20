@@ -7,7 +7,7 @@ import {
 import { EngineAnalysisReconciliationService } from '../../src/analysis/engine/engine-analysis-reconciliation.service.js';
 
 describe('EngineAnalysisReconciliationService', () => {
-  it('requeues interrupted engine and normal analysis jobs on worker startup', async () => {
+  it('requeues interrupted engine and pending downstream analysis jobs on worker startup', async () => {
     const database = new FakeDatabase();
     const engineEnqueuer = { enqueueEngineAnalysisJob: jest.fn() };
     const analysisEnqueuer = { enqueueAnalysisJob: jest.fn() };
@@ -61,7 +61,7 @@ class FakeDatabase {
         {
           id: 'analysis-job',
           traceId: 'analysis-trace',
-          status: AnalysisJobStatus.CLASSIFICATION,
+          status: AnalysisJobStatus.PENDING,
           jobType: AnalysisJobType.ANALYSIS,
           completedAt: null,
           analysis: null,

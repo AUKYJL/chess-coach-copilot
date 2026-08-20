@@ -48,11 +48,37 @@ describe('EngineAnalysisProcessor', () => {
       engineEvidenceStatus: EngineEvidenceStatus.FAILED,
     });
   });
+
+  it('keeps the downstream analysis pending when its enqueue fails', async () => {
+    const database = new FakeDatabase();
+    const processor = createProcessor(database, undefined, {
+      enqueuePersistedAnalysisJob: () =>
+        Promise.reject(new Error('analysis queue offline')),
+    });
+
+    await expect(
+      processor.process(createBullJob(database.job) as never),
+    ).resolves.toBeUndefined();
+
+    expect(database.createdAnalysisJob.status).toBe(AnalysisJobStatus.PENDING);
+    expect(database.jobUpdates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ status: AnalysisJobStatus.COMPLETED }),
+      ]),
+    );
+    expect(database.gameUpdates.at(-1)).toMatchObject({
+      engineEvidenceStatus: EngineEvidenceStatus.READY,
+    });
+  });
 });
 
 class FakeDatabase {
   readonly gameUpdates: Array<Record<string, unknown>> = [];
   readonly jobUpdates: Array<Record<string, unknown>> = [];
+  readonly createdAnalysisJob = {
+    id: 'analysis-job',
+    status: AnalysisJobStatus.PENDING,
+  };
   readonly job = {
     id: 'engine-job',
     createdAt: new Date(),
@@ -82,7 +108,7 @@ class FakeDatabase {
       return Promise.resolve({ count: 1 });
     },
     findFirst: () => Promise.resolve(null),
-    create: () => Promise.resolve({ id: 'analysis-job' }),
+    create: () => Promise.resolve(this.createdAnalysisJob),
   };
 
   game = {
@@ -102,6 +128,11 @@ function createProcessor(
   parser: { parse: () => unknown } = {
     parse: () => ({ moves: [] }),
   },
+  analysisJobsService: {
+    enqueuePersistedAnalysisJob: () => Promise<unknown>;
+  } = {
+    enqueuePersistedAnalysisJob: () => Promise.resolve({}),
+  },
 ) {
   return new EngineAnalysisProcessor(
     {
@@ -119,9 +150,7 @@ function createProcessor(
           positions: [],
         }),
     } as never,
-    {
-      enqueuePersistedAnalysisJob: () => Promise.resolve({}),
-    } as never,
+    analysisJobsService as never,
   );
 }
 
