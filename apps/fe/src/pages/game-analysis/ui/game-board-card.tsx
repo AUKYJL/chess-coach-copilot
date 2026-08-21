@@ -1,5 +1,11 @@
-import { ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCcw,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { ChessBoard, JSChessEngine, type SquarePos } from "react-chessboard-ui";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui";
@@ -9,8 +15,6 @@ import type {
   GameAnalysisCriticalMomentViewModel,
   GameAnalysisReplayMoveViewModel,
 } from "../model";
-
-import { ToneBadge } from "./tone-badge";
 
 const BOARD_CONFIG = {
   arrowColor: "#1f4d7a",
@@ -42,11 +46,8 @@ const BOARD_COORDINATE_RANKS = [
   "8",
 ] as const;
 const BOARD_LIGHT_SQUARE_COLOR = "#F4EFE7";
-const COMPACT_BOARD_SQUARE_SIZE_PX = 28;
-const MOBILE_BOARD_SQUARE_SIZE_PX = 32;
-const DESKTOP_BOARD_SQUARE_SIZE_PX = 39;
-const MOBILE_VIEWPORT_MIN_WIDTH_PX = 360;
-const DESKTOP_VIEWPORT_MIN_WIDTH_PX = 640;
+const BOARD_MAX_SIZE_PX = 640;
+const MIN_BOARD_SQUARE_SIZE_PX = 28;
 const SELECTED_MOVE_ROW_HEIGHT_PX = 26;
 
 type BoardSizing = {
@@ -64,39 +65,22 @@ type BoardArrow = {
 
 function noop() {}
 
-function getBoardSizing(viewportWidth: number): BoardSizing {
-  if (viewportWidth < MOBILE_VIEWPORT_MIN_WIDTH_PX) {
-    return {
-      squareSize: COMPACT_BOARD_SQUARE_SIZE_PX,
-      boardSize: COMPACT_BOARD_SQUARE_SIZE_PX * 8,
-      coordinateFontSize: 10,
-      coordinateInset: 2,
-    };
-  }
-
-  if (viewportWidth < DESKTOP_VIEWPORT_MIN_WIDTH_PX) {
-    return {
-      squareSize: MOBILE_BOARD_SQUARE_SIZE_PX,
-      boardSize: MOBILE_BOARD_SQUARE_SIZE_PX * 8,
-      coordinateFontSize: 10,
-      coordinateInset: 3,
-    };
-  }
+function getBoardSizing(availableWidth: number): BoardSizing {
+  const squareSize = Math.max(
+    MIN_BOARD_SQUARE_SIZE_PX,
+    Math.floor(Math.min(availableWidth, BOARD_MAX_SIZE_PX) / 8),
+  );
 
   return {
-    squareSize: DESKTOP_BOARD_SQUARE_SIZE_PX,
-    boardSize: DESKTOP_BOARD_SQUARE_SIZE_PX * 8,
-    coordinateFontSize: 11,
-    coordinateInset: 4,
+    squareSize,
+    boardSize: squareSize * 8,
+    coordinateFontSize: squareSize < 36 ? 10 : 11,
+    coordinateInset: squareSize < 36 ? 3 : 4,
   };
 }
 
 function getInitialBoardSizing(): BoardSizing {
-  if (typeof window === "undefined") {
-    return getBoardSizing(DESKTOP_VIEWPORT_MIN_WIDTH_PX);
-  }
-
-  return getBoardSizing(window.innerWidth);
+  return getBoardSizing(320);
 }
 
 function getCoordinateTextColor(rowIndex: number, columnIndex: number): string {
@@ -146,11 +130,15 @@ function toArrowCoords(args: {
 type GameBoardCardProps = {
   boardReversed: boolean;
   initialFen: string;
+  isEndDisabled: boolean;
   isNextDisabled: boolean;
   isPreviousDisabled: boolean;
+  isStartDisabled: boolean;
   onFlipBoard: () => void;
+  onGoToEnd: () => void;
   onGoToNext: () => void;
   onGoToPrevious: () => void;
+  onGoToStart: () => void;
   selectedMoment: GameAnalysisCriticalMomentViewModel | null;
   selectedMove: GameAnalysisReplayMoveViewModel | null;
 };
@@ -158,11 +146,15 @@ type GameBoardCardProps = {
 export function GameBoardCard({
   boardReversed,
   initialFen,
+  isEndDisabled,
   isNextDisabled,
   isPreviousDisabled,
+  isStartDisabled,
   onFlipBoard,
+  onGoToEnd,
   onGoToNext,
   onGoToPrevious,
+  onGoToStart,
   selectedMoment,
   selectedMove,
 }: GameBoardCardProps) {
@@ -187,21 +179,17 @@ export function GameBoardCard({
     ? BOARD_COORDINATE_RANKS
     : BOARD_COORDINATE_RANKS.toReversed();
   const [boardSizing, setBoardSizing] = useState(getInitialBoardSizing);
+  const boardContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const desktopMediaQuery = window.matchMedia(
-      `(min-width: ${DESKTOP_VIEWPORT_MIN_WIDTH_PX}px)`,
-    );
-    const mobileMediaQuery = window.matchMedia(
-      `(min-width: ${MOBILE_VIEWPORT_MIN_WIDTH_PX}px)`,
-    );
-
     const updateBoardSizing = () => {
-      const nextBoardSizing = desktopMediaQuery.matches
-        ? getBoardSizing(DESKTOP_VIEWPORT_MIN_WIDTH_PX)
-        : mobileMediaQuery.matches
-          ? getBoardSizing(MOBILE_VIEWPORT_MIN_WIDTH_PX)
-          : getBoardSizing(0);
+      const availableWidth = boardContainerRef.current?.clientWidth;
+
+      if (!availableWidth) {
+        return;
+      }
+
+      const nextBoardSizing = getBoardSizing(availableWidth);
 
       setBoardSizing((currentBoardSizing) =>
         currentBoardSizing.squareSize === nextBoardSizing.squareSize
@@ -211,35 +199,34 @@ export function GameBoardCard({
     };
 
     updateBoardSizing();
-    desktopMediaQuery.addEventListener("change", updateBoardSizing);
-    mobileMediaQuery.addEventListener("change", updateBoardSizing);
+    const resizeObserver = new ResizeObserver(updateBoardSizing);
+    const boardContainer = boardContainerRef.current;
+
+    if (boardContainer) {
+      resizeObserver.observe(boardContainer);
+    }
 
     return () => {
-      desktopMediaQuery.removeEventListener("change", updateBoardSizing);
-      mobileMediaQuery.removeEventListener("change", updateBoardSizing);
+      resizeObserver.disconnect();
     };
   }, []);
 
   return (
     <Card>
-      <CardHeader className="gap-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div
-            className="flex flex-wrap items-center gap-2"
-            style={{ minHeight: SELECTED_MOVE_ROW_HEIGHT_PX }}
-          >
-            <CardTitle>{selectedMove?.moveLabel ?? "Начальная позиция"}</CardTitle>
-            {selectedMoment ? (
-              <ToneBadge
-                label={selectedMoment.severityLabel}
-                tone={selectedMoment.severityTone}
-              />
-            ) : null}
-          </div>
+      <CardHeader className="gap-1 pb-3">
+        <div
+          className="flex items-center"
+          style={{ minHeight: SELECTED_MOVE_ROW_HEIGHT_PX }}
+        >
+          <CardTitle className="text-base">
+            {selectedMove
+              ? `${selectedMove.moveLabel} · ход ${selectedMove.ply}`
+              : "Начальная позиция"}
+          </CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="mx-auto w-fit">
+        <div ref={boardContainerRef} className="mx-auto w-full">
           <div
             className="relative mx-auto"
             style={{
@@ -312,15 +299,49 @@ export function GameBoardCard({
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-1">
+          <Button
+            aria-label="Начало партии"
+            className="size-8 rounded-xl p-1.5"
+            disabled={isStartDisabled}
+            onClick={onGoToStart}
+            size={BUTTON_SIZE.ICON}
+            variant={BUTTON_VARIANT.OUTLINE}
+          >
+            <ChevronsLeft className="size-4" />
+          </Button>
           <Button
             aria-label="Предыдущий ход"
+            className="size-8 rounded-xl p-1.5"
             disabled={isPreviousDisabled}
             onClick={onGoToPrevious}
             size={BUTTON_SIZE.ICON}
             variant={BUTTON_VARIANT.OUTLINE}
           >
             <ChevronLeft className="size-4" />
+          </Button>
+          <span className="text-muted-foreground text-sm font-medium">
+            {selectedMove?.moveLabel ?? "Начало"}
+          </span>
+          <Button
+            aria-label="Следующий ход"
+            className="size-8 rounded-xl p-1.5"
+            disabled={isNextDisabled}
+            onClick={onGoToNext}
+            size={BUTTON_SIZE.ICON}
+            variant={BUTTON_VARIANT.OUTLINE}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+          <Button
+            aria-label="Конец партии"
+            className="size-8 rounded-xl p-1.5"
+            disabled={isEndDisabled}
+            onClick={onGoToEnd}
+            size={BUTTON_SIZE.ICON}
+            variant={BUTTON_VARIANT.OUTLINE}
+          >
+            <ChevronsRight className="size-4" />
           </Button>
           <Button
             onClick={onFlipBoard}
@@ -329,15 +350,6 @@ export function GameBoardCard({
           >
             <RefreshCcw className="size-4" />
             Перевернуть доску
-          </Button>
-          <Button
-            aria-label="Следующий ход"
-            disabled={isNextDisabled}
-            onClick={onGoToNext}
-            size={BUTTON_SIZE.ICON}
-            variant={BUTTON_VARIANT.OUTLINE}
-          >
-            <ChevronRight className="size-4" />
           </Button>
         </div>
       </CardContent>

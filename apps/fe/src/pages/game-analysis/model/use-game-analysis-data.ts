@@ -89,7 +89,7 @@ type QueryActions = {
   retryPage: () => Promise<void>;
   reviewErrorMessage: string | null;
   saveReport: () => Promise<void>;
-  submitMomentReview: (input: SubmitMomentReviewInput) => Promise<void>;
+  submitMomentReview: (input: SubmitMomentReviewInput) => Promise<boolean>;
 };
 
 type GameAnalysisQueryResult =
@@ -913,10 +913,14 @@ export function useGameAnalysisData({
           queryKey: analysisQueryKey,
         });
       }
+
+      return true;
     } catch (error) {
       setReviewErrorMessage(
         getErrorMessage(error, "Не удалось сохранить решение тренера."),
       );
+
+      return false;
     }
   };
 

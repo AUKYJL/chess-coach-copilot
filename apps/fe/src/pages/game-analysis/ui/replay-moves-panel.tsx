@@ -1,15 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { cn } from "@/shared/lib/cn";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  TYPOGRAPHY_COLOR,
-  TYPOGRAPHY_VARIANT,
-  Typography,
-} from "@/shared/ui";
+import { Typography } from "@/shared/ui";
 
 import type {
   GameAnalysisCriticalMomentViewModel,
@@ -81,8 +73,8 @@ function ReplayMoveButton(args: {
   return (
     <button
       className={cn(
-        "border-border bg-surface-subtle hover:bg-surface flex min-h-11 w-full items-center justify-between rounded-[18px] border px-3 py-2 text-left text-sm transition-colors",
-        args.isActive && "border-accent/35 text-foreground bg-[#eef4fb]",
+        "hover:bg-surface-subtle flex h-9 w-full items-center justify-between rounded-md px-2 text-left text-sm transition-colors",
+        args.isActive && "text-foreground bg-[#eef4fb]",
       )}
       onClick={() => args.onSelectPly(args.move.ply)}
       ref={args.registerRef}
@@ -125,25 +117,17 @@ export function ReplayMovesPanel({
   }, [selectedPly]);
 
   return (
-    <Card>
-      <CardHeader className="gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle>Полный реплей партии</CardTitle>
-            <Typography
-              color={TYPOGRAPHY_COLOR.SECONDARY}
-              variant={TYPOGRAPHY_VARIANT.BODY_SMALL}
-            >
-              {selectedMove
-                ? `${selectedMove.moveLabel} · ход ${selectedMove.ply} из ${moves.length}`
-                : "Выберите ход, чтобы синхронизировать доску и детали."}
-            </Typography>
-          </div>
-        </div>
-      </CardHeader>
+    <div className="min-h-0">
+      <div className="mb-4 px-1">
+        <h2 className="text-foreground text-lg font-semibold">Все ходы</h2>
+        <Typography className="mt-1 text-sm">
+          {selectedMove
+            ? `${selectedMove.moveLabel} · ход ${selectedMove.ply} из ${moves.length}`
+            : "Выберите ход, чтобы синхронизировать доску."}
+        </Typography>
+      </div>
 
-      <CardContent>
-        {moves.length === 0 ? (
+      {moves.length === 0 ? (
           <div className="border-border bg-surface-subtle rounded-[22px] border px-4 py-5">
             <p className="text-foreground text-sm font-semibold">
               Реплей пока недоступен
@@ -152,8 +136,8 @@ export function ReplayMovesPanel({
               Нормализованные ходы появятся здесь после готового анализа.
             </p>
           </div>
-        ) : (
-          <div className="max-h-[28rem] space-y-2 overflow-y-auto pr-1">
+      ) : (
+          <div className="divide-border overflow-hidden rounded-[18px] border divide-y">
             {rows.map((row) => {
               const whiteMove = row.whiteMove;
               const blackMove = row.blackMove;
@@ -171,9 +155,9 @@ export function ReplayMovesPanel({
               return (
                 <div
                   key={row.fullMoveNumber}
-                  className="grid grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-start gap-2"
+                  className="grid grid-cols-[2.75rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-1 px-2"
                 >
-                  <div className="text-muted-foreground px-1 pt-2 text-xs font-semibold tracking-[0.18em] uppercase">
+                  <div className="text-muted-foreground px-1 text-xs font-semibold">
                     {row.fullMoveNumber}.
                   </div>
 
@@ -217,15 +201,14 @@ export function ReplayMovesPanel({
                         }}
                       />
                     ) : (
-                      <div className="border-border/60 bg-surface-subtle/60 min-h-11 rounded-[18px] border border-dashed" />
+                      <div className="h-9" />
                     )}
                   </div>
                 </div>
               );
             })}
           </div>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }
