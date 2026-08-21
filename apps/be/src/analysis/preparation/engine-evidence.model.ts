@@ -13,7 +13,7 @@ const enginePositionEvidenceSchema = z.object({
   evaluation: engineEvaluationSchema,
   bestMove: z.string().min(1).optional(),
   principalVariation: z.array(z.string().min(1)).optional(),
-  depth: z.number().int().positive().optional(),
+  depth: z.number().int().nonnegative().optional(),
   nodes: z.number().int().nonnegative().optional(),
   analysisLevel: z.enum(['SCAN', 'DEEP']).optional(),
 });

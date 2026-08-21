@@ -5,6 +5,7 @@ import request from 'supertest';
 import {
   AnalysisJobStatus,
   AnalysisJobType,
+  EngineEvidenceStatus,
   ReportAudience,
   WeaknessTag,
 } from '../../src/generated/prisma/client.js';
@@ -171,6 +172,15 @@ describe('ImportsController (e2e)', () => {
     expect(duplicateResponse.body.isDuplicate).toBe(true);
     expect(duplicateResponse.body.id).toBe(firstImport.body.id);
     expect(fakeQueue.jobs).toHaveLength(queueCountAfterFirstImport);
+    const duplicateEvents = await prisma.analysisJobEvent.findMany({
+      where: {
+        analysisJobId: firstImport.body.id as string,
+        traceId: duplicateResponse.headers['x-request-id'],
+      },
+    });
+    expect(duplicateEvents.map((event) => event?.stage)).toEqual([
+      'import_duplicate_returned',
+    ]);
 
     await request(server)
       .post(`/students/${studentId}/archive`)
@@ -183,6 +193,98 @@ describe('ImportsController (e2e)', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .send(payload)
       .expect(422);
+  });
+
+  it('retries failed analysis when its PGN is imported again', async () => {
+    const { accessToken, studentId } = await registerCoachAndStudent(app);
+    const server = getServer(app);
+    const payload = {
+      studentColor: 'WHITE',
+      rawPgn: readFileSync(
+        new URL(
+          '../fixtures/pgn/annotated-lichess-with-eval.pgn',
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+    };
+
+    const firstImport = await request(server)
+      .post(`/students/${studentId}/imports/pgn`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send(payload)
+      .expect(201);
+    await prisma.analysisJob.update({
+      where: { id: firstImport.body.id as string },
+      data: {
+        status: AnalysisJobStatus.FAILED,
+        failureCode: 'ANALYSIS_FAILED',
+        failureMessage: 'LLM unavailable',
+      },
+    });
+    const queueCount = fakeQueue.jobs.length;
+
+    const retryResponse = await request(server)
+      .post(`/students/${studentId}/imports/pgn`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send(payload)
+      .expect(201);
+
+    expect(retryResponse.body).toMatchObject({
+      id: firstImport.body.id,
+      isDuplicate: true,
+      status: AnalysisJobStatus.PENDING,
+      attemptCount: 1,
+    });
+    expect(fakeQueue.jobs).toHaveLength(queueCount + 1);
+    const events = await prisma.analysisJobEvent.findMany({
+      where: {
+        analysisJobId: firstImport.body.id as string,
+        traceId: retryResponse.headers['x-request-id'],
+      },
+    });
+    expect(events.map((event) => event?.stage)).toEqual([
+      'import_duplicate_retry_enqueued',
+      'import_duplicate_retry_started',
+    ]);
+  });
+
+  it('creates a new engine job when its failed PGN is imported again', async () => {
+    const { accessToken, studentId } = await registerCoachAndStudent(app);
+    const server = getServer(app);
+    const payload = {
+      studentColor: 'WHITE',
+      rawPgn: '[Event "Training"]\n[Result "1-0"]\n\n1. e4 e5 1-0',
+    };
+
+    const firstImport = await request(server)
+      .post(`/students/${studentId}/imports/pgn`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send(payload)
+      .expect(201);
+    await prisma.analysisJob.update({
+      where: { id: firstImport.body.id as string },
+      data: { status: AnalysisJobStatus.FAILED },
+    });
+    await prisma.game.update({
+      where: { id: firstImport.body.gameId as string },
+      data: { engineEvidenceStatus: EngineEvidenceStatus.FAILED },
+    });
+    const queueCount = fakeQueue.jobs.length;
+
+    const retryResponse = await request(server)
+      .post(`/students/${studentId}/imports/pgn`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send(payload)
+      .expect(201);
+
+    expect(retryResponse.body).toMatchObject({
+      jobType: AnalysisJobType.ENGINE_ANALYSIS,
+      isDuplicate: true,
+      status: AnalysisJobStatus.PENDING,
+    });
+    expect(retryResponse.body.id).not.toBe(firstImport.body.id);
+    expect(fakeQueue.jobs).toHaveLength(queueCount + 1);
   });
 
   it('keeps the import flow successful when analysis job event persistence is unavailable', async () => {

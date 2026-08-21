@@ -1,4 +1,4 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Job, UnrecoverableError } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
@@ -16,6 +16,8 @@ import {
   ENGINE_ANALYSIS_QUEUE_NAME,
 } from '../../queues/queue.constants.js';
 import type { EngineAnalysisQueueJobData } from '../../queues/queue.service.js';
+import { QueueWorkerLoggingService } from '../../queues/queue-worker-logging.service.js';
+import { AnalysisJobEventsService } from '../jobs/analysis-job-events.service.js';
 import { PgnParserService } from '../preparation/pgn-parser.service.js';
 import { StockfishError } from './stockfish.error.js';
 import { StockfishGameAnalyzerService } from './stockfish-game-analyzer.service.js';
@@ -30,6 +32,8 @@ export class EngineAnalysisProcessor extends WorkerHost {
     private readonly pgnParserService: PgnParserService,
     private readonly stockfishGameAnalyzerService: StockfishGameAnalyzerService,
     private readonly analysisJobsService: AnalysisJobsService,
+    private readonly analysisJobEventsService: AnalysisJobEventsService,
+    private readonly queueWorkerLoggingService: QueueWorkerLoggingService,
   ) {
     super();
     this.logger.setContext(EngineAnalysisProcessor.name);
@@ -60,6 +64,11 @@ export class EngineAnalysisProcessor extends WorkerHost {
       traceId: job.data.traceId || persistedJob.traceId,
       attempt,
     };
+
+    this.logger.info(
+      { event: 'engine_analysis_job_received', ...context },
+      'Engine analysis worker received a job',
+    );
 
     if (
       persistedJob.status === AnalysisJobStatus.COMPLETED ||
@@ -103,10 +112,23 @@ export class EngineAnalysisProcessor extends WorkerHost {
       });
     });
 
+    await this.analysisJobEventsService.recordBestEffort({
+      analysisJobId: persistedJob.id,
+      traceId: context.traceId,
+      stage: 'engine_analysis_started',
+      level: 'info',
+      message: 'Engine analysis started',
+      payload: { gameId: persistedJob.gameId, attempt },
+    });
+
     try {
       const parsedPgn = this.pgnParserService.parse(
         persistedJob.game.rawPgn,
         persistedJob.game.studentColor,
+      );
+      this.logger.info(
+        { event: 'stockfish_analysis_started', ...context },
+        'Stockfish analysis started',
       );
       const evidence = await this.stockfishGameAnalyzerService.analyze(
         parsedPgn,
@@ -193,6 +215,17 @@ export class EngineAnalysisProcessor extends WorkerHost {
         },
         'Engine analysis completed',
       );
+      await this.analysisJobEventsService.recordBestEffort({
+        analysisJobId: persistedJob.id,
+        traceId: context.traceId,
+        stage: 'engine_analysis_completed',
+        level: 'info',
+        message: 'Engine analysis completed',
+        payload: {
+          queueWaitMs: startedAt - persistedJob.createdAt.getTime(),
+          durationMs: Date.now() - startedAt,
+        },
+      });
     } catch (error) {
       const failureCode = getFailureCode(error);
       const failureMessage = toFailureMessage(error);
@@ -235,6 +268,20 @@ export class EngineAnalysisProcessor extends WorkerHost {
         },
         'Engine analysis failed',
       );
+      await this.analysisJobEventsService.recordBestEffort({
+        analysisJobId: persistedJob.id,
+        traceId: context.traceId,
+        stage: 'engine_analysis_failed',
+        level: 'error',
+        message: 'Engine analysis failed',
+        payload: {
+          failureCode,
+          failureMessage,
+          terminal,
+          exhausted,
+          durationMs: Date.now() - startedAt,
+        },
+      });
 
       if (terminal) {
         throw new UnrecoverableError(failureMessage);
@@ -242,6 +289,28 @@ export class EngineAnalysisProcessor extends WorkerHost {
 
       throw error;
     }
+  }
+
+  @OnWorkerEvent('error')
+  onWorkerError(error: Error): void {
+    this.queueWorkerLoggingService.logWorkerError(
+      ENGINE_ANALYSIS_QUEUE_NAME,
+      error,
+    );
+  }
+
+  @OnWorkerEvent('failed')
+  onJobFailed(
+    job: Job<EngineAnalysisQueueJobData> | undefined,
+    error: Error,
+    previousState: string,
+  ): void {
+    this.queueWorkerLoggingService.logJobFailed(
+      ENGINE_ANALYSIS_QUEUE_NAME,
+      job,
+      error,
+      previousState,
+    );
   }
 }
 

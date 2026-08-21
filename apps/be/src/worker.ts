@@ -10,7 +10,15 @@ async function bootstrap(): Promise<void> {
 
   app.useLogger(app.get(Logger));
   app.enableShutdownHooks();
-  await app.get(StockfishUciAdapter).verifyAvailable();
+  const stockfish = app.get(StockfishUciAdapter);
+  await stockfish.verifyAvailable();
+  app.get(Logger).log(
+    {
+      event: 'worker_ready',
+      engine: stockfish.getIdentity(),
+    },
+    'Background worker is ready',
+  );
 }
 
 bootstrap().catch((error: unknown) => {

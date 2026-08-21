@@ -151,6 +151,13 @@ function createProcessor(
         }),
     } as never,
     analysisJobsService as never,
+    {
+      recordBestEffort: () => Promise.resolve(null),
+    } as never,
+    {
+      logWorkerError: () => undefined,
+      logJobFailed: () => undefined,
+    } as never,
   );
 }
 

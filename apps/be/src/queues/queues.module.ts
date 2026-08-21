@@ -9,6 +9,7 @@ import {
   ENGINE_ANALYSIS_QUEUE_NAME,
 } from './queue.constants.js';
 import { QueueService } from './queue.service.js';
+import { QueueWorkerLoggingService } from './queue-worker-logging.service.js';
 
 @Global()
 @Module({
@@ -34,6 +35,7 @@ import { QueueService } from './queue.service.js';
   ],
   providers: [
     QueueService,
+    QueueWorkerLoggingService,
     {
       provide: ANALYSIS_JOB_ENQUEUER,
       useExisting: QueueService,
@@ -45,6 +47,7 @@ import { QueueService } from './queue.service.js';
   ],
   exports: [
     QueueService,
+    QueueWorkerLoggingService,
     ANALYSIS_JOB_ENQUEUER,
     ENGINE_ANALYSIS_JOB_ENQUEUER,
     BullModule,

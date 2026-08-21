@@ -39,6 +39,29 @@ describe('HttpExceptionFilter', () => {
       }),
     );
   });
+
+  it('logs unexpected failures with request context and the original error', () => {
+    const logger = createLogger();
+    const filter = new HttpExceptionFilter(logger);
+    const response = createResponse();
+    const error = new Error('database offline');
+
+    filter.catch(
+      error,
+      createArgumentsHost(response, { id: 'trace-id', url: '/test' }),
+    );
+
+    expect(logger.error.mock.calls).toContainEqual([
+      expect.objectContaining({
+        event: 'http_exception',
+        traceId: 'trace-id',
+        path: '/test',
+        statusCode: 500,
+        err: error,
+      }),
+      'HTTP request failed',
+    ]);
+  });
 });
 
 function createResponse() {
@@ -48,19 +71,20 @@ function createResponse() {
   };
 }
 
-function createLogger() {
+function createLogger(): Logger & { error: jest.Mock } {
   return {
     error: jest.fn(),
-  } as unknown as Logger;
+  } as unknown as Logger & { error: jest.Mock };
 }
 
-function createArgumentsHost(response: ReturnType<typeof createResponse>) {
+function createArgumentsHost(
+  response: ReturnType<typeof createResponse>,
+  request: { id?: string; url: string } = { url: '/test' },
+) {
   return {
     switchToHttp: () => ({
       getResponse: () => response,
-      getRequest: () => ({
-        url: '/test',
-      }),
+      getRequest: () => ({ ...request, headers: {} }),
     }),
   } as ArgumentsHost;
 }

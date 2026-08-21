@@ -23,6 +23,7 @@ import {
       ): Params => ({
         pinoHttp: {
           level: loggingConfiguration.level,
+          autoLogging: false,
           genReqId: (request, response) => {
             const requestId =
               readRequestIdHeader(request.headers) ?? randomUUID();

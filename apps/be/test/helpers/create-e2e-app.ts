@@ -31,6 +31,7 @@ import {
   ENGINE_ANALYSIS_QUEUE_NAME,
 } from '../../src/queues/queue.constants.js';
 import type { AnalysisQueueJobData } from '../../src/queues/queue.service.js';
+import { QueueWorkerLoggingService } from '../../src/queues/queue-worker-logging.service.js';
 import { ReportsModule } from '../../src/reports/reports.module.js';
 import { setupSwagger } from '../../src/shared/swagger/swagger.config.js';
 import { StudentsModule } from '../../src/students/students.module.js';
@@ -230,12 +231,20 @@ class FakeLlmService {
       provide: getQueueToken(ENGINE_ANALYSIS_QUEUE_NAME),
       useValue: { getJob: () => Promise.resolve(undefined) },
     },
+    {
+      provide: QueueWorkerLoggingService,
+      useValue: {
+        logWorkerError: () => undefined,
+        logJobFailed: () => undefined,
+      },
+    },
   ],
   exports: [
     FakeAnalysisJobEnqueuer,
     ANALYSIS_JOB_ENQUEUER,
     ENGINE_ANALYSIS_JOB_ENQUEUER,
     getQueueToken(ENGINE_ANALYSIS_QUEUE_NAME),
+    QueueWorkerLoggingService,
   ],
 })
 class TestingQueueModule {}

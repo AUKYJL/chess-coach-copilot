@@ -1,4 +1,4 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import type { Job } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
@@ -21,6 +21,7 @@ import {
 } from '../../queues/queue.constants.js';
 import type { AnalysisQueueJobData } from '../../queues/queue.service.js';
 import { ReportsService } from '../../reports/reports.service.js';
+import { QueueWorkerLoggingService } from '../../queues/queue-worker-logging.service.js';
 import { AnalysisClassifierService } from '../classification/analysis-classifier.service.js';
 import { GenerationTraceService } from '../classification/generation-trace.service.js';
 import { PgnPreparationService } from '../preparation/pgn-preparation.service.js';
@@ -49,6 +50,7 @@ export class AnalysisProcessor extends WorkerHost {
     private readonly reportsService: ReportsService,
     private readonly homeworkService: HomeworkService,
     private readonly progressService: ProgressService,
+    private readonly queueWorkerLoggingService: QueueWorkerLoggingService,
   ) {
     super();
     this.logger.setContext(AnalysisProcessor.name);
@@ -60,6 +62,25 @@ export class AnalysisProcessor extends WorkerHost {
     }
 
     await this.processPersistedJob(job.data);
+  }
+
+  @OnWorkerEvent('error')
+  onWorkerError(error: Error): void {
+    this.queueWorkerLoggingService.logWorkerError(ANALYSIS_QUEUE_NAME, error);
+  }
+
+  @OnWorkerEvent('failed')
+  onJobFailed(
+    job: Job<AnalysisQueueJobData> | undefined,
+    error: Error,
+    previousState: string,
+  ): void {
+    this.queueWorkerLoggingService.logJobFailed(
+      ANALYSIS_QUEUE_NAME,
+      job,
+      error,
+      previousState,
+    );
   }
 
   async processPersistedJob(jobData: AnalysisQueueJobData): Promise<void> {
@@ -372,6 +393,8 @@ export class AnalysisProcessor extends WorkerHost {
           event: 'analysis_failed',
           traceId,
           analysisJobId,
+          gameId: analysisJob.gameId,
+          jobType: analysisJob.jobType,
           failureCode: 'ANALYSIS_FAILED',
           failureMessage,
           stage,

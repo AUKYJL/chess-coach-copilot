@@ -6,8 +6,9 @@
     "apps/fe"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:be\" \"npm run dev:fe\"",
+    "dev": "concurrently --kill-others-on-fail -n api,worker,web \"npm run dev:be\" \"npm run dev:worker\" \"npm run dev:fe\"",
     "dev:be": "npm run start:dev --workspace=be",
+    "dev:worker": "npm run start:worker --workspace=be",
     "dev:fe": "npm run dev --workspace=fe",
     "api:sync": "npm run api:export --workspace=be && npm run api:types --workspace=fe",
     "build": "npm run build:be && npm run build:fe",

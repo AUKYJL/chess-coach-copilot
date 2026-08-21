@@ -1,7 +1,7 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 import { AnalysisJobEventsService } from '../analysis/jobs/analysis-job-events.service.js';
-import { Prisma } from '../generated/prisma/client.js';
+import { AnalysisJobStatus, Prisma } from '../generated/prisma/client.js';
 import { AnalysisJobResponse } from '../analysis/dto/analysis-job.response.js';
 import { AnalysisJobsService } from '../analysis/jobs/analysis-jobs.service.js';
 import { PgnPreparationService } from '../analysis/preparation/pgn-preparation.service.js';
@@ -141,13 +141,110 @@ export class ImportsService {
       engineEvidenceStatus: engineEvidence ? 'READY' : null,
       engineEvidenceSource: engineEvidence ? 'PGN' : null,
     });
+    if (isDuplicate) {
+      const analysisJob =
+        await this.analysisJobsService.getLatestWorkflowJobForGame(game.id);
+
+      if (analysisJob.status === AnalysisJobStatus.FAILED) {
+        this.logger.info(
+          {
+            event: 'import_duplicate_retry_started',
+            traceId,
+            studentId,
+            gameId: game.id,
+            analysisJobId: analysisJob.id,
+            jobType: analysisJob.jobType,
+            failureCode: analysisJob.failureCode,
+          },
+          'Retrying failed analysis for an imported duplicate',
+        );
+        await this.analysisJobEventsService.recordBestEffort({
+          analysisJobId: analysisJob.id,
+          traceId,
+          stage: 'import_duplicate_retry_started',
+          level: 'info',
+          message: 'Retrying failed analysis for an imported duplicate',
+          payload: {
+            studentId,
+            gameId: game.id,
+            jobType: analysisJob.jobType,
+            failureCode: analysisJob.failureCode,
+          },
+        });
+
+        const retryJob = await this.analysisJobsService.retry(
+          analysisJob.id,
+          coachAccountId,
+        );
+        this.logger.info(
+          {
+            event: 'import_duplicate_retry_enqueued',
+            traceId,
+            studentId,
+            gameId: game.id,
+            analysisJobId: retryJob.id,
+            jobType: retryJob.jobType,
+            status: retryJob.status,
+          },
+          'Retry for imported duplicate was enqueued',
+        );
+        await this.analysisJobEventsService.recordBestEffort({
+          analysisJobId: retryJob.id,
+          traceId,
+          stage: 'import_duplicate_retry_enqueued',
+          level: 'info',
+          message: 'Retry for imported duplicate was enqueued',
+          payload: {
+            studentId,
+            gameId: game.id,
+            jobType: retryJob.jobType,
+            status: retryJob.status,
+          },
+        });
+
+        return { ...retryJob, isDuplicate: true };
+      }
+
+      this.logger.info(
+        {
+          event: 'import_duplicate_returned',
+          traceId,
+          studentId,
+          gameId: game.id,
+          analysisJobId: analysisJob.id,
+          jobType: analysisJob.jobType,
+          status: analysisJob.status,
+          failureCode: analysisJob.failureCode,
+          normalizedPgnHashPrefix: game.normalizedPgnHash.slice(0, 12),
+        },
+        'Imported PGN matched an existing game',
+      );
+      await this.analysisJobEventsService.recordBestEffort({
+        analysisJobId: analysisJob.id,
+        traceId,
+        stage: 'import_duplicate_returned',
+        level: 'info',
+        message: 'Imported PGN matched an existing game',
+        payload: {
+          studentId,
+          gameId: game.id,
+          jobType: analysisJob.jobType,
+          status: analysisJob.status,
+          failureCode: analysisJob.failureCode,
+        },
+      });
+      return {
+        ...analysisJob,
+        isDuplicate: true,
+      };
+    }
+
     this.logger.info(
       {
         event: 'import_game_created',
         traceId,
         studentId,
         gameId: game.id,
-        isDuplicate,
         normalizedPgnHashPrefix: game.normalizedPgnHash.slice(0, 12),
       },
       'Imported game persisted',
@@ -160,19 +257,9 @@ export class ImportsService {
       payload: {
         studentId,
         gameId: game.id,
-        isDuplicate,
         normalizedPgnHashPrefix: game.normalizedPgnHash.slice(0, 12),
       },
     });
-
-    if (isDuplicate) {
-      return {
-        ...(await this.analysisJobsService.getLatestWorkflowJobForGame(
-          game.id,
-        )),
-        isDuplicate: true,
-      };
-    }
 
     const analysisJob = engineEvidenceInspection.sufficient
       ? await this.analysisJobsService.createAndEnqueueAnalysisJob({
